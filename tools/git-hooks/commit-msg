@@ -1,0 +1,21 @@
+#!/bin/sh
+# AFTERFALL commit-msg hook.
+# Rejects commit messages that contain AI co-author trailers or AI attribution
+# footers. Project policy: commits carry only the developer's own Git identity.
+# Installed into .git/hooks by tools/setup-dev.sh (repository-local only).
+
+msg_file="$1"
+
+# Ignore comment lines (git strips them later) when scanning.
+body=$(grep -v '^#' "$msg_file")
+
+pattern='(co-authored-by:.*(claude|anthropic|openai|chatgpt|copilot|gpt|gemini|\bai\b|noreply@anthropic\.com))|(generated (with|by) .*(claude|anthropic|ai agent|chatgpt|copilot))|(claude-session:)|(claude\.(ai|com)/code)|(🤖)'
+
+if printf '%s\n' "$body" | grep -Eiq "$pattern"; then
+  echo "commit-msg: rejected — AI attribution/co-author trailers are not allowed in this repository." >&2
+  echo "Offending line(s):" >&2
+  printf '%s\n' "$body" | grep -Ei "$pattern" >&2
+  echo "Remove them and commit again (see CLAUDE.md > Commit rules)." >&2
+  exit 1
+fi
+exit 0
