@@ -41,7 +41,7 @@ namespace Afterfall.Presentation.UI
             return col;
         }
 
-        private static VisualElement NewGame(UiManager ui)
+        public static VisualElement NewGame(UiManager ui)
         {
             var col = UiKit.Div("panel", "col");
             col.style.width = 760;

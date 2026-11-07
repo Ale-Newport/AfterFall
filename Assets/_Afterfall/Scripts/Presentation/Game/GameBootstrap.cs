@@ -33,7 +33,9 @@ namespace Afterfall.Presentation
             Settings = AppSettings.Load();
             AudioListener.volume = Settings.MasterVolume;
             Input = new GameInput();
-            Saves = new SaveService(new SaveFileStore(SaveDirectory));
+            // A scripted tour saves and autosaves into its own folder, never next to the player's saves.
+            string tourDir = AutoTour.RequestedDirectory();
+            Saves = new SaveService(new SaveFileStore(tourDir != null ? Path.Combine(tourDir, "Saves") : SaveDirectory));
             Content = LoadContent(out string error);
             ContentError = error;
             Ui = UiManager.Create(this);

@@ -5,11 +5,13 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Afterfall.Core;
+using Afterfall.Domain.AI;
 using Afterfall.Domain.Colony;
 using Afterfall.Domain.Construction;
 using Afterfall.Domain.Industry;
 using Afterfall.Domain.Items;
 using Afterfall.Domain.World;
+using Afterfall.Presentation.UI;
 using Afterfall.Services;
 using UnityEngine;
 using EntityId = Afterfall.Core.EntityId;
@@ -39,17 +41,28 @@ namespace Afterfall.Presentation
         {
             public Vector3 Site;
             public EntityId Colonist, Plot, Workshop, Generator;
+            public Structure Gen, Shop, Lamp, Crate;
+            public ColonistState Mara;
+            public readonly List<EntityId> Expected = new List<EntityId>();
+        }
+
+        /// <summary>The tour's output folder when <c>-afterfall-tour</c> is on the command line, otherwise null.</summary>
+        public static string RequestedDirectory()
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            int i = Array.IndexOf(args, Flag);
+            if (i < 0) return null;
+            string dir = i + 1 < args.Length && !args[i + 1].StartsWith("-") ? args[i + 1] : Path.Combine(Application.persistentDataPath, "Tour");
+            return Path.GetFullPath(dir);
         }
 
         public static void TryAttach(GameBootstrap boot)
         {
-            string[] args = Environment.GetCommandLineArgs();
-            int i = Array.IndexOf(args, Flag);
-            if (i < 0) return;
-            string dir = i + 1 < args.Length && !args[i + 1].StartsWith("-") ? args[i + 1] : Path.Combine(Application.persistentDataPath, "Tour");
+            string dir = RequestedDirectory();
+            if (dir == null) return;
             var tour = boot.gameObject.AddComponent<AutoTour>();
             tour._boot = boot;
-            tour._dir = Path.GetFullPath(dir);
+            tour._dir = dir;
         }
 
         private void OnEnable() => Application.logMessageReceived += OnLog;
@@ -64,9 +77,11 @@ namespace Afterfall.Presentation
         private IEnumerator Start()
         {
             Directory.CreateDirectory(_dir);
+            string playerSaves = SaveFolderSnapshot();
             Line($"AFTERFALL tour {DateTime.Now:yyyy-MM-dd HH:mm:ss}, Unity {Application.unityVersion}, {SystemInfo.graphicsDeviceName} ({SystemInfo.graphicsDeviceType}), {Screen.width}x{Screen.height}");
             yield return Seconds(2f);
             yield return Capture("01_main_menu");
+            yield return MainMenuScreens();
 
             float t0 = Time.realtimeSinceStartup;
             _boot.StartNewGame(DifficultyPreset.Survival, 20261107);
@@ -172,10 +187,35 @@ namespace Afterfall.Presentation
                 yield break;
             }
 
+            yield return Defence(gc, town);
+            yield return ColonyLife(gc, town);
+            yield return PumpOutpost(gc, town);
+            yield return PowerGrid(gc, town);
+
             SkipTo(gc, 22.0);
+            Time.timeScale = 4f;
+            float sleepWait = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - sleepWait < 20f && town.Mara.Activity != ColonistActivity.Resting) yield return null;
+            Time.timeScale = 1f;
+            Check(town.Mara.Activity == ColonistActivity.Resting, $"At night {town.Mara.Name} sleeps in her bed ({town.Mara.Activity}: {town.Mara.Status})");
             StandAndLook(gc, town.Site + new Vector3(-9f, 0f, -7f), town.Site);
             yield return Seconds(2f);
-            yield return Capture("16_night_at_base");
+            yield return Capture("21_night_at_base");
+            yield return MeasureFrames("settlement at night", 3f);
+
+            yield return DeathAndRespawn(gc);
+            gc.Ui.OpenPause();
+            yield return Seconds(0.5f);
+            Check(gc.Session.Paused, "The pause menu pauses the simulation");
+            yield return Capture("24_pause_menu");
+            gc.Ui.CloseWindow();
+            yield return Seconds(0.3f);
+            Check(!gc.Session.Paused, "Closing the pause menu resumes the simulation");
+            bool fps = gc.Settings.ShowFps;
+            gc.Settings.ShowFps = true;
+            yield return Seconds(1f);
+            yield return Capture("25_f3_overlay");
+            gc.Settings.ShowFps = fps;
 
             int structures = gc.Session.World.Structures.Count;
             gc.Save("tour_test");
@@ -192,12 +232,15 @@ namespace Afterfall.Presentation
                 bool crops = w.Structures.TryGetValue(town.Plot, out Structure plot) && plot.Crop != null && plot.Crop.Planted;
                 bool recipe = w.Structures.TryGetValue(town.Workshop, out Structure shop) && shop.Machine.RecipeId == "gears";
                 bool linked = w.HasPowerLink(town.Generator, town.Workshop);
-                Line($"{(sameStructures && recruited && crops && recipe && linked ? "Save and reload: OK" : "FAIL: save and reload")} " +
-                     $"(structures {w.Structures.Count}/{structures}, colonist recruited {recruited}, crop planted {crops}, workshop recipe kept {recipe}, power link kept {linked})");
+                    int colonists = w.Colonists.Values.Count(x => x.Recruited);
+                bool batteries = w.Structures.Values.Any(x => x.Battery != null && x.Battery.StoredJoules > 0);
+                Line($"{(sameStructures && recruited && crops && recipe && linked && colonists == 2 && batteries ? "Save and reload: OK" : "FAIL: save and reload")} " +
+                     $"(structures {w.Structures.Count}/{structures}, colonists recruited {colonists}, crop planted {crops}, workshop recipe kept {recipe}, power link kept {linked}, battery charge kept {batteries})");
             }
             _boot.Saves.Store.Delete("tour_test");
             yield return Seconds(1.5f);
-            yield return Capture("17_after_reload");
+            yield return Capture("26_after_reload");
+            Check(SaveFolderSnapshot() == playerSaves, $"The tour left the player's save folder untouched ({GameBootstrap.SaveDirectory})");
             Finish();
         }
 
@@ -247,13 +290,14 @@ namespace Afterfall.Presentation
             Check(s.World.Tech.IsUnlocked("electricity"), "A generator schematic plus smelted ingots unlock Electricity");
             yield return Construct(gc, "generator", town.Site + new Vector3(-6f, 0f, 2f), x => gen = x);
             if (gen != null) yield return Construct(gc, "workshop", gen.Position.ToUnity(), x => shop = x, 3.5f);
-            if (shop != null) yield return Construct(gc, "lamp", shop.Position.ToUnity(), null, 2.5f);
+            Structure lamp = null;
+            if (shop != null) yield return Construct(gc, "lamp", shop.Position.ToUnity(), x => lamp = x, 2.5f);
             Grant(bag, "seed_potato", 1);
             yield return Seconds(1f);
             Check(s.World.Tech.IsUnlocked("agriculture"), "Seeds unlock Agriculture");
             yield return Construct(gc, "planter_bed", town.Site + new Vector3(2f, 0f, -5f), x => plotA = x);
             yield return Construct(gc, "planter_bed", town.Site + new Vector3(5f, 0f, -5f), x => plotB = x);
-            if (bed == null || crate == null || furnace == null || gen == null || shop == null || plotA == null || plotB == null)
+            if (bed == null || crate == null || furnace == null || gen == null || shop == null || lamp == null || plotA == null || plotB == null)
             {
                 Line("FAIL: the settlement could not be completed");
                 bag.MaxWeight = maxWeight;
@@ -262,6 +306,11 @@ namespace Afterfall.Presentation
             town.Generator = gen.Id;
             town.Workshop = shop.Id;
             town.Plot = plotB.Id;
+            town.Gen = gen;
+            town.Shop = shop;
+            town.Lamp = lamp;
+            town.Crate = crate;
+            town.Mara = survivor;
             Check(s.World.HasPowerLink(gen.Id, shop.Id), "The workshop connected itself to the generator");
             StandAndLook(gc, town.Site + new Vector3(-10f, 0f, -9f), town.Site + new Vector3(0f, 0f, 1f));
             yield return Seconds(1f);
@@ -369,9 +418,9 @@ namespace Afterfall.Presentation
             done(town);
         }
 
-        private IEnumerator Construct(GameController gc, string defId, Vector3 near, Action<Structure> done, float minRadius = 0f)
+        private IEnumerator Construct(GameController gc, string defId, Vector3 near, Action<Structure> done, float minRadius = 0f, float maxRadius = 26f)
         {
-            Structure st = PlanNear(gc, defId, near, minRadius, out string reason);
+            Structure st = PlanNear(gc, defId, near, minRadius, out string reason, maxRadius);
             if (st == null)
             {
                 Line($"FAIL: could not plan {defId} near {Fmt(near)}: {reason}");
@@ -455,6 +504,14 @@ namespace Afterfall.Presentation
             }
         }
 
+        private void LogZombie(GameController gc, ZombieState z)
+        {
+            ZombieView v = gc.Sync.ZombieViewOf(z.Id);
+            string agent = v == null ? "no view" : !v.OnNavMesh ? "off NavMesh" : $"path {v.Agent.pathStatus}, remaining {v.Agent.remainingDistance:0.0} m, speed {v.Agent.velocity.magnitude:0.0}";
+            float toPlayer = Vector3.Distance(z.Position.ToUnity(), gc.Player.transform.position);
+            Line($"  infected: {z.Mode} at {Fmt(z.Position.ToUnity())}, {toPlayer:0.0} m from the survivor, health {z.Health:0}, stall {z.StallTime:0.0} s, breaching {(z.BreachTarget.IsValid ? gc.Session.World.Structures.TryGetValue(z.BreachTarget, out Structure t) ? t.DefId : "?" : "nothing")}; {agent}");
+        }
+
         private void LogColonist(GameController gc, ColonistState c)
         {
             ColonistView v = gc.Sync.ColonistViewOf(c.Id);
@@ -463,14 +520,15 @@ namespace Afterfall.Presentation
             Line($"  {c.Name}: {c.Activity} \"{c.Status}\" at {Fmt(c.Position.ToUnity())} y {c.Position.Y:0.0} (ground {gc.GroundHeight(c.Position.ToUnity()):0.0}), target {(c.HasMoveTarget ? Fmt(c.MoveTarget.ToUnity()) : "none")}; {agent}");
         }
 
-        private static Structure PlanNear(GameController gc, string defId, Vector3 near, float minRadius, out string reason)
+        private static Structure PlanNear(GameController gc, string defId, Vector3 near, float minRadius, out string reason, float maxRadius = 26f)
         {
             reason = "unknown building";
             BuildingDefinition def = gc.Session.Content.Building(defId);
             if (def == null) return null;
-            for (float r = minRadius; r <= 26f; r += 2f)
+            float stepSize = maxRadius < 2f ? 0.25f : 2f;
+            for (float r = minRadius; r <= maxRadius; r += stepSize)
             {
-                int steps = r < 0.5f ? 1 : Mathf.CeilToInt(2f * Mathf.PI * r / 2f);
+                int steps = r < 0.1f ? 1 : Mathf.CeilToInt(2f * Mathf.PI * r / stepSize);
                 for (int i = 0; i < steps; i++)
                 {
                     float a = i * Mathf.PI * 2f / steps;
@@ -567,6 +625,349 @@ namespace Afterfall.Presentation
         private static string Fmt(Vector3 v) => $"({v.x:0}, {v.z:0})";
 
         private void Check(bool ok, string text) => Line(ok ? text : "FAIL: " + text);
+
+        // ================================================================== more chapters
+
+        private IEnumerator MainMenuScreens()
+        {
+            UiManager ui = _boot.Ui;
+            ui.ReplaceMainMenuContent(MenuScreens.NewGame(ui));
+            yield return Seconds(0.4f);
+            yield return Capture("01b_new_game");
+            ui.ReplaceMainMenuContent(MenuScreens.LoadGame(ui));
+            yield return Seconds(0.4f);
+            yield return Capture("01c_load_game");
+            ui.ShowMainMenu();
+            ui.OpenSettings();
+            yield return Seconds(0.4f);
+            yield return Capture("01d_settings");
+            ui.CloseWindow();
+            ui.OpenHelp();
+            yield return Seconds(0.4f);
+            yield return Capture("01e_controls");
+            ui.CloseWindow();
+            yield return Seconds(0.3f);
+        }
+
+        /// <summary>A shelter snapped onto a foundation, a barricade the infected batter, repair, demolish and melee.</summary>
+        private IEnumerator Defence(GameController gc, Settlement town)
+        {
+            GameSession s = gc.Session;
+            Inventory bag = s.Player.Inventory;
+            Structure foundation = null, doorway = null, roof = null, barricade = null;
+            // Far enough from the base that the infected comes for the survivor, not the colonists.
+            yield return Construct(gc, "foundation", town.Site + new Vector3(-6f, 0f, -45f), x => foundation = x);
+            if (foundation == null) yield break;
+            Vector3 c = foundation.Position.ToUnity();
+            var walls = new List<Structure>();
+            // The doorway faces away from the base (-Z), so infected arrive from the far side.
+            foreach (Vector3 edge in new[] { new Vector3(1.4f, 0f, 0f), new Vector3(-1.4f, 0f, 0f), new Vector3(0f, 0f, 1.4f) })
+                yield return Construct(gc, "wall", c + edge, x => walls.Add(x), 0f, 0.5f);
+            yield return Construct(gc, "doorway", c + new Vector3(0f, 0f, -1.4f), x => doorway = x, 0f, 0.5f);
+            yield return Construct(gc, "roof", c, x => roof = x, 0f, 0.5f);
+            Check(walls.Count == 3 && doorway != null && roof != null, $"Shelter: {walls.Count} walls and {(doorway != null ? "a" : "no")} doorway snapped to the foundation, {(roof != null ? "a" : "no")} roof on top");
+            if (doorway == null) yield break;
+            Vector3 door = doorway.Position.ToUnity();
+            Vector3 outward = door - c;
+            outward.y = 0f;
+            outward.Normalize();
+            yield return Seconds(0.5f); // let the new parts carve the NavMesh
+            Check(PathStatus(c + Vector3.up * 0.5f, door + outward * 3f) == UnityEngine.AI.NavMeshPathStatus.PathComplete, "Agents can walk into the shelter through the doorway");
+            StandAndLook(gc, door + outward * 6f + new Vector3(-3f, 0f, 0f), c);
+            yield return Seconds(0.8f);
+            yield return Capture("16_shelter");
+
+            yield return Construct(gc, "barricade", door + outward * 0.45f, x => barricade = x, 0f, 1.2f);
+            if (barricade == null) yield break;
+            yield return Seconds(0.5f);
+            Check(PathStatus(c + Vector3.up * 0.5f, door + outward * 3f) != UnityEngine.AI.NavMeshPathStatus.PathComplete, "The barricade seals the doorway");
+
+            // Hide inside, make noise and let an infected find the barricade.
+            gc.Player.Teleport(c + Vector3.up * 0.45f);
+            gc.CameraRig.Look(Mathf.Atan2(outward.x, outward.z) * Mathf.Rad2Deg, 8f);
+            ZombieState z = s.Zombies.Spawn((door + outward * 12f).ToSim(), "wanderer", s.Rng);
+            float maxHealth = s.Content.Building("barricade").MaxHealth;
+            Time.timeScale = 2f;
+            float start = Time.realtimeSinceStartup, nextNoise = 0f;
+            var shelter = new List<Structure>(walls) { doorway, barricade };
+            float nextLog = start;
+            while (Time.realtimeSinceStartup - start < 40f && shelter.All(x => x.Health >= s.Content.Building(x.DefId).MaxHealth) && !z.IsDead)
+            {
+                if (Time.realtimeSinceStartup >= nextNoise)
+                {
+                    nextNoise = Time.realtimeSinceStartup + 2f;
+                    s.EmitNoise(s.Player.Position, 30f, "tour");
+                }
+                if (Time.realtimeSinceStartup >= nextLog)
+                {
+                    nextLog += 4f;
+                    LogZombie(gc, z);
+                }
+                yield return null;
+            }
+            Time.timeScale = 1f;
+            Structure hit = shelter.FirstOrDefault(x => x.Health < s.Content.Building(x.DefId).MaxHealth);
+            Check(hit != null, $"The infected battered the shelter ({(hit != null ? $"{s.Content.Building(hit.DefId).Name} {hit.Health:0}/{s.Content.Building(hit.DefId).MaxHealth:0}" : "nothing damaged")}, infected {z.Mode})");
+            yield return Capture("17_breach");
+
+            Grant(bag, "hammer", 1);
+            Structure damaged = hit ?? barricade;
+            foreach (ItemAmount a in s.Construction.RepairCost(damaged)) Grant(bag, a.ItemId, a.Quantity);
+            OpResult repaired = s.Repair(damaged.Id);
+            Check(repaired.Ok && damaged.Health >= s.Content.Building(damaged.DefId).MaxHealth, "Repair with a hammer: " + repaired.Message);
+            int wood = bag.Count("wood");
+            OpResult demolished = s.Demolish(barricade.Id);
+            Check(demolished.Ok && !s.World.Structures.ContainsKey(barricade.Id), $"Demolish the barricade: {demolished.Message} (wood {wood} -> {bag.Count("wood")})");
+
+            Grant(bag, "stone_axe", 1);
+            for (int i = 0; i < PlayerState.HotbarSize; i++)
+                if (bag.GetSlot(i).ItemId == "stone_axe") s.SelectHotbar(i);
+            int swings = 0;
+            start = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - start < 30f && !z.IsDead)
+            {
+                if (Vector3.Distance(z.Position.ToUnity(), gc.Player.transform.position) < 2.6f && s.MeleeAttack(new[] { z.Id }).Code == "ok") swings++;
+                else if (Time.realtimeSinceStartup >= nextNoise)
+                {
+                    nextNoise = Time.realtimeSinceStartup + 2f;
+                    s.EmitNoise(s.Player.Position, 30f, "tour");
+                }
+                yield return null;
+            }
+            Check(z.IsDead, $"Killed the infected with a stone axe after it came through the doorway ({swings} swings, survivor health {s.Player.Vitals.Health:0})");
+            RemoveZombies(gc);
+            s.Player.Vitals.Health = s.Player.Vitals.MaxHealth;
+        }
+
+        /// <summary>Fleeing, eating, a second survivor walking across the valley.</summary>
+        private IEnumerator ColonyLife(GameController gc, Settlement town)
+        {
+            GameSession s = gc.Session;
+            ColonistState mara = town.Mara;
+            Vector3 at = mara.Position.ToUnity();
+            Vector3 away = at - town.Site;
+            away.y = 0f;
+            Vector3 spawn = at + (away.sqrMagnitude > 0.01f ? away.normalized : Vector3.right) * 7f;
+            ZombieState z = s.Zombies.Spawn(Ground(gc, spawn).ToSim(), "wanderer", s.Rng);
+            z.Yaw = Mathf.Atan2(at.x - spawn.x, at.z - spawn.z) * Mathf.Rad2Deg; // looking her way, so it sees her
+            float start = Time.realtimeSinceStartup, nextLog = start;
+            bool fled = false;
+            while (Time.realtimeSinceStartup - start < 15f && !fled && mara.Vitals.Health > 50f)
+            {
+                fled = mara.Status.StartsWith("Fleeing");
+                if (Time.realtimeSinceStartup >= nextLog)
+                {
+                    nextLog += 1f;
+                    LogZombie(gc, z);
+                    LogColonist(gc, mara);
+                }
+                yield return null;
+            }
+            Check(fled, $"{mara.Name} flees from an infected that comes for her (infected {z.Mode}, her health {mara.Vitals.Health:0})");
+            RemoveZombies(gc);
+            yield return Seconds(1f);
+
+            int potatoes = town.Crate.Storage.Count("potato");
+            mara.Vitals.Hunger = 20f; // tour shortcut: a hungry colonist
+            Time.timeScale = 4f;
+            start = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - start < 20f && mara.Vitals.Hunger < 30f) yield return null;
+            Time.timeScale = 1f;
+            Check(mara.Vitals.Hunger >= 30f, $"{mara.Name} ate from the crate when hungry (hunger 20 -> {mara.Vitals.Hunger:0}, potatoes {potatoes} -> {town.Crate.Storage.Count("potato")})");
+
+            Structure bed2 = null;
+            yield return Construct(gc, "bed", town.Site + new Vector3(-3f, 0f, 2f), x => bed2 = x);
+            ColonistState eli = s.World.Colonists.Values.FirstOrDefault(c => !c.Recruited);
+            if (eli == null || bed2 == null)
+            {
+                Line("FAIL: no second survivor or bed");
+                yield break;
+            }
+            Vector3 hideout = eli.Position.ToUnity();
+            StandAndLook(gc, FreeSpotNear(gc, hideout, 1.6f), hideout);
+            yield return Seconds(0.3f);
+            OpResult joined = s.Recruit(eli.Id);
+            Check(joined.Ok, $"Recruit {eli.Name}: {joined.Message}");
+            float distance = Vector3.Distance(Flat(hideout), Flat(town.Site));
+            Time.timeScale = 4f;
+            start = Time.realtimeSinceStartup;
+            nextLog = start;
+            while (Time.realtimeSinceStartup - start < 60f && Vector3.Distance(Flat(eli.Position.ToUnity()), Flat(town.Site)) > 25f)
+            {
+                if (Time.realtimeSinceStartup >= nextLog)
+                {
+                    nextLog += 15f;
+                    LogColonist(gc, eli);
+                }
+                yield return null;
+            }
+            Time.timeScale = 1f;
+            Check(Vector3.Distance(Flat(eli.Position.ToUnity()), Flat(town.Site)) <= 25f, $"{eli.Name} walked {distance:0} m across the valley to the settlement ({Time.realtimeSinceStartup - start:0} s at 4x)");
+            gc.SetTactical(true);
+            gc.CameraRig.Tactical.Focus(town.Site, 20f);
+            yield return Seconds(1.5f);
+            yield return Capture("18_two_colonists");
+            gc.SetTactical(false);
+        }
+
+        /// <summary>A generator and an electric pump on the lake shore filling bottles and irrigating a bed.</summary>
+        private IEnumerator PumpOutpost(GameController gc, Settlement town)
+        {
+            GameSession s = gc.Session;
+            Inventory bag = s.Player.Inventory;
+            WorldLayout layout = s.World.Layout;
+            Vector3 lake = layout.LakeCenter.ToUnity();
+            Vector3 toTown = Flat(town.Site - lake).normalized;
+            Vector3 shore = Ground(gc, lake + toTown * (layout.LakeRadius + 2f));
+            Check(s.World.Tech.IsUnlocked("water_works"), "Machining gears unlocked Water Works");
+            Structure pump = null, gen = null, plot = null;
+            yield return Construct(gc, "water_pump", shore, x => pump = x);
+            if (pump == null) yield break;
+            yield return Construct(gc, "generator", pump.Position.ToUnity(), x => gen = x, 3f, 6f);
+            yield return Construct(gc, "planter_bed", pump.Position.ToUnity(), x => plot = x, 4f, 9f);
+            if (gen == null || plot == null) yield break;
+            Check(s.World.HasPowerLink(gen.Id, pump.Id), "The pump connected itself to its generator");
+            yield return Use(gc, pump, () => s.SetMachineRecipe(pump.Id, "pump_water"), "set the pump recipe");
+            Grant(bag, "empty_bottle", 4);
+            yield return Deposit(gc, pump, "empty_bottle", 4, pump.Machine.Input);
+            Grant(bag, "fuel_can", 1);
+            yield return Deposit(gc, gen, "fuel_can", 1, gen.Generator.Fuel);
+            Grant(bag, "seed_potato", 1);
+            yield return Use(gc, plot, () => s.PlantCrop(plot.Id), "plant at the pump");
+            Time.timeScale = 4f;
+            float start = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - start < 15f && (pump.Machine.Output.Count("water_bottle") == 0 || !plot.Crop.Irrigated)) yield return null;
+            Time.timeScale = 1f;
+            Check(pump.Machine.Output.Count("water_bottle") > 0, $"The powered pump filled {pump.Machine.Output.Count("water_bottle")} bottles ({UiKit.StatusText(pump.Machine)})");
+            Check(plot.Crop.Irrigated && plot.Crop.Water >= 99f, $"The pump irrigates the planter bed {Vector3.Distance(Flat(pump.Position.ToUnity()), Flat(plot.Position.ToUnity())):0.0} m away (water {plot.Crop.Water:0})");
+            StandAndLook(gc, pump.Position.ToUnity() + Flat(pump.Position.ToUnity() - lake).normalized * 8f + new Vector3(2f, 0f, 2f), pump.Position.ToUnity());
+            yield return Seconds(1f);
+            yield return Capture("19_pump_outpost");
+        }
+
+        /// <summary>Poles and cables, a battery bank, three workshops and a lamp shed at night on battery power.</summary>
+        private IEnumerator PowerGrid(GameController gc, Settlement town)
+        {
+            GameSession s = gc.Session;
+            Inventory bag = s.Player.Inventory;
+            Structure gen = town.Gen;
+            Vector3 g = gen.Position.ToUnity();
+            Structure pole = null, farLamp = null, battery = null;
+            yield return Construct(gc, "power_pole", g + new Vector3(-9f, 0f, 0f), x => pole = x, 0f, 4f);
+            if (pole != null) yield return Construct(gc, "lamp", pole.Position.ToUnity() + new Vector3(-9f, 0f, 0f), x => farLamp = x, 0f, 4f);
+            if (pole == null || farLamp == null) yield break;
+            yield return Seconds(0.5f);
+            Check(SameGrid(s, gen, farLamp), $"A power pole carries the generator's grid to a lamp {Vector3.Distance(g, farLamp.Position.ToUnity()):0} m away");
+            OpResult cut = s.DisconnectPower(pole.Id, farLamp.Id);
+            yield return Seconds(0.5f);
+            Check(cut.Ok && !SameGrid(s, gen, farLamp), "Cutting the cable isolates the lamp: " + cut.Message);
+            OpResult linked = s.ConnectPower(pole.Id, farLamp.Id);
+            yield return Seconds(0.5f);
+            Check(linked.Ok && SameGrid(s, gen, farLamp), "Reconnecting the cable: " + linked.Message);
+
+            yield return Construct(gc, "battery_bank", g, x => battery = x, 2.5f, 7f);
+            var shops = new List<Structure> { town.Shop };
+            for (int i = 0; i < 2; i++) yield return Construct(gc, "workshop", g, x => shops.Add(x), 3.5f, 8f);
+            if (battery == null || shops.Count < 3) yield break;
+            yield return Seconds(0.5f); // the grid is recomputed on the next power tick
+            Check(SameGrid(s, gen, battery) && shops.All(x => SameGrid(s, gen, x)), "The battery bank and three workshops share the generator's grid");
+            foreach (Structure shop in shops)
+            {
+                yield return Use(gc, shop, () => s.SetMachineRecipe(shop.Id, "gears"), "set a workshop recipe");
+                Grant(bag, "iron_ingot", 20);
+                yield return Deposit(gc, shop, "iron_ingot", 20, shop.Machine.Input);
+            }
+            Grant(bag, "fuel_can", 2);
+            yield return Deposit(gc, gen, "fuel_can", 2, gen.Generator.Fuel);
+            Time.timeScale = 4f;
+            yield return Seconds(12f);
+            Time.timeScale = 1f;
+            Check(battery.Battery.StoredJoules > 1000.0, $"Surplus generator power charged the battery ({battery.Battery.StoredJoules / 1000.0:0} kJ)");
+
+            SkipTo(gc, 21.0);
+            yield return Seconds(1f);
+            s.ToggleEnabled(gen.Id);
+            yield return Seconds(1.5f);
+            bool shopsRun = shops.All(x => x.Power.Powered);
+            bool lampShed = town.Lamp.Power.Reason.StartsWith("Insufficient power");
+            Check(shopsRun && lampShed, $"Generator off at night: the battery runs the three workshops ({shops.Count(x => x.Power.Powered)}/3 powered) and the lamp is shed first ({town.Lamp.Power.Reason})");
+            gc.SetTactical(true);
+            gc.CameraRig.Tactical.Focus(g, 20f);
+            gc.Tactical.Select(town.Lamp.Id);
+            yield return Seconds(1.5f);
+            yield return Capture("20_power_shedding");
+            s.ToggleEnabled(gen.Id);
+            yield return Seconds(1.5f);
+            Check(town.Lamp.Power.Powered && shops.All(x => x.Power.Powered), $"Generator back on: everything powered (lamp: {town.Lamp.Power.Reason}; generator enabled {gen.Enabled}, {gen.Generator.Status}, fuel {Units(gen.Generator.Fuel)} items, buffer {gen.Generator.BufferJoules / 1000:0} kJ)");
+            gc.Tactical.Select(EntityId.None);
+            gc.SetTactical(false);
+        }
+
+        private IEnumerator DeathAndRespawn(GameController gc)
+        {
+            GameSession s = gc.Session;
+            Inventory bag = s.Player.Inventory;
+            int carried = Units(bag);
+            s.DamagePlayer(1000f, "the tour");
+            yield return Seconds(1.5f);
+            Check(gc.IsDead, "The survivor died");
+            yield return Capture("22_death_screen");
+            WorldDrop drop = s.World.Drops.Values.FirstOrDefault(d => d.IsBelongings);
+            Check(drop != null && Units(drop.Contents) == carried && Units(bag) == 0, $"All {carried} carried items were dropped where the survivor fell");
+            OpResult respawned = s.Respawn();
+            if (respawned.Ok) gc.OnRespawned();
+            Check(respawned.Ok, "Respawn: " + respawned.Message);
+            yield return Seconds(1.5f);
+            if (drop == null) yield break;
+            Vector3 dropAt = drop.Position.ToUnity();
+            Vector3 p = gc.Player.transform.position;
+            gc.CameraRig.Look(Mathf.Atan2(dropAt.x - p.x, dropAt.z - p.z) * Mathf.Rad2Deg, 4f);
+            yield return Seconds(1f);
+            yield return Capture("23_belongings_beacon");
+            Line($"Respawned {Vector3.Distance(Flat(p), Flat(dropAt)):0} m from the belongings");
+            StandAndLook(gc, FreeSpotNear(gc, dropAt, 1.2f), dropAt);
+            yield return Seconds(0.3f);
+            OpResult picked = s.PickUpDrop(drop.Id);
+            Check(picked.Ok && Units(bag) == carried, $"Recovered the belongings: {picked.Message}");
+        }
+
+        private static UnityEngine.AI.NavMeshPathStatus PathStatus(Vector3 from, Vector3 to)
+        {
+            if (!UnityEngine.AI.NavMesh.SamplePosition(from, out UnityEngine.AI.NavMeshHit a, 1.5f, UnityEngine.AI.NavMesh.AllAreas) ||
+                !UnityEngine.AI.NavMesh.SamplePosition(to, out UnityEngine.AI.NavMeshHit b, 1.5f, UnityEngine.AI.NavMesh.AllAreas))
+                return UnityEngine.AI.NavMeshPathStatus.PathInvalid;
+            var path = new UnityEngine.AI.NavMeshPath();
+            UnityEngine.AI.NavMesh.CalculatePath(a.position, b.position, UnityEngine.AI.NavMesh.AllAreas, path);
+            return path.status;
+        }
+
+        private static bool SameGrid(GameSession s, Structure a, Structure b)
+        {
+            var net = s.Power.NetworkOf(a.Id);
+            return net != null && net.Members.Contains(b.Id);
+        }
+
+        private static void RemoveZombies(GameController gc)
+        {
+            foreach (EntityId id in gc.Session.World.Zombies.Keys.ToList()) gc.Session.World.Zombies.Remove(id);
+            gc.Session.World.MarkChanged();
+        }
+
+        private static int Units(Inventory inv)
+        {
+            int n = 0;
+            for (int i = 0; i < inv.SlotCount; i++) n += inv.GetSlot(i).Quantity;
+            return n;
+        }
+
+        private static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);
+
+        private static string SaveFolderSnapshot()
+        {
+            if (!Directory.Exists(GameBootstrap.SaveDirectory)) return "";
+            return string.Join("|", Directory.GetFiles(GameBootstrap.SaveDirectory).OrderBy(f => f, StringComparer.Ordinal)
+                .Select(f => $"{Path.GetFileName(f)}@{File.GetLastWriteTimeUtc(f).Ticks}"));
+        }
 
         // ================================================================== helpers
 
