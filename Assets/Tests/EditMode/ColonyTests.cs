@@ -95,6 +95,27 @@ namespace Afterfall.Tests
         }
 
         [Test]
+        public void NewRecruit_WithNoWork_WalksToTheSettlement()
+        {
+            GameSession s = TestSupport.NewSession(6161);
+            s.Threats.SpawningEnabled = false;
+            foreach (EntityId id in s.World.Zombies.Keys.ToList()) s.World.Zombies.Remove(id);
+            s.World.Clock.Advance(s.World.Clock.DayLengthSeconds * 0.1);
+            Vec3 p = s.Player.Position;
+            Structure bed = TestSupport.Build(s.World, "bed", new Vec3(p.X - 3, p.Y, p.Z));
+            ColonistState c = s.World.Colonists.Values.First();
+            c.Position = s.World.Layout.Ground(p.X + 60, p.Z + 20);
+            s.Player.Position = c.Position; // talk to them where they hide
+            Assert.IsTrue(s.Recruit(c.Id).Ok);
+            s.Player.Position = p;
+            TestSupport.Run(s, 3, 0.1);
+            Assert.AreEqual("Heading to the settlement", c.Status);
+            TestSupport.Run(s, 40, 0.1);
+            Assert.LessOrEqual(Vec3.DistanceXZ(c.Position, bed.Position), ColonySystem.HomeRadius, "the recruit walked home");
+            Assert.AreEqual(ColonistActivity.Idle, c.Activity);
+        }
+
+        [Test]
         public void Colonists_RefuelOnlyWithDedicatedFuel_NotBuildingMaterials()
         {
             GameSession s = Base(out ColonistState c, out Structure crate);

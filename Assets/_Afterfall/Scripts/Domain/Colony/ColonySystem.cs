@@ -57,6 +57,9 @@ namespace Afterfall.Domain.Colony
         public const float NeedThreshold = 35f;
         public const float FleeRadius = 9f;
 
+        /// <summary>Idle colonists further than this from their bed walk back to the settlement.</summary>
+        public const float HomeRadius = 18f;
+
         private readonly WorldState _world;
         private readonly ContentDatabase _content;
         private readonly EventBus _bus;
@@ -152,6 +155,20 @@ namespace Afterfall.Domain.Colony
                     c.HasMoveTarget = false;
                 }
                 else if (c.CurrentJob.IsValid) Execute(c, (float)dt);
+                else if (FarFromHome(c, out Structure home))
+                {
+                    // A new recruit (or a colonist who fled far) walks back to the settlement when there is no work.
+                    if (c.HasMoveTarget && Movement.CannotReach(c))
+                    {
+                        c.Activity = ColonistActivity.Idle;
+                        c.Status = "Can't find a way to the settlement";
+                    }
+                    else
+                    {
+                        if (MoveTo(c, home.Position, (float)dt, HomeRadius * 0.5f)) c.Activity = ColonistActivity.Idle;
+                        c.Status = "Heading to the settlement";
+                    }
+                }
                 else
                 {
                     c.Activity = ColonistActivity.Idle;
@@ -711,6 +728,12 @@ namespace Afterfall.Domain.Colony
             if (!string.IsNullOrEmpty(food.Consumable?.Returns) && !c.Carry.TryAdd(food.Consumable.Returns, 1))
                 _construction.CreateDrop(new List<ItemStack> { new ItemStack(food.Consumable.Returns, 1) }, c.Position, "Empty bottle", false);
             Complete(c, j);
+        }
+
+        private bool FarFromHome(ColonistState c, out Structure home)
+        {
+            home = null;
+            return c.HomeBed.IsValid && _world.Structures.TryGetValue(c.HomeBed, out home) && Vec3.DistanceXZ(c.Position, home.Position) > HomeRadius;
         }
 
         private bool MoveTo(ColonistState c, Vec3 target, float dt, float arrive)
