@@ -1,0 +1,22 @@
+{
+    "name": "Afterfall.Presentation",
+    "rootNamespace": "Afterfall.Presentation",
+    "references": [
+        "Afterfall.Core",
+        "Afterfall.Domain",
+        "Afterfall.Persistence",
+        "Afterfall.Services",
+        "Unity.InputSystem",
+        "Unity.Cinemachine",
+        "Unity.AI.Navigation"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

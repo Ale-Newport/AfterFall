@@ -1,0 +1,131 @@
+using System;
+using Afterfall.Domain.Items;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+namespace Afterfall.Presentation.UI
+{
+    /// <summary>Small helpers for building UI Toolkit trees in code.</summary>
+    public static class UiKit
+    {
+        public static VisualElement Div(params string[] classes)
+        {
+            var e = new VisualElement();
+            foreach (string c in classes) e.AddToClassList(c);
+            return e;
+        }
+
+        public static Label Text(string text, params string[] classes)
+        {
+            var l = new Label(text);
+            foreach (string c in classes) l.AddToClassList(c);
+            return l;
+        }
+
+        public static Button Btn(string text, Action onClick, params string[] classes)
+        {
+            var b = new Button(onClick) { text = text };
+            b.AddToClassList("btn");
+            foreach (string c in classes) b.AddToClassList(c);
+            return b;
+        }
+
+        public static void Show(VisualElement e, bool visible) => e.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+
+        public static T Put<T>(this VisualElement parent, T child) where T : VisualElement
+        {
+            parent.Add(child);
+            return child;
+        }
+
+        public static void SetClass(VisualElement e, string cls, bool on)
+        {
+            if (on) e.AddToClassList(cls);
+            else e.RemoveFromClassList(cls);
+        }
+
+        public static string Watts(float w) => w >= 1000f ? $"{w / 1000f:0.0} kW" : $"{w:0} W";
+    }
+
+    /// <summary>A labelled progress bar.</summary>
+    public sealed class Bar : VisualElement
+    {
+        private readonly VisualElement _fill;
+        private readonly Label _label;
+
+        public Bar(Color color, float height = 16f)
+        {
+            AddToClassList("bar");
+            style.height = height;
+            _fill = UiKit.Div("bar-fill");
+            _fill.style.backgroundColor = color;
+            Add(_fill);
+            _label = UiKit.Text("", "bar-label");
+            Add(_label);
+        }
+
+        public void Set(float fraction, string text)
+        {
+            _fill.style.width = Length.Percent(Mathf.Clamp01(fraction) * 100f);
+            _label.text = text;
+        }
+
+        public void SetColor(Color c) => _fill.style.backgroundColor = c;
+    }
+
+    /// <summary>One inventory slot: procedural icon, quantity, durability, hotbar key.</summary>
+    public sealed class ItemSlot : VisualElement
+    {
+        private readonly Label _icon, _qty, _key;
+        private readonly VisualElement _dur;
+        public int Index;
+        public Action<ItemSlot, PointerDownEvent> Clicked;
+
+        public ItemSlot(int index, string key = null)
+        {
+            Index = index;
+            AddToClassList("slot");
+            _icon = UiKit.Text("", "slot-icon");
+            _icon.pickingMode = PickingMode.Ignore;
+            Add(_icon);
+            _qty = UiKit.Text("", "slot-qty");
+            _qty.pickingMode = PickingMode.Ignore;
+            Add(_qty);
+            _dur = UiKit.Div("slot-dur");
+            _dur.pickingMode = PickingMode.Ignore;
+            Add(_dur);
+            _key = UiKit.Text(key ?? "", "slot-key");
+            _key.pickingMode = PickingMode.Ignore;
+            Add(_key);
+            RegisterCallback<PointerDownEvent>(e => Clicked?.Invoke(this, e));
+        }
+
+        public void Set(ItemStack stack, ItemCatalog catalog)
+        {
+            if (stack.IsEmpty || !catalog.TryGet(stack.ItemId, out ItemDefinition def))
+            {
+                _icon.text = "";
+                _icon.style.backgroundColor = new Color(0, 0, 0, 0);
+                _qty.text = "";
+                _dur.style.display = DisplayStyle.None;
+                tooltip = "";
+                return;
+            }
+            _icon.text = def.Icon;
+            _icon.style.backgroundColor = Conversions.ParseColor(def.Color, Color.gray);
+            _qty.text = stack.Quantity > 1 ? stack.Quantity.ToString() : "";
+            if (def.HasDurability)
+            {
+                float f = Mathf.Clamp01(stack.Durability / (float)def.MaxDurability);
+                _dur.style.display = DisplayStyle.Flex;
+                _dur.style.width = Length.Percent(f * 90f);
+                _dur.style.backgroundColor = Color.Lerp(new Color(0.9f, 0.3f, 0.2f), new Color(0.4f, 0.8f, 0.35f), f);
+            }
+            else _dur.style.display = DisplayStyle.None;
+            tooltip = $"{def.Name}\n{def.Description}";
+        }
+
+        public void SetSelected(bool on) => UiKit.SetClass(this, "slot--selected", on);
+        public void SetActive(bool on) => UiKit.SetClass(this, "slot--active", on);
+    }
+}
