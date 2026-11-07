@@ -1,17 +1,17 @@
 # Progress log
 
-_Last updated: 2026-11-07 (session 2: first runs in Unity)._
+_Last updated: 2026-11-07 (session 2: first runs in Unity, settlement tour)._
 
 ## Snapshot
 | | |
 |---|---|
 | Branch | `main` (every commit pushed to `origin`) |
 | Unity version | 6000.3.28f1 (arm64), installed through Unity Hub 3.22.6 with a Personal license |
-| Last headless tests | 2026-11-07: **120/120 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on each push. |
-| Last Unity EditMode run | 2026-11-07: **120/120 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
+| Last headless tests | 2026-11-07: **122/122 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on each push. |
+| Last Unity EditMode run | 2026-11-07: **122/122 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
 | Last Unity PlayMode run | 2026-11-07: **5/5 smoke tests passed** (plus 2 Input System integration tests) |
 | Last player build | 2026-11-07: macOS (Apple Silicon), 118 MB, no errors |
-| Last scripted tour of the build | 2026-11-07: **0 errors logged**. New game in 1.1 s, NavMesh in 1.4 s. Frames average 8.4 ms (holding the 120 Hz vsync cap); p95 9.3 ms, worst 21 ms. Save and reload OK. |
+| Last scripted tour of the build | 2026-11-07: **0 failed checks, 0 errors logged**. New game in 1.1 s, NavMesh in 1.4 s. Frames average 8.3–8.8 ms (holding the 120 Hz vsync cap); p95 9.3–16 ms between runs. It builds a powered settlement with a recruited colonist and crops, which survives save and reload. |
 | Human playtest of the acceptance loop | **not yet** |
 | Windows build | **not yet built** |
 
@@ -51,18 +51,27 @@ These were exercised in the editor (PlayMode tests) or in the macOS build (scrip
 - **Windows and HUD:** backpack and crafting window, build menu, HUD vitals and hotbar, prompts.
 - **Construction:** placement ghost for a foundation, with a valid result and its explanation.
 - **Infected:** spawned Wanderer and Runner walking to and attacking the survivor (NavMesh); sound captions.
-- **Day and night:** morning, midday, afternoon and 22:00 lighting.
-- **Saves:** save and reload, in both the PlayMode test and the build.
+- **Day and night:** morning, midday, afternoon and 22:00 lighting (the lamp lights the base at night).
+- **Construction:** planning through the real placement path (snapping, physics probe, rules), then building by hand. The tour builds a bed, crates, a workbench, a furnace, a generator, a workshop, a lamp and planter beds.
+- **Technology:** Metalworking, Electrification and Agriculture unlock from the activities that should trigger them.
+- **Industry:** smelting in the furnace; machine windows; recipe selection.
+- **Electricity:** the workshop auto-connects to the generator. It reports "No power" without fuel and with the generator switched off, then resumes. Grid summary and overlay labels match.
+- **Colonist:** recruit Mara from the farmhouse. On her own she then:
+  - leaves the house and stores workshop output;
+  - hauls planks and nails to a blueprint and builds it;
+  - plants and waters a bed from storage;
+  - harvests potatoes into the crate.
+- **Farming by hand:** planting and watering.
+- **Saves:** save and reload, in both the PlayMode test and the build. Reloading keeps structures, the recruited colonist, the planted crop, machine recipes and power links.
 
 ## Implemented, not yet exercised in Unity
 These compile and have been code-reviewed, but neither the tests nor the tour exercise them yet (next: a manual playtest):
 - **Menus:** continue, load list, settings (rebinding, volume, captions, UI scale), controls and quit screens; difficulty and seed choice.
 - **Survivor:** melee, held items, repair (E), demolish (hold X), death and the belongings beacon.
-- **World:** lake and boundary up close, structure and crop visuals, drops.
-- **Construction:** actually placing and building (delivery, hold E), snapping to planned foundations.
-- **Industry and power:** machine windows, furnace, workshop, generators, cables, batteries, power shedding.
-- **Strategic view:** selection, orders, cables, labels for structures, the colony panel with recruited colonists.
-- **Colonists and farming:** recruitment, hauling, building, farming jobs on NavMesh.
+- **World:** lake and boundary up close, drops.
+- **Construction by hand input:** aiming with the mouse and holding E (the tour calls the same commands directly); walls and roofs snapping to foundations.
+- **Power beyond one generator:** cables and poles, batteries, priority shedding, the water pump and irrigation.
+- **Colony:** the second survivor (Eli at Hartley's Workshop), eating and sleeping, fleeing infected, work-priority buttons.
 - **Extras:** procedural audio output (captions were seen), tooltips, F3 overlay.
 - **Tooling:** Windows command-line build; editor menus (Validate Content was run by the build).
 
@@ -100,8 +109,15 @@ Bugs that only showed up in the engine, all fixed:
 - **Illegible HUD bar labels; an empty grey banner; an overflowing panel heading.**
 - **A URP warning on every new game** (`Camera.layerCullSpherical`).
 
+### Found by the settlement tour (all fixed)
+- **Survivors indoors snapped onto the roof.** The NavMesh covered roofs and attics, so Mara stood on the farmhouse roof and could not be recruited. Roofs, ceilings and canopies are now not walkable.
+- **Most buildings were sealed for agents.** With the default 0.5 m agent and 1.2 m doors, only 4 of 9 such doors connected inside to outside. The agent is now 0.35 m and doors are 1.6 m: all 12 POI doors connect.
+- **Colonists walked forever toward unreachable targets.** They now give up after stalling 4 s, with "can't find a way there" in their recent problems.
+- **Colonists burned building planks as furnace fuel.** Automatic refuelling now only uses items tagged `fuel`.
+- **Raw state names in the UI** (`WaitingForInput`, "Idle: Idle"), recipe buttons overflowing the panel, and toasts covering the strategic panel.
+
 ## Known issues and risks (severity)
-- **High — no human playtest yet.** Feel, pacing and the full acceptance loop (machines, electricity, colonists, farming) still need someone at the keyboard. Follow the manual script in docs/TESTING.md.
+- **High — no human playtest yet.** The tour grants building materials and drives commands directly, so gathering pace, mouse-and-keyboard building, and the overall feel still need someone at the keyboard. Follow the manual script in docs/TESTING.md.
 - **Medium.** UI windows are still slightly see-through, and some visual tuning remains: ground colours, morning light levels.
 - **Medium.** The fog of war is only partly opaque, and trees taller than its 9 m layer show through.
 - **Medium.** The threat director treats distance as "out of sight" and does not check the camera frustum.
@@ -117,7 +133,7 @@ Bugs that only showed up in the engine, all fixed:
 
 ## Next development tasks
 1. **Playtest the acceptance scenario** (docs/TESTING.md) by hand in the editor or the macOS build. Tune movement, camera, harvest and colonist pacing, and day-length balance. Record time to first construction and to first machine output.
-2. Extend the scripted tour to machines, electricity, colonists and farming, so those paths are exercised in the build on every run.
+2. Extend the tour to walls and roofs on foundations, cables and poles, batteries and shedding, the pump and irrigation, and infected attacking a barricade.
 3. Work zones and storage designation in the strategic view; Guard profession (engage infected near the base).
 4. Conveyors (automation level 3) between storage and machines.
 5. Weather (storm or cold snap) with warnings and consequences for power and needs.

@@ -5,6 +5,8 @@ All notable changes, grouped by milestone. Dates are UTC.
 ## [Unreleased] — First runs in Unity (2026-11-07)
 
 ### Added
+- The tour builds and runs a settlement: construction, technology unlocks, smelting, a powered workshop, a power outage and recovery, a recruited colonist hauling, building and farming, and a save and reload that keeps all of it. Checks print `FAIL` lines, and `tools/run-unity-checks.sh` fails on them.
+- `BuildController.PlanAt` (planning through the interactive placement rules) and `CameraRig.Look` for tools.
 - `-afterfall-tour <dir>`: a scripted tour of a build. It visits the main screens, captures screenshots, logs rendering state and frame times, counts logged errors, then quits.
 - `tools/run-unity-checks.sh`: EditMode and PlayMode tests, a macOS build and the tour in one command.
 - In-engine screenshots in the README.
@@ -14,6 +16,11 @@ All notable changes, grouped by milestone. Dates are UTC.
 - Terrain was invisible, then unlit and glossy, in player builds (instanced terrain variants stripped; smoothness read from texture alpha).
 - Illegible HUD bar labels, an empty banner, an overflowing panel heading, see-through windows, and the wording of the crafting-station message.
 - A URP warning on every new game (`Camera.layerCullSpherical`).
+- Survivors hiding indoors snapped onto roofs (roofs, ceilings and canopies are no longer walkable).
+- Most POI buildings were unreachable for colonists and infected (NavMesh agent 0.35 m, doors 1.6 m).
+- Colonists walked forever toward unreachable targets; they now give up with a reason.
+- Colonists burned building planks as fuel; automatic refuelling uses only items tagged `fuel`.
+- Raw machine state names in the UI, overflowing recipe buttons, toasts over the strategic panel, and "Idle: Idle" in colonist cards.
 
 ### Changed
 - Unity 6000.3.28f1 serialization upgrades of project settings and URP assets; `Packages/packages-lock.json` is committed.

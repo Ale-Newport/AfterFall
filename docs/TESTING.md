@@ -30,7 +30,7 @@ Requirements: .NET SDK 10 (`brew install dotnet`). On macOS Homebrew installs yo
 | AcceptanceLoopTests | **organic early game** (bare hands → tools → workbench → planks → foundation → drink → save/load → continue) and the **industrial chain** (workbench → metalworking → furnace smelting → electrification → generator + workshop → gears → water works → fuel outage → refuel → resume) |
 | PerformanceTests | busy-settlement simulation budget (prints per-system timings) |
 
-Last result: **120 passed, 0 failed** (see docs/PROGRESS.md for the date and environment).
+Last result: **122 passed, 0 failed** (see docs/PROGRESS.md for the date and environment).
 
 ## 2. Unity compile check — no Unity license required
 `tools/unity-compile-check/compile_check.py` compiles every asmdef assembly (runtime, editor, EditMode and PlayMode tests) with the .NET SDK against **Unity's own reference assemblies** and the **source** of the pinned packages, using Unity-like scripting defines. It runs in two passes: `player` (no `UNITY_EDITOR`) and `editor`.
@@ -63,7 +63,7 @@ PlayMode smoke tests (`Assets/Tests/PlayMode/GameSmokeTests.cs`) load `Main.unit
 - `Harvesting_AddsItemsToInventory`
 - `SaveAndLoad_RestoresPlayerAndInventory`
 
-Last result (2026-11-07, 6000.3.28f1): **EditMode 120/120, PlayMode 5/5** (plus the Input System's 2 integration tests, included through `testables`).
+Last result (2026-11-07, 6000.3.28f1): **EditMode 122/122, PlayMode 5/5** (plus the Input System's 2 integration tests, included through `testables`).
 
 The first Unity run failed 7 save tests that pass on .NET. Unity's Mono formats some re-read doubles differently, which broke the save checksum. Engine-specific behaviour like this is why the in-Unity run matters even with a green .NET suite. `PersistenceTests.Checksum_DoesNotDependOnNumberFormatting` now covers it.
 
@@ -74,10 +74,17 @@ The first Unity run failed 7 save tests that pass on .NET. Unity's Mono formats 
 - harvests a branch pile and opens the backpack and build menu;
 - shows a foundation placement preview;
 - spawns a Wanderer and a Runner, then opens the strategic view;
-- jumps to 22:00;
-- saves and reloads.
+- builds a settlement next to Dawson Farm through the real placement path: bed, crate, workbench, furnace, generator, workshop, lamp, planter beds;
+- smelts iron, unlocks Electrification, runs the powered workshop, switches the generator off and on;
+- recruits Mara, who stores output, builds a second crate from hauled materials, plants, waters and harvests;
+- jumps to 22:00 at the base;
+- saves and reloads, checking structures, the colonist, the crop, the recipe and the power link.
 
-It writes a PNG for each step and `tour-report.txt` (load times, frame times, every error logged), then quits.
+It writes a PNG for each step and `tour-report.txt`, then quits. The report has load times, frame times, a line per check and every error logged. A check that does not hold starts with `FAIL`. Building materials are granted, and the report lists them. Everything else goes through the normal game commands.
+
+`tools/run-unity-checks.sh tour` prints the report and exits non-zero on any `FAIL` line or logged error. `-afterfall-tour-diag` adds:
+- lighting comparisons and a scan for large shadow casters;
+- a NavMesh path probe through every POI doorway.
 
 ```bash
 open -W -n Builds/macOS/AFTERFALL.app --args -afterfall-tour "$PWD/Logs/tour" -screen-fullscreen 0 -screen-width 1600 -screen-height 900

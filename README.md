@@ -2,12 +2,13 @@
 
 AFTERFALL is a single-player 3D open-world survival, crafting, base-building and industrial-automation game built with **Unity 6.3 LTS**. You wake up alone in a quiet, ruined valley. You scavenge, build shelter, smelt metal, bring electricity back, and automate production. The long-term goal is a settlement that grows into a connected industrial civilization.
 
-> **Status: early playable prototype (Phases 0–5 in progress).** The game runs in Unity 6000.3.28f1. In Unity, all 120 EditMode tests and the 5 PlayMode smoke tests pass. A macOS build plays a scripted tour with no errors and holds the 120 Hz vsync cap on an Apple M2 Max: new game, harvesting, crafting, a building preview, infected, the strategic view, night, then save and reload. A person has not yet played the full acceptance loop, and the Windows build is untested. See [docs/PROGRESS.md](docs/PROGRESS.md) for exactly what is verified.
+> **Status: early playable prototype (Phases 0–5 in progress).** The game runs in Unity 6000.3.28f1. In Unity, all 122 EditMode tests and the 5 PlayMode smoke tests pass. A macOS build plays a scripted tour with no failed checks or errors, holding the 120 Hz vsync cap on an Apple M2 Max. The tour plays the opening (harvesting, crafting, infected, the strategic view), then builds a settlement: smelting, a powered workshop through an outage and recovery, and a recruited colonist who hauls, builds and farms. It ends with a save and reload that keeps all of it. Nobody has played it by hand yet: the tour grants building materials and drives commands directly. The Windows build is untested. See [docs/PROGRESS.md](docs/PROGRESS.md) for exactly what is verified.
 
 | | |
 |---|---|
-| ![Start camp in the morning](docs/screenshots/start-camp-morning.jpg) | ![Placing a foundation](docs/screenshots/build-placement.jpg) |
-| ![Infected approaching](docs/screenshots/infected.jpg) | ![Strategic view](docs/screenshots/strategic-view.jpg) |
+| ![Start camp in the morning](docs/screenshots/start-camp-morning.jpg) | ![A small settlement by Dawson Farm: generator, workshop, furnace, crates and planter beds](docs/screenshots/settlement.jpg) |
+| ![Mara, a recruited colonist, at work in the settlement](docs/screenshots/colonist-at-work.jpg) | ![Strategic view during a power outage: the workshop reports no power](docs/screenshots/power-outage-strategic.jpg) |
+| ![Infected approaching](docs/screenshots/infected.jpg) | ![The settlement at night](docs/screenshots/night-at-base.jpg) |
 
 _Captured by the scripted tour of the macOS build (`-afterfall-tour`); procedural placeholder art._
 
@@ -109,7 +110,7 @@ Every binding can be changed in **Settings**.
 dotnet test tools/dotnet/AfterfallSim.Tests/AfterfallSim.Tests.csproj
 ```
 
-This runs the EditMode test suite (120 tests) headlessly: inventory conservation, reservations, crafting, construction, machines, power, AI, threats, world generation, saves and colonist jobs, farming and full gameplay-loop scenarios.
+This runs the EditMode test suite (122 tests) headlessly: inventory conservation, reservations, crafting, construction, machines, power, AI, threats, world generation, saves and colonist jobs, farming and full gameplay-loop scenarios.
 
 With Unity installed and licensed, `tools/run-unity-checks.sh` runs the same suite inside Unity, the PlayMode smoke tests, a macOS build and the scripted tour (screenshots, frame times and an error count in `Logs/unity-checks/`). See [docs/TESTING.md](docs/TESTING.md).
 

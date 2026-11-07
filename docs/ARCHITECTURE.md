@@ -87,7 +87,11 @@ Every inventory has its own `EntityId` and is registered in `WorldState` with it
 - **Art:** procedural low-poly meshes (`MeshFactory`), primitive-composed props (`PropBuilder`), and shared URP materials derived from material assets in `Resources/Materials`, so shader variants ship in builds.
 - **Input:** `GameInput` builds `InputActionAsset` maps in code (Global, Player, Tactical). Maps are enabled per mode. Overrides persist in PlayerPrefs.
 - **Cameras:** `CinemachineBrain` blends between a `CinemachineThirdPersonFollow` camera and a transform-driven strategic camera.
-- **Navigation:** a `NavMeshSurface` on the world root is baked asynchronously at runtime from physics colliders. Completed blocking structures carve with `NavMeshObstacle`. Zombies use direct movement until the bake finishes.
+- **Navigation:** a `NavMeshSurface` on the world root is baked asynchronously at runtime from physics colliders. Completed blocking structures carve with `NavMeshObstacle`. Zombies use direct movement until the bake finishes. Constraints learned in the engine:
+  - The baked agent is 0.35 m in radius and 1.8 m tall (`ProjectSettings/NavMeshAreas.asset`), matching the characters.
+  - Doorways are at least 1.6 m wide; at 1.2 m, only 4 of 9 POI doors connected.
+  - Roofs, ceilings and canopies carry `Shapes.NotWalkable`, so nobody is placed or routed on top of them.
+  - `IColonistMovement.CannotReach` lets the colony system fail a job ("can't find a way there") when an agent stalls at the end of a partial path.
 - **UI:** a single `UIDocument` with layers (HUD, overlay, windows, menus, toasts), built in C# and styled by `Resources/UI/Afterfall.uss`.
 
 ## Performance
