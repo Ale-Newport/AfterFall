@@ -162,7 +162,7 @@ namespace Afterfall.Presentation
             if (!Running) return;
             HandleGlobalInput();
             UpdateInputMaps();
-            Session.Paused = Ui.CurrentWindow is PauseWindow || Ui.CurrentWindow is SettingsWindow || Ui.CurrentWindow is HelpWindow || Ui.CurrentWindow is LoadWindow || Ui.MenuOpen;
+            Session.Paused = IsPausingWindow(Ui.CurrentWindow) || Ui.MenuOpen;
             if (!Session.Paused)
             {
                 Session.Update(Time.deltaTime);
@@ -193,8 +193,9 @@ namespace Afterfall.Presentation
                 else if (!IsDead) Ui.OpenPause();
             }
             if (IsDead) return;
-            if (i.Inventory.WasPressedThisFrame() && !(Ui.CurrentWindow is PauseWindow)) Ui.ToggleInventory();
-            if (i.Build.WasPressedThisFrame() && !(Ui.CurrentWindow is PauseWindow))
+            bool menuWindow = IsPausingWindow(Ui.CurrentWindow);
+            if (i.Inventory.WasPressedThisFrame() && !menuWindow) Ui.ToggleInventory();
+            if (i.Build.WasPressedThisFrame() && !menuWindow)
             {
                 Build.Cancel();
                 Ui.ToggleBuildMenu();
@@ -207,7 +208,7 @@ namespace Afterfall.Presentation
                 Settings.ShowFps = !Settings.ShowFps;
                 Settings.Save();
             }
-            if (i.Help.WasPressedThisFrame()) Ui.OpenHelp();
+            if (i.Help.WasPressedThisFrame() && !menuWindow) Ui.OpenHelp();
 
             if (!GameplayInputActive) return;
             for (int h = 0; h < i.Hotbar.Length; h++)
@@ -230,6 +231,8 @@ namespace Afterfall.Presentation
             Cursor.lockState = free ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = free;
         }
+
+        private static bool IsPausingWindow(IWindow w) => w is PauseWindow || w is SettingsWindow || w is HelpWindow || w is LoadWindow;
 
         public void SetTactical(bool on)
         {

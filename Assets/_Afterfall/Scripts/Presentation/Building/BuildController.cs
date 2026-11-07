@@ -41,6 +41,7 @@ namespace Afterfall.Presentation
             Cancel();
             _def = def;
             _ghost = new GameObject("Ghost_" + def.Id);
+            _ghost.transform.SetParent(transform, false);
             StructureVisuals.Build(_ghost.transform, def, _validMat, false);
             foreach (Collider c in _ghost.GetComponentsInChildren<Collider>()) Destroy(c);
             Shapes.SetLayerRecursive(_ghost, Layers.Ghost);
@@ -78,7 +79,16 @@ namespace Afterfall.Presentation
         private void UpdatePlacement(bool tactical)
         {
             Ray ray = _gc.CameraRig.AimRay(tactical);
-            HasPosition = Physics.Raycast(ray, out RaycastHit hit, tactical ? 600f : 40f, Layers.PlacementSurfaceMask, QueryTriggerInteraction.Ignore);
+            float range = tactical ? 600f : 40f;
+            HasPosition = Physics.Raycast(ray, out RaycastHit hit, range, Layers.PlacementSurfaceMask, QueryTriggerInteraction.Ignore);
+            // Planned (blueprint) foundations only have trigger hitboxes: detect them so pieces can be placed on top.
+            if (Physics.Raycast(ray, out RaycastHit trig, range, Layers.Mask(Layers.Interactable), QueryTriggerInteraction.Collide)
+                && trig.collider.GetComponentInParent<StructureView>() is StructureView planned && planned.Def.ProvidesSupport
+                && (!HasPosition || trig.distance < hit.distance))
+            {
+                hit = trig;
+                HasPosition = true;
+            }
             if (!HasPosition)
             {
                 _ghost.SetActive(false);

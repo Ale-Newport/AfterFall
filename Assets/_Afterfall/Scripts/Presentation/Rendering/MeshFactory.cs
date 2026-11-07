@@ -50,11 +50,12 @@ namespace Afterfall.Presentation
             var b = new FlatBuilder();
             Vector3 a0 = new Vector3(-0.5f, 0, -0.5f), a1 = new Vector3(-0.5f, 0, 0.5f), a2 = new Vector3(-0.5f, 1, 0);
             Vector3 b0 = new Vector3(0.5f, 0, -0.5f), b1 = new Vector3(0.5f, 0, 0.5f), b2 = new Vector3(0.5f, 1, 0);
-            b.Tri(a0, a2, a1);
-            b.Tri(b0, b1, b2);
-            b.Quad(a0, b0, b2, a2);
-            b.Quad(b1, a1, a2, b2);
-            b.Quad(a0, a1, b1, b0);
+            // Clockwise (Unity front-face) winding: every normal points outward.
+            b.Tri(a0, a1, a2);
+            b.Tri(b0, b2, b1);
+            b.Quad(a2, b2, b0, a0);
+            b.Quad(b2, a2, a1, b1);
+            b.Quad(b0, b1, a1, a0);
             return b.Build("gable");
         });
 

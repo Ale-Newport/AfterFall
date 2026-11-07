@@ -54,7 +54,7 @@ namespace Afterfall.EditorTools
 
     public static class AfterfallMenu
     {
-        [MenuItem("AFTERFALL/Play Main Scene %#p", priority = 0)]
+        [MenuItem("AFTERFALL/Play Main Scene", priority = 0)]
         public static void PlayMain()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;

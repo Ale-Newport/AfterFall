@@ -81,6 +81,9 @@ namespace Afterfall.Presentation.UI
         public int Index;
         public Action<ItemSlot, PointerDownEvent> Clicked;
 
+        /// <summary>Name and description shown in the runtime hover tooltip (VisualElement.tooltip is editor-only).</summary>
+        public string HoverText { get; private set; } = "";
+
         public ItemSlot(int index, string key = null)
         {
             Index = index;
@@ -98,6 +101,10 @@ namespace Afterfall.Presentation.UI
             _key.pickingMode = PickingMode.Ignore;
             Add(_key);
             RegisterCallback<PointerDownEvent>(e => Clicked?.Invoke(this, e));
+            RegisterCallback<PointerEnterEvent>(e => UiManager.Current?.ShowTooltip(HoverText, e.position));
+            RegisterCallback<PointerMoveEvent>(e => UiManager.Current?.ShowTooltip(HoverText, e.position));
+            RegisterCallback<PointerLeaveEvent>(e => UiManager.Current?.HideTooltip());
+            RegisterCallback<DetachFromPanelEvent>(e => UiManager.Current?.HideTooltip());
         }
 
         public void Set(ItemStack stack, ItemCatalog catalog)
@@ -108,7 +115,7 @@ namespace Afterfall.Presentation.UI
                 _icon.style.backgroundColor = new Color(0, 0, 0, 0);
                 _qty.text = "";
                 _dur.style.display = DisplayStyle.None;
-                tooltip = "";
+                HoverText = "";
                 return;
             }
             _icon.text = def.Icon;
@@ -122,7 +129,7 @@ namespace Afterfall.Presentation.UI
                 _dur.style.backgroundColor = Color.Lerp(new Color(0.9f, 0.3f, 0.2f), new Color(0.4f, 0.8f, 0.35f), f);
             }
             else _dur.style.display = DisplayStyle.None;
-            tooltip = $"{def.Name}\n{def.Description}";
+            HoverText = $"{def.Name}{(stack.Quantity > 1 ? $" ×{stack.Quantity}" : "")}\n{def.Description}\n{def.Weight * stack.Quantity:0.##} kg" + (def.HasDurability ? $" · durability {stack.Durability}/{def.MaxDurability}" : "");
         }
 
         public void SetSelected(bool on) => UiKit.SetClass(this, "slot--selected", on);

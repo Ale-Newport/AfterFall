@@ -31,6 +31,10 @@ namespace Afterfall.Presentation.UI
         private TacticalPanel _tactical;
         private VisualElement _death, _loading, _mainMenu;
         private Label _loadingText;
+        private Label _tooltip;
+
+        /// <summary>The active UI manager (used by reusable elements such as item slots for tooltips).</summary>
+        public static UiManager Current { get; private set; }
         private float _refreshTimer;
 
         public GameBootstrap App { get; private set; }
@@ -71,13 +75,20 @@ namespace Afterfall.Presentation.UI
             _root.AddToClassList("root");
             _hudLayer = Layer("hud", PickingMode.Ignore);
             _overlayLayer = Layer("overlay", PickingMode.Ignore);
-            _windowLayer = Layer("windows", PickingMode.Ignore);
+            // Menus (main menu, loading, death) sit below windows so Settings/Help opened from
+            // the main menu are visible and clickable; toasts stay on top of everything.
             _menuLayer = Layer("menus", PickingMode.Ignore);
+            _windowLayer = Layer("windows", PickingMode.Ignore);
             _toastLayer = Layer("toasts", PickingMode.Ignore);
             var toasts = UiKit.Div("toasts");
             toasts.pickingMode = PickingMode.Ignore;
             _toastLayer.Add(toasts);
             _toastLayer.userData = toasts;
+            _tooltip = UiKit.Text("", "tooltip");
+            _tooltip.pickingMode = PickingMode.Ignore;
+            UiKit.Show(_tooltip, false);
+            _toastLayer.Add(_tooltip);
+            Current = this;
 
             _loading = UiKit.Div("layer", "loading");
             _loadingText = _loading.Put(UiKit.Text("Loading…", "title"));
@@ -93,6 +104,29 @@ namespace Afterfall.Presentation.UI
             e.pickingMode = picking;
             _root.Add(e);
             return e;
+        }
+
+        public void ShowTooltip(string text, Vector2 panelPosition)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                HideTooltip();
+                return;
+            }
+            _tooltip.text = text;
+            _tooltip.style.left = panelPosition.x + 18f;
+            _tooltip.style.top = panelPosition.y + 18f;
+            UiKit.Show(_tooltip, true);
+        }
+
+        public void HideTooltip()
+        {
+            if (_tooltip != null) UiKit.Show(_tooltip, false);
+        }
+
+        private void OnDestroy()
+        {
+            if (Current == this) Current = null;
         }
 
         public void ApplyScale(float scale)
@@ -150,6 +184,7 @@ namespace Afterfall.Presentation.UI
 
         public void HideMainMenu()
         {
+            CloseWindow();
             _mainMenu?.RemoveFromHierarchy();
             _mainMenu = null;
         }
@@ -200,6 +235,7 @@ namespace Afterfall.Presentation.UI
 
         public void CloseWindow()
         {
+            HideTooltip();
             if (_window == null) return;
             _window.OnClose();
             _window.Root.RemoveFromHierarchy();

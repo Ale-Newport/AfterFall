@@ -89,6 +89,12 @@ namespace Afterfall.Presentation
             if (_gc?.Session == null) return;
             if (!_gc.Session.World.Zombies.TryGetValue(Id, out ZombieState z)) return;
             if (z.IsDead) SetDead();
+            if (_gc.Session.Paused)
+            {
+                // The simulation is frozen: agents must not keep walking to their last destination.
+                if (OnNavMesh) Agent.isStopped = true;
+                return;
+            }
 
             // Late navmesh: enable the agent once the navmesh has been baked.
             if (!_dead && Agent != null && !Agent.enabled && _gc.NavReady && NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 4f, NavMesh.AllAreas))

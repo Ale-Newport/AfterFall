@@ -87,6 +87,11 @@ namespace Afterfall.Presentation
                 Agent.enabled = true;
                 Agent.Warp(hit.position);
             }
+            if (_gc.Session.Paused)
+            {
+                if (OnNavMesh) Agent.isStopped = true;
+                return;
+            }
             float dt = Mathf.Max(Time.deltaTime, 1e-4f);
             if (OnNavMesh)
             {
@@ -159,7 +164,7 @@ namespace Afterfall.Presentation
                 v.Agent.isStopped = true;
                 return true;
             }
-            v.Agent.isStopped = false;
+            v.Agent.isStopped = false; // also clears a pause stop
             v.Agent.speed = speed;
             if (float.IsNaN(v.LastDestination.x) || (target - v.LastDestination).sqrMagnitude > 0.25f)
             {

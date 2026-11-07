@@ -122,6 +122,8 @@ namespace Afterfall.Presentation
             Ui.DetachGame();
             Destroy(_game.gameObject);
             _game = null;
+            // Terrain data, generated textures, meshes and NavMesh data of the old session.
+            Resources.UnloadUnusedAssets();
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }

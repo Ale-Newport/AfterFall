@@ -47,8 +47,6 @@ namespace Afterfall.Presentation.UI
             _threat = _left.Put(UiKit.Text("", "wrap"));
             _left.Add(UiKit.Text("Known locations", "subtitle"));
             _places = _left.Put(UiKit.Text("", "muted"));
-            _colony = new ColonyPanel(gc);
-            _right.Add(_colony.Root);
 
             _right = Root.Put(UiKit.Div("panel", "tactical-right"));
             _selection = _right;
@@ -58,6 +56,8 @@ namespace Afterfall.Presentation.UI
             _selActions = _right.Put(UiKit.Div("row"));
             _selActions.style.flexWrap = Wrap.Wrap;
             _recipeList = _right.Put(UiKit.Div("col"));
+            _colony = new ColonyPanel(gc);
+            _right.Add(_colony.Root);
         }
 
         public void Refresh()

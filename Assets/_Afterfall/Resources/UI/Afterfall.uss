@@ -139,3 +139,9 @@
 .death { background-color: rgba(30, 0, 0, 0.7); align-items: center; justify-content: center; }
 .death-title { font-size: 64px; -unity-font-style: bold; color: rgb(220, 70, 60); }
 .loading { background-color: rgb(12, 13, 12); align-items: center; justify-content: center; }
+
+.tooltip {
+    position: absolute; max-width: 360px; white-space: normal; font-size: 14px;
+    background-color: rgba(10, 11, 10, 0.95); border-color: rgb(170, 155, 110); border-width: 1px;
+    border-radius: 4px; padding: 6px 8px; color: rgb(236, 230, 214);
+}
