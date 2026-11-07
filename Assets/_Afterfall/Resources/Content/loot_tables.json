@@ -25,6 +25,12 @@
         "min": 2,
         "max": 2,
         "chance": 1.0
+      },
+      {
+        "itemId": "seed_potato",
+        "min": 2,
+        "max": 2,
+        "chance": 1.0
       }
     ]
   },
@@ -60,6 +66,12 @@
         "min": 1,
         "max": 2,
         "chance": 0.2
+      },
+      {
+        "itemId": "seed_potato",
+        "min": 1,
+        "max": 3,
+        "chance": 0.25
       }
     ]
   },
@@ -414,6 +426,12 @@
         "min": 3,
         "max": 6,
         "chance": 0.5
+      },
+      {
+        "itemId": "seed_potato",
+        "min": 3,
+        "max": 6,
+        "chance": 1.0
       }
     ]
   }

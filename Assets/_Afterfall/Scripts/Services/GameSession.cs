@@ -49,6 +49,12 @@ namespace Afterfall.Services
             Threats = new ThreatDirector(World, Content, Events, Zombies);
             Colony = new ColonySystem(World, Content, Events, Construction);
             Zombies.ColonistHit += (id, dmg) => Colony.DamageColonist(id, dmg, "the infected");
+            Farming = new Afterfall.Domain.Farming.FarmingSystem(World, Content, Events, Tech);
+            Farming.PumpHasPower = s =>
+            {
+                PowerNetworkInfo net = Power.NetworkOf(s.Id);
+                return net != null && (net.RunningGenerators > 0 || net.StoredJoules > 0);
+            };
             if (Colony.Movement is DirectColonistMovement walk) walk.GroundHeight = p => World.Layout.HeightAt(p.X, p.Z);
             _playerSystem = new PlayerSystem(this);
 
@@ -61,6 +67,7 @@ namespace Afterfall.Services
             Scheduler.Register(Power, 4);
             Scheduler.Register(Machines, 4);
             Scheduler.Register(Colony, 4);
+            Scheduler.Register(Farming, 1);
             Scheduler.Register(Zombies, 10);
             Scheduler.Register(Threats, 0.5);
             Scheduler.Register(new ResourceRespawnSystem(World, Content), 0.2);
@@ -78,6 +85,7 @@ namespace Afterfall.Services
         public ZombieSystem Zombies { get; }
         public ThreatDirector Threats { get; }
         public ColonySystem Colony { get; }
+        public Afterfall.Domain.Farming.FarmingSystem Farming { get; }
 
         public PlayerState Player => World.Player;
         public double Now => World.Clock.ElapsedSeconds;
@@ -523,6 +531,19 @@ namespace Afterfall.Services
         }
 
         public OpResult DisconnectPower(EntityId a, EntityId b) => PowerLinker.Unlink(World, a, b);
+
+        // ================================================================== farming
+
+        private OpResult WithPlot(EntityId id, System.Func<Structure, OpResult> action)
+        {
+            if (!World.Structures.TryGetValue(id, out Structure s)) return OpResult.Fail("missing", "Nothing there.");
+            if (Vec3.Distance(s.Position, Player.Position) > InteractRange + FootprintRadius(s)) return OpResult.Fail("too_far", "Move closer.");
+            return action(s);
+        }
+
+        public OpResult PlantCrop(EntityId plot) => WithPlot(plot, s => Farming.Plant(s, Player.Inventory));
+        public OpResult WaterCrop(EntityId plot) => WithPlot(plot, s => Farming.Water(s, Player.Inventory));
+        public OpResult HarvestCrop(EntityId plot) => WithPlot(plot, s => Farming.Harvest(s, Player.Inventory));
 
         // ================================================================== colony
 

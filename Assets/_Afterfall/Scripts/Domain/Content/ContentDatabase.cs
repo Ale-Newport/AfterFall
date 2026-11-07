@@ -130,6 +130,8 @@ namespace Afterfall.Domain.Content
                 if (b.MaxHealth <= 0) errors.Add($"Building {b.Id}: MaxHealth must be positive.");
                 CheckAmounts(db, errors, $"Building {b.Id} cost", b.Cost);
                 CheckTech(db, errors, $"Building {b.Id}", b.RequiredTech);
+                if (b.Farm != null && (!db.Items.Contains(b.Farm.SeedItem) || !db.Items.Contains(b.Farm.CropItem)))
+                    errors.Add($"Building {b.Id}: farm references unknown seed or crop item.");
                 if (b.Machine != null && db.RecipesForStation(b.Machine.Station).Count == 0)
                     errors.Add($"Building {b.Id}: machine station '{b.Machine.Station}' has no recipes.");
             }

@@ -185,6 +185,35 @@
     "requiredTech": "survival"
   },
   {
+    "id": "planter_bed",
+    "name": "Planter Bed",
+    "description": "Grows potatoes from seed. Needs water \u2014 water it by hand, or place it within 10 m of a running electric water pump for automatic irrigation.",
+    "category": "Farming",
+    "cost": [
+      "planks:4",
+      "fiber:6"
+    ],
+    "buildSeconds": 3,
+    "maxHealth": 120,
+    "sizeX": 2,
+    "sizeY": 0.4,
+    "sizeZ": 1.2,
+    "visual": "planter",
+    "color": "#6E5135",
+    "farm": {
+      "seedItem": "seed_potato",
+      "cropItem": "potato",
+      "yieldMin": 3,
+      "yieldMax": 5,
+      "seedReturnMin": 1,
+      "seedReturnMax": 2,
+      "growSeconds": 900,
+      "waterPerSecond": 0.08
+    },
+    "blocksMovement": false,
+    "requiredTech": "agriculture"
+  },
+  {
     "id": "furnace",
     "name": "Stone Furnace",
     "description": "Smelts ore and scrap into iron and burns wood into charcoal. Burns fuel while working.",

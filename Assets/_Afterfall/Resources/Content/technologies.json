@@ -11,6 +11,23 @@
     ]
   },
   {
+    "id": "agriculture",
+    "name": "Agriculture",
+    "era": 2,
+    "description": "Planter beds for growing food.",
+    "prerequisites": [
+      "survival"
+    ],
+    "conditions": [
+      {
+        "trigger": "AcquireItem",
+        "target": "seed_potato",
+        "count": 1,
+        "description": "Find seed potatoes (farms, kitchens)"
+      }
+    ]
+  },
+  {
     "id": "metalworking",
     "name": "Metalworking",
     "era": 3,

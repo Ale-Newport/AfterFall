@@ -441,5 +441,32 @@
     "weight": 4.0,
     "icon": "EM",
     "color": "#1F618D"
+  },
+  {
+    "id": "seed_potato",
+    "name": "Seed Potatoes",
+    "description": "Sprouting tubers. Plant them in a planter bed.",
+    "category": "Natural",
+    "maxStack": 20,
+    "weight": 0.1,
+    "icon": "SP",
+    "color": "#9C7B4A",
+    "tags": [
+      "seed"
+    ]
+  },
+  {
+    "id": "potato",
+    "name": "Potato",
+    "description": "Filling and easy to grow. Edible raw in a pinch.",
+    "category": "FoodMedicine",
+    "maxStack": 20,
+    "weight": 0.2,
+    "icon": "PO",
+    "color": "#B8945A",
+    "consumable": {
+      "hunger": 16,
+      "thirst": 2
+    }
   }
 ]

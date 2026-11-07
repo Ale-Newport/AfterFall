@@ -134,6 +134,7 @@ namespace Afterfall.Persistence
                 };
             }
             if (s.Battery != null) dto.BatteryStoredJoules = s.Battery.StoredJoules;
+            if (s.Crop != null) dto.Crop = new Afterfall.Domain.Farming.CropState { SeedId = s.Crop.SeedId, Growth = s.Crop.Growth, Water = s.Crop.Water, Irrigated = s.Crop.Irrigated };
             if (s.Power != null) dto.Power = new PowerDto { Powered = s.Power.Powered, Reason = s.Power.Reason, DemandWatts = s.Power.DemandWatts };
             return dto;
         }
@@ -251,6 +252,13 @@ namespace Afterfall.Persistence
                         s.Generator.Status = sd.Generator.Status ?? "";
                     }
                     if (s.Battery != null && sd.BatteryStoredJoules.HasValue) s.Battery.StoredJoules = sd.BatteryStoredJoules.Value;
+                    if (s.Crop != null && sd.Crop != null)
+                    {
+                        s.Crop.SeedId = content.Items.Contains(sd.Crop.SeedId) ? sd.Crop.SeedId : "";
+                        s.Crop.Growth = sd.Crop.Growth;
+                        s.Crop.Water = sd.Crop.Water;
+                        s.Crop.Irrigated = sd.Crop.Irrigated;
+                    }
                     if (s.Power != null && sd.Power != null)
                     {
                         s.Power.Powered = sd.Power.Powered;

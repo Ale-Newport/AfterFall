@@ -128,6 +128,7 @@ namespace Afterfall.Domain.Construction
                 s.Generator = new GeneratorState { Fuel = new Inventory(idForRole("generator_fuel"), catalog, def.Generator.FuelSlots, 0f, InventoryFilter.Energy(), $"{def.Name} fuel") };
 
             if (def.Battery != null && s.Battery == null) s.Battery = new BatteryState();
+            if (def.Farm != null && s.Crop == null) s.Crop = new Farming.CropState();
             if (def.IsPowerComponent && s.Power == null) s.Power = new PowerState();
         }
     }

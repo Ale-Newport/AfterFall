@@ -93,6 +93,7 @@ namespace Afterfall.Persistence
         public MachineDto Machine { get; set; }
         public GeneratorDto Generator { get; set; }
         public double? BatteryStoredJoules { get; set; }
+        public Afterfall.Domain.Farming.CropState Crop { get; set; }
         public PowerDto Power { get; set; }
     }
 

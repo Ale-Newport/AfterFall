@@ -13,6 +13,7 @@ namespace Afterfall.Domain.Construction
         Defense,
         Furniture,
         Lighting,
+        Farming,
 
         /// <summary>World-generated props (loot containers, wrecks). Not player-buildable.</summary>
         WorldProp
@@ -91,6 +92,26 @@ namespace Afterfall.Domain.Construction
         public int PowerPriority { get; set; } = 4;
     }
 
+    /// <summary>A crop plot: plant a seed item, keep it watered, harvest the crop item.</summary>
+    public sealed class FarmSpec
+    {
+        public string SeedItem { get; set; } = "";
+        public string CropItem { get; set; } = "";
+        public int YieldMin { get; set; } = 2;
+        public int YieldMax { get; set; } = 4;
+        public int SeedReturnMin { get; set; }
+        public int SeedReturnMax { get; set; } = 1;
+
+        /// <summary>Seconds of watered growth from planting to harvest.</summary>
+        public float GrowSeconds { get; set; } = 900f;
+
+        /// <summary>Soil water (0–100) used per second while growing.</summary>
+        public float WaterPerSecond { get; set; } = 0.08f;
+
+        /// <summary>A running electric water pump within this range keeps the plot watered.</summary>
+        public float IrrigationRange { get; set; } = 10f;
+    }
+
     /// <summary>
     /// Static description of a constructible (or world-generated) structure: cost, build
     /// effort, footprint, placement rules and the functional components it provides.
@@ -132,6 +153,7 @@ namespace Afterfall.Domain.Construction
         public BatterySpec Battery { get; set; }
         public PowerNodeSpec PowerNode { get; set; }
         public LightSpec Light { get; set; }
+        public FarmSpec Farm { get; set; }
 
         public bool IsDoor { get; set; }
 
