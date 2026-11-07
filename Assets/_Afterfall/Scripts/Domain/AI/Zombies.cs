@@ -58,6 +58,14 @@ namespace Afterfall.Domain.AI
         /// <summary>Seconds since death (corpse cleanup).</summary>
         public float DeadTime { get; set; }
 
+        /// <summary>Player structure this zombie is currently battering (transient).</summary>
+        public EntityId BreachTarget { get; set; }
+
+        /// <summary>Seconds without meaningful progress toward its goal (transient).</summary>
+        public float StallTime { get; set; }
+
+        public float LastGoalDistance { get; set; } = -1f;
+
         public bool IsDead => Mode == ZombieMode.Dead;
     }
 

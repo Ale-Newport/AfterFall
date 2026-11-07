@@ -144,6 +144,12 @@ namespace Afterfall.Presentation.UI
                 }, "btn--small"));
             }
             _selActions.Add(UiKit.Btn("Focus camera", () => _gc.CameraRig.Tactical.Focus(s.Position.ToUnity(), 0f), "btn--small"));
+            if (s.PlayerBuilt)
+            {
+                // Physical actions: the session enforces that the survivor is standing next to it.
+                _selActions.Add(UiKit.Btn("Repair", () => Toast(_gc.Session.Repair(id)), "btn--small"));
+                _selActions.Add(UiKit.Btn(s.IsComplete ? "Demolish" : "Cancel blueprint", () => { Toast(_gc.Session.Demolish(id)); _gc.Tactical.Select(EntityId.None); }, "btn--small", "btn--danger"));
+            }
             if (s.Machine != null && def.Machine != null)
             {
                 _recipeList.Add(UiKit.Text("Production order", "subtitle"));

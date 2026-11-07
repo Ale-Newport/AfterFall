@@ -168,3 +168,49 @@ namespace Afterfall.Tests
         }
     }
 }
+
+namespace Afterfall.Tests
+{
+    public class BreachTests
+    {
+        [Test]
+        public void Zombie_BattersBarricadeInItsPath_ThenReachesPlayer()
+        {
+            GameSession s = TestSupport.NewSession(5150);
+            s.Threats.SpawningEnabled = false;
+            foreach (EntityId id in s.World.Zombies.Keys.ToList()) s.World.Zombies.Remove(id);
+            s.World.Clock.Advance(s.World.Clock.DayLengthSeconds * 0.2); // midday
+            Vec3 p = s.Player.Position;
+            Structure barricade = TestSupport.Build(s.World, "barricade", new Vec3(p.X + 4f, p.Y, p.Z));
+            barricade.Yaw = 90f; // spans the zombie's straight path
+            ZombieState z = s.Zombies.Spawn(new Vec3(p.X + 8f, p.Y, p.Z), "wanderer", new DeterministicRandom(3));
+            z.Yaw = -90f;
+            var warnings = new System.Collections.Generic.List<string>();
+            s.Events.Subscribe<Notification>(n => warnings.Add(n.Message));
+            int hits = 0;
+            s.Events.Subscribe<PlayerDamaged>(e => hits++);
+
+            TestSupport.Run(s, 6, 0.1);
+            Assert.Greater(z.Position.X, p.X + 4.3f, "the barricade stops the zombie");
+            Assert.AreEqual(0, hits);
+            Assert.IsTrue(z.BreachTarget.IsValid, "a stalled zombie starts battering the barrier");
+            Assert.Less(barricade.Health, 500f);
+            Assert.IsTrue(warnings.Any(w => w.Contains("breaking through")), "the player is warned");
+
+            TestSupport.Run(s, 60, 0.1);
+            Assert.IsFalse(s.World.Structures.ContainsKey(barricade.Id), "the barricade eventually breaks");
+            Assert.Greater(hits, 0, "then the zombie reaches the player");
+        }
+
+        [Test]
+        public void Zombie_DoesNotBatterCratesOrMachines()
+        {
+            GameSession s = TestSupport.NewSession(5151);
+            Structure crate = TestSupport.Build(s.World, "storage_crate", s.Player.Position);
+            Assert.IsNull(s.Zombies.NearestBlocker(s.Player.Position, 3f));
+            Structure wall = TestSupport.Build(s.World, "barricade", new Vec3(s.Player.Position.X + 1f, s.Player.Position.Y, s.Player.Position.Z));
+            Assert.AreEqual(wall.Id, s.Zombies.NearestBlocker(s.Player.Position, 3f).Id);
+            Assert.IsNotNull(crate);
+        }
+    }
+}

@@ -187,16 +187,19 @@ namespace Afterfall.Presentation
                 }
                 return $"[Hold E] Deliver & build {Def.Name} — needs {string.Join(", ", parts)}";
             }
+            string own = s.PlayerBuilt ? "  · [Hold X] Demolish" : "";
+            if (s.PlayerBuilt && s.Health < Def.MaxHealth - 0.5f && IsPassive())
+                return $"[E] Repair {Def.Name} ({s.Health:0}/{Def.MaxHealth:0}) — {RepairCostText(gc, s)}{own}";
             if (!s.PlayerBuilt && s.Storage != null) return $"[E] Search {Def.Name}{(s.Searched ? (s.Storage.IsEmpty ? " (empty)" : " (searched)") : "")}";
-            if (s.Storage != null) return $"[E] Open {Def.Name}";
-            if (s.Machine != null) return $"[E] Operate {Def.Name} — {s.Machine.Status}: {s.Machine.StatusDetail}";
-            if (s.Generator != null) return $"[E] Generator — {s.Generator.Status}";
-            if (!string.IsNullOrEmpty(Def.CraftingStation)) return $"[E] Use {Def.Name}";
-            if (Def.IsBed) return gc.Session.Player.SpawnStructureId == s.Id ? $"{Def.Name} (your respawn point)" : $"[E] Rest — set respawn point";
-            if (Def.Light != null) return $"[E] Switch {(s.Enabled ? "off" : "on")} {Def.Name} — {s.Power?.Reason}";
-            if (s.Battery != null) return $"{Def.Name} — {s.Battery.StoredJoules / 1000:0}/{Def.Battery.CapacityKJ:0} kJ";
-            if (Def.PowerNode != null) return $"{Def.Name} — network {s.Power?.NetworkId}";
-            return Def.Name;
+            if (s.Storage != null) return $"[E] Open {Def.Name}{own}";
+            if (s.Machine != null) return $"[E] Operate {Def.Name} — {s.Machine.Status}: {s.Machine.StatusDetail}{own}";
+            if (s.Generator != null) return $"[E] Generator — {s.Generator.Status}{own}";
+            if (!string.IsNullOrEmpty(Def.CraftingStation)) return $"[E] Use {Def.Name}{own}";
+            if (Def.IsBed) return (gc.Session.Player.SpawnStructureId == s.Id ? $"{Def.Name} (your respawn point)" : $"[E] Rest — set respawn point") + own;
+            if (Def.Light != null) return $"[E] Switch {(s.Enabled ? "off" : "on")} {Def.Name} — {s.Power?.Reason}{own}";
+            if (s.Battery != null) return $"[E] {Def.Name} — {s.Battery.StoredJoules / 1000:0}/{Def.Battery.CapacityKJ:0} kJ{own}";
+            if (Def.PowerNode != null) return $"{Def.Name} — grid {s.Power?.NetworkId}{own}";
+            return $"{Def.Name} ({s.Health:0}/{Def.MaxHealth:0}){own}";
         }
 
         public void Interact(GameController gc)
@@ -205,6 +208,12 @@ namespace Afterfall.Presentation
             if (!s.IsComplete)
             {
                 InteractHeld(gc, 0.25f);
+                return;
+            }
+            if (s.PlayerBuilt && s.Health < Def.MaxHealth - 0.5f && IsPassive())
+            {
+                OpResult rep = gc.Session.Repair(s.Id);
+                gc.Toast(rep.Message, rep.Ok ? Severity.Success : Severity.Warning);
                 return;
             }
             if (s.Storage != null) gc.Ui.OpenContainer(s.Storage.Id, Def.Name);
@@ -220,6 +229,17 @@ namespace Afterfall.Presentation
                 OpResult r = gc.Session.ToggleEnabled(s.Id);
                 gc.Toast(r.Message);
             }
+        }
+
+        /// <summary>Pieces with no other use (walls, barricades, foundations) are repaired with E.</summary>
+        private bool IsPassive() => Def.Storage == null && Def.Machine == null && Def.Generator == null && Def.Battery == null && Def.Light == null && !Def.IsBed && string.IsNullOrEmpty(Def.CraftingStation);
+
+        private static string RepairCostText(GameController gc, Structure s)
+        {
+            List<ItemAmount> cost = gc.Session.Construction.RepairCost(s);
+            var parts = new List<string>();
+            foreach (ItemAmount a in cost) parts.Add($"{a.Quantity} {gc.Session.Content.Items.NameOf(a.ItemId)}");
+            return (parts.Count == 0 ? "free" : string.Join(", ", parts)) + (gc.Session.HasTool(ToolType.Hammer) ? "" : " + hammer");
         }
 
         public void InteractHeld(GameController gc, float dt)

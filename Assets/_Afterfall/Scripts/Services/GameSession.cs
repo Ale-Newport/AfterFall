@@ -49,6 +49,8 @@ namespace Afterfall.Services
             _playerSystem = new PlayerSystem(this);
 
             Zombies.PlayerHit += (z, dmg) => DamagePlayer(dmg, "the infected");
+            Zombies.Construction = Construction;
+            if (Zombies.Adapter is DirectZombieAdapter direct) direct.IsBlocked = p => Zombies.IsInsideBlocker(p, 0.35f);
 
             // Order matters within a tick: power is balanced before machines consume it.
             Scheduler.Register(_playerSystem, 10);
