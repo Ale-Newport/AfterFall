@@ -92,6 +92,9 @@ Every inventory has its own `EntityId` and is registered in `WorldState` with it
   - Doorways are at least 1.6 m wide; at 1.2 m, only 4 of 9 POI doors connected.
   - Roofs, ceilings and canopies carry `Shapes.NotWalkable`, so nobody is placed or routed on top of them.
   - `IColonistMovement.CannotReach` lets the colony system fail a job ("can't find a way there") when an agent stalls at the end of a partial path.
+  - Completed structures carve one `NavMeshObstacle` per solid part that blocks a walking person. Parts below step height (0.6 m) and above head height (1.9 m) are skipped, so doorway openings stay passable and foundations stay walkable.
+  - For infected, the end of a partial path more than 1 m from the goal is not "reached". They keep pursuing, stall against the barrier and start breaching it.
+  - Idle colonists more than 18 m from their bed walk home, so new recruits come to the settlement.
 - **UI:** a single `UIDocument` with layers (HUD, overlay, windows, menus, toasts), built in C# and styled by `Resources/UI/Afterfall.uss`.
 
 ## Performance

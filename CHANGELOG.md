@@ -5,6 +5,7 @@ All notable changes, grouped by milestone. Dates are UTC.
 ## [Unreleased] — First runs in Unity (2026-11-07)
 
 ### Added
+- The tour covers every system: menus, a shelter with a barricade the infected breach, repair, demolish, melee, fleeing, eating and sleeping colonists, a second survivor's long walk, a pump outpost with irrigation, poles and cables, batteries, priority shedding, death and recovery, pause and the F3 overlay.
 - The tour builds and runs a settlement: construction, technology unlocks, smelting, a powered workshop, a power outage and recovery, a recruited colonist hauling, building and farming, and a save and reload that keeps all of it. Checks print `FAIL` lines, and `tools/run-unity-checks.sh` fails on them.
 - `BuildController.PlanAt` (planning through the interactive placement rules) and `CameraRig.Look` for tools.
 - `-afterfall-tour <dir>`: a scripted tour of a build. It visits the main screens, captures screenshots, logs rendering state and frame times, counts logged errors, then quits.
@@ -21,6 +22,13 @@ All notable changes, grouped by milestone. Dates are UTC.
 - Colonists walked forever toward unreachable targets; they now give up with a reason.
 - Colonists burned building planks as fuel; automatic refuelling uses only items tagged `fuel`.
 - Raw machine state names in the UI, overflowing recipe buttons, toasts over the strategic panel, and "Idle: Idle" in colonist cards.
+- Player-built doorways and foundations sealed the NavMesh (one carve box per footprint); each blocking part now carves on its own.
+- Walls could not meet at foundation corners, so shelters could not be closed.
+- New recruits idled at their hideout; idle colonists far from their bed walk home.
+- Infected never breached barriers in the game: the end of a partial path counted as arrival.
+- Each death was handled twice (two events, two messages, a doubled death count).
+- White text fields hid typed text; movement bindings read "Move Up/Down".
+- Tour runs autosaved into the player's save folder.
 
 ### Changed
 - Unity 6000.3.28f1 serialization upgrades of project settings and URP assets; `Packages/packages-lock.json` is committed.

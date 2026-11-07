@@ -30,7 +30,7 @@ Requirements: .NET SDK 10 (`brew install dotnet`). On macOS Homebrew installs yo
 | AcceptanceLoopTests | **organic early game** (bare hands → tools → workbench → planks → foundation → drink → save/load → continue) and the **industrial chain** (workbench → metalworking → furnace smelting → electrification → generator + workshop → gears → water works → fuel outage → refuel → resume) |
 | PerformanceTests | busy-settlement simulation budget (prints per-system timings) |
 
-Last result: **122 passed, 0 failed** (see docs/PROGRESS.md for the date and environment).
+Last result: **124 passed, 0 failed** (see docs/PROGRESS.md for the date and environment).
 
 ## 2. Unity compile check — no Unity license required
 `tools/unity-compile-check/compile_check.py` compiles every asmdef assembly (runtime, editor, EditMode and PlayMode tests) with the .NET SDK against **Unity's own reference assemblies** and the **source** of the pinned packages, using Unity-like scripting defines. It runs in two passes: `player` (no `UNITY_EDITOR`) and `editor`.
@@ -77,8 +77,16 @@ The first Unity run failed 7 save tests that pass on .NET. Unity's Mono formats 
 - builds a settlement next to Dawson Farm through the real placement path: bed, crate, workbench, furnace, generator, workshop, lamp, planter beds;
 - smelts iron, unlocks Electrification, runs the powered workshop, switches the generator off and on;
 - recruits Mara, who stores output, builds a second crate from hauled materials, plants, waters and harvests;
-- jumps to 22:00 at the base;
-- saves and reloads, checking structures, the colonist, the crop, the recipe and the power link.
+- builds a shelter (foundation, walls, doorway, roof). It checks the doorway is passable and that a barricade seals it, then hides inside while an infected batters the wall. It repairs with a hammer, demolishes the barricade and kills the infected with a stone axe;
+- lets an infected chase Mara (she flees), makes her hungry (she eats), and recruits Eli, who walks 245 m to the settlement;
+- builds a pump outpost on the lake (bottles filled, a bed irrigated);
+- runs a pole and cable to a distant lamp (cuts and reconnects it) and adds a battery and two more workshops. At night it switches the generator off to watch the lamp being shed, then back on;
+- checks that Mara sleeps at night, then dies, respawns and recovers the belongings;
+- opens the pause menu and the F3 overlay;
+- saves and reloads, checking structures, colonists, the crop, the recipe, power links and battery charge;
+- checks that the player's own save folder was not touched (the tour saves into `<dir>/Saves`).
+
+Before the game starts it also shows the New Game, Load Game, Settings and Controls screens.
 
 It writes a PNG for each step and `tour-report.txt`, then quits. The report has load times, frame times, a line per check and every error logged. A check that does not hold starts with `FAIL`. Building materials are granted, and the report lists them. Everything else goes through the normal game commands.
 

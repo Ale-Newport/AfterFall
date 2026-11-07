@@ -1,13 +1,13 @@
 # Progress log
 
-_Last updated: 2026-11-07 (session 2: first runs in Unity, settlement tour)._
+_Last updated: 2026-11-07 (session 2: first runs in Unity; the tour covers every system)._
 
 ## Snapshot
 | | |
 |---|---|
 | Branch | `main` (every commit pushed to `origin`) |
 | Unity version | 6000.3.28f1 (arm64), installed through Unity Hub 3.22.6 with a Personal license |
-| Last headless tests | 2026-11-07: **122/122 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on each push. |
+| Last headless tests | 2026-11-07: **124/124 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on each push. |
 | Last Unity EditMode run | 2026-11-07: **122/122 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
 | Last Unity PlayMode run | 2026-11-07: **5/5 smoke tests passed** (plus 2 Input System integration tests) |
 | Last player build | 2026-11-07: macOS (Apple Silicon), 118 MB, no errors |
@@ -62,18 +62,31 @@ These were exercised in the editor (PlayMode tests) or in the macOS build (scrip
   - plants and waters a bed from storage;
   - harvests potatoes into the crate.
 - **Farming by hand:** planting and watering.
-- **Saves:** save and reload, in both the PlayMode test and the build. Reloading keeps structures, the recruited colonist, the planted crop, machine recipes and power links.
+- **Saves:** save and reload, in both the PlayMode test and the build. Reloading keeps structures, recruited colonists, the planted crop, machine recipes, power links and battery charge.
+- **Main menu screens:** New Game (difficulty and seed), Load Game, Settings (sliders, toggles, key bindings) and Controls.
+- **Shelter:** a foundation with three walls, a doorway and a roof snapped onto it. Agents walk in through the doorway; a barricade in front of it seals it.
+- **Defence:**
+  - an infected drawn by noise stalls at the sealed shelter and batters a wall ("The infected are breaking through your Wooden Wall!");
+  - repairing with a hammer restores the wall, and demolishing the barricade refunds wood;
+  - a stone axe kills the infected in melee when it comes through the doorway.
+- **Colony:**
+  - Mara flees from an infected coming for her, eats from the crate when hungry, and sleeps in her bed at night;
+  - Eli, recruited at Hartley's Workshop, walks 245 m across the valley to the settlement.
+- **Water:** an electric pump on the lake shore, on its own generator, fills bottles and irrigates a planter bed 4 m away.
+- **Grid:**
+  - a power pole carries power 18 m to a lamp; cutting and reconnecting the cable isolates and restores it;
+  - a battery bank charges from surplus;
+  - at night with the generator off, the battery runs three workshops and sheds the lamp first ("1500 W available, 1560 W demanded"); everything is powered again when it is back on.
+- **Death:** all carried items drop where the survivor fell, and the death screen shows the belongings beacon. After respawning, the beacon is visible from 113 m and the belongings are recovered.
+- **Pause and overlay:** the pause menu pauses the simulation and resumes it on close; the F3 overlay shows FPS and per-system tick costs.
 
 ## Implemented, not yet exercised in Unity
-These compile and have been code-reviewed, but neither the tests nor the tour exercise them yet (next: a manual playtest):
-- **Menus:** continue, load list, settings (rebinding, volume, captions, UI scale), controls and quit screens; difficulty and seed choice.
-- **Survivor:** melee, held items, repair (E), demolish (hold X), death and the belongings beacon.
-- **World:** lake and boundary up close, drops.
-- **Construction by hand input:** aiming with the mouse and holding E (the tour calls the same commands directly); walls and roofs snapping to foundations.
-- **Power beyond one generator:** cables and poles, batteries, priority shedding, the water pump and irrigation.
-- **Colony:** the second survivor (Eli at Hartley's Workshop), eating and sleeping, fleeing infected, work-priority buttons.
-- **Extras:** procedural audio output (captions were seen), tooltips, F3 overlay.
-- **Tooling:** Windows command-line build; editor menus (Validate Content was run by the build).
+The tour drives the game through its commands, not the mouse and keyboard, so these still need a person:
+- **Input:** aiming and clicking to place, holding E to build or repair, holding X to demolish, swinging with the mouse, rebinding a key, dragging sliders, typing a seed.
+- **UI by hand:** clicking through windows, tooltips on hover, work-priority buttons, the strategic view's selection and cable tools.
+- **Audio:** that the procedural sounds play and are mixed well (captions were seen).
+- **World up close:** the map boundary.
+- **Tooling:** the Windows build; editor menus (the build ran Validate Content).
 
 ## Review (2026-11-07)
 Before Unity was available, an independent review of the Unity layer found:
@@ -109,6 +122,15 @@ Bugs that only showed up in the engine, all fixed:
 - **Illegible HUD bar labels; an empty grey banner; an overflowing panel heading.**
 - **A URP warning on every new game** (`Camera.layerCullSpherical`).
 
+### Found by extending the tour to every system (all fixed)
+- **Player-built doorways and foundations sealed the NavMesh.** Each structure carved one box the size of its footprint. Now each blocking part carves on its own.
+- **A shelter could not be closed.** Walls meeting at a foundation corner overlapped in the placement probe. Wall pieces now meet at corners, and any wall piece on the same edge counts as a duplicate.
+- **New recruits stayed where they were found.** With no work to do, Eli idled 245 m away. Idle colonists far from their bed now walk to the settlement.
+- **Infected never breached anything in the game.** They took the end of a partial path as "arrived", then gave up and searched. Breaching worked only in the headless simulation.
+- **Every death was handled twice.** Each death fired two death events, showed the message twice and counted as two deaths.
+- **Unreadable inputs and labels.** Text fields were white, so typed text vanished, and movement keys read "Move Up/Down".
+- **The tour autosaved into the player's save folder.** It now saves into its own folder and checks that the player's folder is untouched. The two tour autosaves already written there were moved to the Trash.
+
 ### Found by the settlement tour (all fixed)
 - **Survivors indoors snapped onto the roof.** The NavMesh covered roofs and attics, so Mara stood on the farmhouse roof and could not be recruited. Roofs, ceilings and canopies are now not walkable.
 - **Most buildings were sealed for agents.** With the default 0.5 m agent and 1.2 m doors, only 4 of 9 such doors connected inside to outside. The agent is now 0.35 m and doors are 1.6 m: all 12 POI doors connect.
@@ -118,6 +140,7 @@ Bugs that only showed up in the engine, all fixed:
 
 ## Known issues and risks (severity)
 - **High — no human playtest yet.** The tour grants building materials and drives commands directly, so gathering pace, mouse-and-keyboard building, and the overall feel still need someone at the keyboard. Follow the manual script in docs/TESTING.md.
+- **Low.** Tree canopies can poke through structures built right next to them, and the camera can end up inside one.
 - **Medium.** UI windows are still slightly see-through, and some visual tuning remains: ground colours, morning light levels.
 - **Medium.** The fog of war is only partly opaque, and trees taller than its 9 m layer show through.
 - **Medium.** The threat director treats distance as "out of sight" and does not check the camera frustum.
@@ -133,11 +156,10 @@ Bugs that only showed up in the engine, all fixed:
 
 ## Next development tasks
 1. **Playtest the acceptance scenario** (docs/TESTING.md) by hand in the editor or the macOS build. Tune movement, camera, harvest and colonist pacing, and day-length balance. Record time to first construction and to first machine output.
-2. Extend the tour to walls and roofs on foundations, cables and poles, batteries and shedding, the pump and irrigation, and infected attacking a barricade.
-3. Work zones and storage designation in the strategic view; Guard profession (engage infected near the base).
-4. Conveyors (automation level 3) between storage and machines.
-5. Weather (storm or cold snap) with warnings and consequences for power and needs.
-6. Recorded audio and authored character animation where licensed assets are available.
+2. Work zones and storage designation in the strategic view; the Guard profession.
+3. Conveyors (automation level 3) between storage and machines.
+4. Weather (storm or cold snap) with warnings and consequences for power and needs.
+5. Recorded audio and authored character animation where licensed assets are available.
 
 ## How to run (current)
 - Headless tests: `dotnet test tools/dotnet/AfterfallSim.Tests/AfterfallSim.Tests.csproj`
