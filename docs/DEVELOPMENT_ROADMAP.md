@@ -30,7 +30,7 @@ Processing machines ✅, configurable recipes ✅, production cycles ✅, fuel �
 **Acceptance:** process resources in powered machinery and diagnose shortages. *(Headless: `AcceptanceLoopTests.IndustrialChain_SmeltPowerMachineAndRecover` passes.)*
 
 ## Phase 4: Survival & threats
-Survival needs ✅, day/night effects ✅ (perception, threat) / 🟡 (lighting), Wanderer zombie ✅, detection, chase and attack ✅, player melee ✅, damage, death and recovery ✅, defensive construction ⏳ (walls and barricades block movement through NavMesh carving; zombies do not attack structures yet).
+Survival needs ✅, day/night effects ✅ (perception, threat) / 🟡 (lighting), Wanderer zombie ✅, detection, chase and attack ✅, player melee ✅, damage, death and recovery ✅, defensive construction ✅ (walls and barricades block movement; stalled infected batter them; repair with a hammer).
 **Acceptance:** survive, fight or escape, recover resources, defend a small base. *(Headless: zombie integration and threat director tests pass.)*
 
 ## Phase 5: Integrated playable prototype (current)
@@ -48,12 +48,14 @@ Survival needs ✅, day/night effects ✅ (perception, threat) / 🟡 (lighting)
 | Persistent save | ✅ |
 | Working main menu | 🟡 |
 | Functional gameplay UI | 🟡 |
-| Automated tests | ✅ 100 EditMode (.NET) + 5 PlayMode (unrun) |
+| Automated tests | ✅ 119 EditMode (.NET) + 5 PlayMode (unrun) |
 | Playable build | 🔲 needs a licensed Unity Editor |
 
 **Acceptance:** the short survival-to-industry loop is completable without cheats. *(Headless loop proven; in-engine playthrough pending.)*
 
-## Phase 6: Vertical slice (🔲)
+## Phase 6: Vertical slice (⏳ groundwork started)
+Done headlessly: recruitable colonists with haul and build jobs (✅), second infected archetype (Runner ✅), agriculture (✅), barrier breaching (✅), procedural audio (🟡). Remaining: more colonists and professions (farmer, guard), work zones and storage designation, conveyors, hostile human group, wildlife, environmental events, larger map.
+
 About 1 km² world with 8–12 POIs, 35–50 items, 20–30 recipes, 15–20 modules, 2–5 colonists with 4 professions and a job scheduler, multiple infected archetypes (runner, armoured), a hostile human group, wildlife, conveyors and logistics, agriculture, more complete electricity (switches, damage), environmental events (storm, cold), meaningful strategic orders (work zones, priorities, storage designation). **Acceptance:** a polished 60–90 minute playthrough.
 
 ## Phase 7: Expanded alpha (🔲)
@@ -65,7 +67,6 @@ Performance optimisation on the defined hardware targets, content completion, ac
 ## Immediate backlog (ordered)
 1. Open in Unity 6000.3.28f1; fix any import, runtime or visual issues; run EditMode and PlayMode tests; capture the first real screenshots.
 2. Playtest the acceptance scenario end to end; tune movement feel, harvest rates and the day-length balance.
-3. Zombies attacking barricades and walls (structure damage → repair loop).
-4. Audio: footsteps, harvest impacts, machine hum, generator, infected vocalisations (licensed sources only).
-5. Storage designation and the NPC hauler (first colonist) built on `ReservedTransfers`.
-6. Spatial index for machine automation and structure queries; profile in-engine on the target hardware.
+3. Tune colonist pacing and job planning in engine; add work zones, storage designation and more professions (farmer: water and harvest plots; guard: engage infected).
+4. Replace procedural audio with recorded sounds where licensed assets are available (keep the captions).
+5. Spatial index for structure queries; profile in-engine on the target hardware.

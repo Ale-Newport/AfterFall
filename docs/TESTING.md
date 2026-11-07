@@ -24,10 +24,13 @@ Requirements: .NET SDK 10 (`brew install dotnet`). On macOS Homebrew installs yo
 | WorldGeneratorTests | determinism, seed variation, prototype content counts, terrain flattening, exploration |
 | ZombieIntegrationTests / ThreatDirectorTests | detect, chase, damage and kill; stealth; fair spawning; announced raids |
 | PersistenceTests | full round trip (items, ids, machines mid-cycle, generator burner, reservations, blueprints, durability, tech, exploration), production continues after load, stable re-save, tamper/truncation/newer-schema rejection, migrations, atomic writes and **backup recovery**, slot listing |
+| BreachTests / ArchetypeTests | barricade stops, is battered, breaks, then the zombie reaches the player; crates are never targeted; Runner tuning and night spawn mix |
+| ColonyTests / ColonySafetyTests | recruiting rules, furnace supply with **item conservation**, blueprint delivery and building, destination destroyed mid-haul (**no loss, no orphaned reservations**, failure recorded), no duplicate job ownership, eating, disabled job types, save/load mid-haul, infected hunting colonists, fleeing, death drops |
+| FarmingTests / FarmJobTests | seeds unlock agriculture, growth only while watered, bottle returned, harvest, pump irrigation, crop save/load; a colonist plants, waters, harvests and replants from storage |
 | AcceptanceLoopTests | **organic early game** (bare hands → tools → workbench → planks → foundation → drink → save/load → continue) and the **industrial chain** (workbench → metalworking → furnace smelting → electrification → generator + workshop → gears → water works → fuel outage → refuel → resume) |
 | PerformanceTests | busy-settlement simulation budget (prints per-system timings) |
 
-Last result: **100 passed, 0 failed** (see docs/PROGRESS.md for the date and environment).
+Last result: **119 passed, 0 failed** (see docs/PROGRESS.md for the date and environment).
 
 ## 2. Unity compile check — no Unity license required
 `tools/unity-compile-check/compile_check.py` compiles every asmdef assembly (runtime, editor, EditMode and PlayMode tests) with the .NET SDK against **Unity's own reference assemblies** and the **source** of the pinned packages, using Unity-like scripting defines. It runs in two passes: `player` (no `UNITY_EDITOR`) and `editor`.

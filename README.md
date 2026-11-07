@@ -20,13 +20,16 @@ There are no screenshots yet: none will be published until real in-engine captur
 | World | Deterministic 512 m × 512 m valley: Unity Terrain, lake, northern ridge, roads, forest (~1,000 harvestable trees), 6 points of interest (Millbrook settlement, Route 9 gas station, Hartley's Workshop, Ridge Substation, Old Quarry, Dawson Farm) plus a starting camp |
 | Survivor | Third-person movement: walk, run, stamina-limited sprint, crouch, jump. Health, stamina, hunger, thirst, carry weight, death and respawn with recoverable belongings |
 | Cameras | Cinemachine 3 shoulder camera with collision and zoom. Tab switches to a strategic view with pan, rotate and zoom |
-| Items | 34 items in 8 categories, with stacking, weight limits, durability, filters and a reservation-based transactional inventory |
+| Items | 36 items in 8 categories, with stacking, weight limits, durability, filters and a reservation-based transactional inventory |
 | Crafting | 20 data-driven recipes: hand crafting, the workbench station, and machine processing |
-| Construction | 16 buildable structures. Ghost preview, snapping (foundations, walls, roofs), rotation, explained placement validation, blueprint → delivery → construction work, repair and demolition |
+| Construction | 17 buildable structures. Ghost preview, snapping (foundations, walls, roofs), rotation, explained placement validation, blueprint → delivery → construction work, repair and demolition |
 | Industry | Stone furnace (burns fuel), powered machine workshop, electric water pump. Explicit machine states with reasons. Semi-automatic pull/push from adjacent crates |
 | Electricity | Generators (fuel cans or charcoal), power poles, lamps and battery banks. Graph networks, priority load shedding, fuel burned in proportion to load |
-| Technology | Survival → Metalworking → Electrification → Water Works, unlocked by world activity |
-| Threats | Wanderer infected: vision, hearing and occlusion; investigate, chase, attack and search states; NavMesh movement. A threat director with fair spawning, night pressure and announced attacks on noisy bases |
+| Technology | Survival → Agriculture → Metalworking → Electrification → Water Works, unlocked by world activity |
+| Threats | Wanderer and Runner infected: vision, hearing and occlusion; investigate, chase, attack and search states; NavMesh movement. They batter walls and barricades that block them, and hunt colonists too. A threat director with fair spawning, night pressure and announced attacks on noisy bases |
+| Colony | Two recruitable survivors (each needs a free bedroll). A job board that hauls blueprint materials, builds, stocks machine inputs and fuel, stores products, and refuels generators. Assignment by priority, preference, skill and distance. Reservation-backed hauling that never loses items. Colonists eat, sleep, flee and can die. Strategic colony panel |
+| Agriculture | Seed potatoes, planter beds, hand watering or pump irrigation, growth and harvest with seeds returned |
+| Audio | Fully procedural soundscape (no third-party audio) with optional captions for important sounds |
 | Persistence | Versioned JSON saves with SHA-256 checksums, migrations, validation, atomic writes and automatic backup recovery. Quick save, autosave and save slots |
 | UI | UI Toolkit HUD, backpack and crafting, containers, machine and generator panels, construction menu, strategic overview, main and pause menus, settings with key rebinding |
 
@@ -84,7 +87,7 @@ To build a standalone player, use **AFTERFALL → Build → macOS / Windows (64-
 |---|---|
 | Move / sprint / crouch / jump | WASD / Shift / C or Ctrl / Space |
 | Look / zoom | Mouse / wheel |
-| Interact (hold to build) | E |
+| Interact (hold to build) / demolish your structure | E / hold X |
 | Attack or harvest | Left mouse button |
 | Hotbar / drop held item | 1–8 / Q |
 | Backpack and crafting | I |
@@ -101,7 +104,7 @@ Every binding can be changed in **Settings**.
 dotnet test tools/dotnet/AfterfallSim.Tests/AfterfallSim.Tests.csproj
 ```
 
-This runs the EditMode test suite (100 tests) headlessly: inventory conservation, reservations, crafting, construction, machines, power, AI, threats, world generation, saves and full gameplay-loop scenarios. The same test files run inside Unity's Test Runner, where PlayMode smoke tests also run. See [docs/TESTING.md](docs/TESTING.md), including how to compile-check the Unity code without a licensed editor.
+This runs the EditMode test suite (119 tests) headlessly: inventory conservation, reservations, crafting, construction, machines, power, AI, threats, world generation, saves and colonist jobs, farming and full gameplay-loop scenarios. The same test files run inside Unity's Test Runner, where PlayMode smoke tests also run. See [docs/TESTING.md](docs/TESTING.md), including how to compile-check the Unity code without a licensed editor.
 
 ## Documentation
 

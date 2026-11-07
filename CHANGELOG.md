@@ -2,6 +2,22 @@
 
 All notable changes, grouped by milestone. Dates are UTC.
 
+## [Unreleased] — Phase 6 groundwork (2026-11-07)
+
+### Added
+- Colony: recruitable survivors, a job board (haul, build, farm, eat, rest), assignment by priority, preference, skill and distance, reservation-backed hauling with failure reasons, needs, fleeing, death, saves, and a strategic colony panel.
+- Agriculture: seed potatoes, planter beds, watering, pump irrigation, harvests, the Agriculture technology.
+- Runner infected archetype; infected batter barriers that block them and hunt colonists.
+- Repair (E on damaged barriers, panel buttons) and demolish (hold X) controls.
+- Procedural audio with captions and a master volume setting.
+
+### Fixed
+- Twelve runtime issues in the never-run Unity layer, found by an independent code review. They include a crash that would have frozen new games on the loading screen, hidden main-menu windows, inside-out roofs, build fog stripping, agents moving while paused, and editor-only tooltips.
+
+### Changed
+- Simulation performance: the busy-settlement frame cost dropped from 0.030 ms to 0.007 ms after caching the structure order.
+- The loading screen is shown before world generation and save loading.
+
 ## [Unreleased] — Phase 0–5: prototype foundation (2026-11-07)
 
 ### Added

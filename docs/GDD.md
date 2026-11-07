@@ -85,7 +85,7 @@ Structures with power components form networks: union-find over cables, rebuilt 
 
 ## 11b. Colony (Phase 6 foundation)
 - Two survivors (Mara Voss at Dawson Farm, a hauler; Eli Brandt at Hartley's Workshop, a builder) can be recruited by talking to them when you have a free bedroll. The bedroll becomes their home.
-- **Planner (every 2 s):** creates jobs from base state: deliver missing blueprint materials, build fully supplied blueprints, keep machine inputs at three cycles' worth, keep fuel stocked, carry finished products to storage, refuel generators.
+- **Planner (every 2 s):** creates jobs from base state: deliver missing blueprint materials, build fully supplied blueprints, keep machine inputs at three cycles' worth, keep fuel stocked, carry finished products to storage, refuel generators, and plant, water and harvest planter beds (Farm).
 - **Assignment:** urgency bucket (P0–P4) → personal work priority per job type (0 = never, 1–4) → skill-weighted distance. Each job has exactly one owner. Personal needs come first: put away carried items, eat or drink from storage below 35%, sleep in their bed at night.
 - **Execution is physical:** walk, pick up, carry (6 slots, 30 kg), deliver, build at the colonist's skill multiplier. Every haul holds a source reservation and a destination reservation (capacity, or a blueprint quota) from claim to delivery. A failure (target destroyed, items gone, fled) releases them, leaves the items with the colonist (later put away), and records the reason for the strategic UI.
 - **Safety:** colonists flee infected that are hunting within 9 m (their job fails cleanly), can be wounded and killed, and drop their pack where they fall.
