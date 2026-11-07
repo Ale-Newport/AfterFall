@@ -92,7 +92,7 @@ namespace Afterfall.Presentation.UI
             var right = body.Put(UiKit.Div("col", "grow"));
             right.style.marginLeft = 16;
             right.Add(UiKit.Text("Crafting", "subtitle"));
-            right.Add(UiKit.Text(craftingFocus ? "You are at a workbench: station recipes are available." : "Hand recipes work anywhere; station recipes need the station nearby.", "muted"));
+            right.Add(UiKit.Text(craftingFocus ? "You are at a crafting station: its recipes are available here." : "Hand recipes work anywhere; station recipes need the station nearby.", "muted"));
             var scroll = right.Put(new ScrollView());
             scroll.style.height = 300;
             _recipeList = scroll;

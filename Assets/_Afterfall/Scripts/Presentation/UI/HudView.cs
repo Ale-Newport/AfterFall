@@ -102,6 +102,7 @@ namespace Afterfall.Presentation.UI
             if (_gc.Build.IsPlacing) _mode.text = (tactical ? "STRATEGIC VIEW · " : "") + "BUILD MODE";
             else if (tactical) _mode.text = "STRATEGIC VIEW — Tab to return · LMB select · WASD pan · Q/E rotate · wheel zoom";
             else _mode.text = "";
+            UiKit.Show(_mode, _mode.text.Length > 0);
 
             _warnings.text = Warnings(v, carried);
             AudioDirector audio = _gc.Audio;

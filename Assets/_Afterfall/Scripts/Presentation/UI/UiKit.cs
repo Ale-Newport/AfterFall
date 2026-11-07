@@ -53,7 +53,7 @@ namespace Afterfall.Presentation.UI
         private readonly VisualElement _fill;
         private readonly Label _label;
 
-        public Bar(Color color, float height = 16f)
+        public Bar(Color color, float height = 20f)
         {
             AddToClassList("bar");
             style.height = height;

@@ -39,7 +39,7 @@ namespace Afterfall.Presentation.UI
 
             _left = Root.Put(UiKit.Div("panel", "tactical-left"));
             _left.Add(UiKit.Text("Settlement", "title"));
-            _left.Add(UiKit.Text("Stockpile (backpack + your storage)", "subtitle"));
+            _left.Add(UiKit.Text("Stockpile (backpack + your storage)", "subtitle", "wrap"));
             _resources = _left.Put(UiKit.Text("", "wrap"));
             _left.Add(UiKit.Text("Electricity", "subtitle"));
             _power = _left.Put(UiKit.Text("", "wrap"));

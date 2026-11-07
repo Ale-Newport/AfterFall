@@ -9,7 +9,7 @@
 .hidden { display: none; }
 
 .panel {
-    background-color: rgba(18, 20, 18, 0.88);
+    background-color: rgba(18, 20, 18, 0.93);
     border-color: rgba(150, 140, 110, 0.55);
     border-width: 1px;
     border-radius: 6px;
@@ -17,7 +17,7 @@
 }
 .window {
     position: absolute;
-    background-color: rgba(20, 22, 20, 0.95);
+    background-color: rgba(20, 22, 20, 0.99);
     border-color: rgba(170, 155, 110, 0.6);
     border-width: 1px;
     border-radius: 8px;
@@ -77,19 +77,19 @@
     -unity-text-align: middle-center; font-size: 17px; -unity-font-style: bold;
     color: rgba(255, 255, 255, 0.92);
 }
-.slot-qty { position: absolute; right: 4px; bottom: 2px; font-size: 14px; -unity-font-style: bold; color: rgb(255, 255, 255); -unity-text-outline-width: 1px; -unity-text-outline-color: rgb(0, 0, 0); }
+.slot-qty { position: absolute; right: 4px; bottom: 2px; font-size: 14px; -unity-font-style: bold; color: rgb(255, 255, 255); text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9); }
 .slot-key { position: absolute; left: 4px; top: 1px; font-size: 12px; color: rgb(220, 210, 180); }
 .slot-dur { position: absolute; left: 5px; right: 5px; bottom: 3px; height: 3px; background-color: rgb(110, 200, 90); }
 .grid { flex-direction: row; flex-wrap: wrap; }
 
 /* Bars */
-.bar { height: 16px; background-color: rgba(0, 0, 0, 0.55); border-radius: 3px; margin: 2px 0; overflow: hidden; }
+.bar { height: 20px; background-color: rgba(0, 0, 0, 0.55); border-radius: 3px; margin: 2px 0; overflow: hidden; }
 .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; }
-.bar-label { position: absolute; left: 6px; right: 6px; top: 0; bottom: 0; font-size: 12px; -unity-text-align: middle-left; color: rgb(250, 248, 240); -unity-text-outline-width: 1px; -unity-text-outline-color: rgb(0, 0, 0); }
+.bar-label { position: absolute; left: 6px; right: 6px; top: 0; bottom: 0; font-size: 13px; -unity-font-style: bold; -unity-text-align: middle-left; color: rgb(250, 248, 240); text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9); }
 
 /* HUD */
 .hud-vitals { position: absolute; left: 18px; bottom: 18px; width: 300px; }
-.hud-clock { position: absolute; right: 18px; top: 14px; font-size: 20px; -unity-font-style: bold; color: rgb(240, 225, 180); -unity-text-outline-width: 1px; -unity-text-outline-color: rgb(0, 0, 0); }
+.hud-clock { position: absolute; right: 18px; top: 14px; font-size: 20px; -unity-font-style: bold; color: rgb(240, 225, 180); text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9); }
 .hud-hotbar { position: absolute; bottom: 14px; left: 0; right: 0; flex-direction: row; justify-content: center; }
 .hud-prompt {
     position: absolute; left: 30%; right: 30%; top: 58%;
@@ -102,7 +102,7 @@
     background-color: rgba(0, 0, 0, 0.7); color: rgb(255, 250, 230); border-radius: 4px; padding: 4px 8px;
 }
 .hud-crosshair { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin-left: -3px; margin-top: -3px; border-radius: 3px; background-color: rgba(255, 255, 255, 0.8); }
-.hud-mode { position: absolute; left: 0; right: 0; top: 14px; -unity-text-align: upper-center; font-size: 18px; color: rgb(240, 210, 130); -unity-text-outline-width: 1px; -unity-text-outline-color: rgb(0, 0, 0); }
+.hud-mode { position: absolute; left: 25%; right: 25%; top: 10px; -unity-text-align: upper-center; font-size: 17px; background-color: rgba(0, 0, 0, 0.5); border-radius: 6px; padding: 4px 10px; color: rgb(240, 210, 130); text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9); }
 .hud-equipped { font-size: 14px; color: rgb(220, 214, 196); margin-top: 4px; }
 .hud-craft { position: absolute; right: 18px; bottom: 100px; width: 260px; }
 .hud-placement { position: absolute; left: 50%; bottom: 100px; width: 520px; margin-left: -260px; }
