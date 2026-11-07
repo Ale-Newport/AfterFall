@@ -79,7 +79,8 @@ namespace Afterfall.Persistence
             {
                 ["format"] = Format,
                 ["schema"] = CurrentSchemaVersion,
-                ["checksum"] = Checksum(payload),
+                // Checksum what a reader will see: the numbers as parsed back from the saved text.
+                ["checksum"] = Checksum(ParseObject(payload.ToString(Formatting.None))),
                 ["payload"] = payload
             };
             return envelope.ToString(Formatting.Indented);
@@ -157,15 +158,40 @@ namespace Afterfall.Persistence
             }
         }
 
+        /// <summary>
+        /// SHA-256 of the payload in canonical form. Pass a payload parsed from JSON text (as
+        /// <see cref="ParseObject"/> returns it), so every number is a double read from the file.
+        /// </summary>
         public static string Checksum(JObject payload)
         {
-            byte[] bytes = Encoding.UTF8.GetBytes(payload.ToString(Formatting.None));
+            var text = new System.IO.StringWriter(CultureInfo.InvariantCulture);
+            using (var writer = new CanonicalWriter(text)) payload.WriteTo(writer);
+            byte[] bytes = Encoding.UTF8.GetBytes(text.ToString());
             using (SHA256 sha = SHA256.Create())
             {
                 byte[] hash = sha.ComputeHash(bytes);
                 var sb = new StringBuilder(hash.Length * 2);
                 foreach (byte b in hash) sb.Append(b.ToString("x2", CultureInfo.InvariantCulture));
                 return sb.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Writes doubles with "G17", which depends only on the value. Newtonsoft's default "R" is
+        /// not stable on Unity's Mono: a scale saved as 0.874098659 is read back and printed as
+        /// 0.87409865899999994, so re-serialising a loaded payload would change the checksum.
+        /// </summary>
+        private sealed class CanonicalWriter : JsonTextWriter
+        {
+            public CanonicalWriter(System.IO.TextWriter writer) : base(writer)
+            {
+                Formatting = Formatting.None;
+            }
+
+            public override void WriteValue(double value)
+            {
+                if (double.IsNaN(value) || double.IsInfinity(value)) base.WriteValue(value);
+                else WriteRawValue(value.ToString("G17", CultureInfo.InvariantCulture));
             }
         }
     }

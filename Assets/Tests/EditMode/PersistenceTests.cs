@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Afterfall.Core;
@@ -8,6 +9,7 @@ using Afterfall.Domain.Items;
 using Afterfall.Domain.World;
 using Afterfall.Persistence;
 using Afterfall.Services;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
@@ -135,6 +137,28 @@ namespace Afterfall.Tests
             WorldState l = SaveSerializer.Deserialize(a, TestSupport.Content, null);
             string b = SaveSerializer.Serialize(l, "x", 0);
             Assert.AreEqual(SaveSerializer.ParseObject(a)["payload"]["World"].ToString(), SaveSerializer.ParseObject(b)["payload"]["World"].ToString());
+        }
+
+        [Test]
+        public void Checksum_DoesNotDependOnNumberFormatting()
+        {
+            // Unity's Mono prints some re-read doubles with 17 digits (0.874098659 → 0.87409865899999994).
+            GameSession s = BuildRichSession();
+            JObject env = SaveSerializer.ParseObject(SaveSerializer.Serialize(s.World, "x", 0));
+            var text = new StringWriter(CultureInfo.InvariantCulture);
+            using (var writer = new SeventeenDigitWriter(text)) env.WriteTo(writer);
+            StringAssert.Contains("0.", text.ToString());
+            WorldState loaded = SaveSerializer.Deserialize(text.ToString(), TestSupport.Content, null);
+            Assert.AreEqual(s.World.Structures.Count, loaded.Structures.Count);
+        }
+
+        private sealed class SeventeenDigitWriter : JsonTextWriter
+        {
+            public SeventeenDigitWriter(TextWriter w) : base(w)
+            {
+            }
+
+            public override void WriteValue(double value) => WriteRawValue(value.ToString("G17", CultureInfo.InvariantCulture));
         }
 
         [Test]
