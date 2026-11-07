@@ -92,3 +92,4 @@ Thumbs.db
 *.pem
 *.key
 .claude/settings.local.json
+tools/unity-compile-check/.build/

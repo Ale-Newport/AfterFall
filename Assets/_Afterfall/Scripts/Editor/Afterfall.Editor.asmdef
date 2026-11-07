@@ -1,0 +1,22 @@
+{
+    "name": "Afterfall.Editor",
+    "rootNamespace": "Afterfall.EditorTools",
+    "references": [
+        "Afterfall.Core",
+        "Afterfall.Domain",
+        "Afterfall.Persistence",
+        "Afterfall.Services",
+        "Afterfall.Presentation"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
