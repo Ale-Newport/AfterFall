@@ -1,0 +1,32 @@
+name: Simulation tests
+
+# Runs the engine-independent simulation and its EditMode test suite with plain .NET.
+# Unity-side tests (PlayMode) need a licensed Unity Editor and are run locally; see docs/TESTING.md.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  dotnet-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build simulation (netstandard2.1, C# 9 — same constraints as Unity)
+        run: dotnet build tools/dotnet/AfterfallSim/AfterfallSim.csproj -c Release
+      - name: Run EditMode tests
+        run: dotnet test tools/dotnet/AfterfallSim.Tests/AfterfallSim.Tests.csproj -c Release --logger "trx;LogFileName=results.trx"
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: tools/dotnet/AfterfallSim.Tests/TestResults/
+      - name: Check Unity .meta files are present
+        run: python3 tools/generate_meta.py --check
