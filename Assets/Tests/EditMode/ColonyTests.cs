@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Afterfall.Core;
+using Afterfall.Domain.AI;
 using Afterfall.Domain.Colony;
 using Afterfall.Domain.Construction;
 using Afterfall.Domain.Items;
@@ -179,6 +180,47 @@ namespace Afterfall.Tests
             TestSupport.Run(loaded, 60, 0.1);
             Assert.Greater(Total(loaded, "iron_ingot"), 0, "the job resumed after loading");
             Assert.AreEqual(ore - Total(loaded, "iron_ore"), 2 * Total(loaded, "iron_ingot"));
+        }
+    }
+}
+
+namespace Afterfall.Tests
+{
+    public class ColonySafetyTests
+    {
+        [Test]
+        public void Infected_HuntColonists_WhoFleeAndCanDie_WithoutLosingItems()
+        {
+            GameSession s = TestSupport.NewSession(7070);
+            s.Threats.SpawningEnabled = false;
+            foreach (EntityId id in s.World.Zombies.Keys.ToList()) s.World.Zombies.Remove(id);
+            s.World.Clock.Advance(s.World.Clock.DayLengthSeconds * 0.1);
+            Vec3 p = s.Player.Position;
+            TestSupport.Build(s.World, "bed", new Vec3(p.X - 3, p.Y, p.Z));
+            ColonistState c = s.World.Colonists.Values.First();
+            c.Position = new Vec3(p.X + 1, p.Y, p.Z);
+            Assert.IsTrue(s.Recruit(c.Id).Ok);
+            c.Carry.TryAdd("wood", 5);
+            s.ReportPlayerTransform(new Vec3(p.X - 60, p.Y, p.Z), 0, new PlayerActivity()); // the player is far away
+
+            ZombieState z = s.Zombies.Spawn(new Vec3(c.Position.X + 6, c.Position.Y, c.Position.Z), "wanderer", new DeterministicRandom(4));
+            z.Yaw = -90f;
+            float health = c.Vitals.Health;
+            Vec3 start = c.Position;
+            TestSupport.Run(s, 2, 0.1);
+            Assert.AreEqual("Fleeing from the infected!", c.Status, "the colonist notices the hunter and runs");
+            Assert.Greater(Vec3.DistanceXZ(c.Position, z.Position), 1f);
+
+            c.Vitals.Health = 5f; // gravely wounded: the next hit is fatal
+            for (int i = 0; i < 600 && c.Activity != ColonistActivity.Down; i++)
+            {
+                c.Position = z.Position + new Vec3(1f, 0, 0); // pinned against the infected
+                s.Update(0.1);
+            }
+            Assert.AreEqual(ColonistActivity.Down, c.Activity, "infected can kill colonists");
+            Assert.AreEqual(5, s.World.Drops.Values.Sum(d => d.Contents.Count("wood")), "their belongings are dropped, not lost");
+            Assert.Less(c.Vitals.Health, health);
+            Assert.IsNotNull(start.ToString());
         }
     }
 }

@@ -100,6 +100,9 @@ namespace Afterfall.Domain.AI
         /// <summary>Invoked when a zombie lands an attack on the player (damage already scaled by difficulty).</summary>
         public event Action<ZombieState, float> PlayerHit;
 
+        /// <summary>Invoked when a zombie lands an attack on a colonist (colonist id, damage).</summary>
+        public event Action<EntityId, float> ColonistHit;
+
         public int AliveCount
         {
             get
@@ -134,6 +137,7 @@ namespace Afterfall.Domain.AI
                 }
                 ZombieArchetype a = _content.Archetype(z.Archetype);
                 var p = new ZombiePerception { TargetAlive = alive };
+                EntityId colonistTarget = EntityId.None;
                 if (player != null)
                 {
                     p.TargetPosition = player.Position;
@@ -143,6 +147,19 @@ namespace Afterfall.Domain.AI
                         bool los = Adapter.HasLineOfSight(z, player.Position);
                         p.TargetVisible = PerceptionRules.CanSee(z, a, player.Position, daylight, player.Activity.Crouching, player.Activity.Sprinting, los);
                     }
+                }
+                // Colonists are prey too: the nearest visible living one wins if closer than a visible player.
+                foreach (Colony.ColonistState c in _world.Colonists.Values)
+                {
+                    if (!c.Recruited || c.Activity == Colony.ColonistActivity.Down) continue;
+                    float cd = Vec3.Distance(z.Position, c.Position);
+                    if (cd > a.SightRange * 1.2f || (p.TargetVisible && cd >= p.TargetDistance)) continue;
+                    if (!PerceptionRules.CanSee(z, a, c.Position, daylight, false, false, Adapter.HasLineOfSight(z, c.Position))) continue;
+                    p.TargetVisible = true;
+                    p.TargetAlive = true;
+                    p.TargetPosition = c.Position;
+                    p.TargetDistance = cd;
+                    colonistTarget = c.Id;
                 }
                 if (Noise.TryHear(z.Position, a.HearingMultiplier, out NoiseEvent heard))
                 {
@@ -159,7 +176,9 @@ namespace Afterfall.Domain.AI
                 Adapter.Apply(z, a, d, fdt);
                 TrackProgress(z, d, fdt);
 
-                if (d.Attack && alive && Vec3.Distance(z.Position, player.Position) <= a.AttackRange * 1.3f)
+                if (d.Attack && colonistTarget.IsValid && Vec3.Distance(z.Position, p.TargetPosition) <= a.AttackRange * 1.3f)
+                    ColonistHit?.Invoke(colonistTarget, a.AttackDamage * _world.Settings.EnemyDamage);
+                else if (d.Attack && alive && Vec3.Distance(z.Position, player.Position) <= a.AttackRange * 1.3f)
                     PlayerHit?.Invoke(z, a.AttackDamage * _world.Settings.EnemyDamage);
             }
             foreach (EntityId id in toRemove)

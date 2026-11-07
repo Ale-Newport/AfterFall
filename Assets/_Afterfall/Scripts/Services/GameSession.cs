@@ -48,6 +48,7 @@ namespace Afterfall.Services
             Zombies = new ZombieSystem(World, Content, Events);
             Threats = new ThreatDirector(World, Content, Events, Zombies);
             Colony = new ColonySystem(World, Content, Events, Construction);
+            Zombies.ColonistHit += (id, dmg) => Colony.DamageColonist(id, dmg, "the infected");
             if (Colony.Movement is DirectColonistMovement walk) walk.GroundHeight = p => World.Layout.HeightAt(p.X, p.Z);
             _playerSystem = new PlayerSystem(this);
 

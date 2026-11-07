@@ -55,6 +55,7 @@ namespace Afterfall.Domain.Colony
         public const int MaxHaulQuantity = 20;
         public const double PlanInterval = 2.0;
         public const float NeedThreshold = 35f;
+        public const float FleeRadius = 9f;
 
         private readonly WorldState _world;
         private readonly ContentDatabase _content;
@@ -131,6 +132,7 @@ namespace Afterfall.Domain.Colony
                 if (!c.Recruited || c.Activity == ColonistActivity.Down) continue;
                 Needs(c, dt);
                 if (c.Activity == ColonistActivity.Down) continue;
+                if (Flee(c, (float)dt)) continue;
                 if ((!c.CurrentJob.IsValid || !_world.Jobs.ContainsKey(c.CurrentJob)) && (!_nextAssign.TryGetValue(c.Id, out double next) || now >= next))
                 {
                     _nextAssign[c.Id] = now + 1.0;
@@ -171,6 +173,43 @@ namespace Afterfall.Domain.Colony
             c.Carry.ClearAll();
             if (stacks.Count > 0) _construction.CreateDrop(stacks, c.Position, $"{c.Name}'s belongings", false);
             _bus?.Publish(new Notification($"{c.Name} has died ({cause}).", Severity.Danger));
+        }
+
+        /// <summary>
+        /// Colonists drop what they are doing and run from infected that are hunting nearby
+        /// (their job fails cleanly, so reserved items are released). Returns true while fleeing.
+        /// </summary>
+        private bool Flee(ColonistState c, float dt)
+        {
+            AI.ZombieState threat = null;
+            float best = FleeRadius;
+            foreach (AI.ZombieState z in _world.Zombies.Values)
+            {
+                if (z.IsDead || (z.Mode != AI.ZombieMode.Chase && z.Mode != AI.ZombieMode.Attack && z.Mode != AI.ZombieMode.Investigate)) continue;
+                float d = Vec3.DistanceXZ(z.Position, c.Position);
+                if (d < best)
+                {
+                    best = d;
+                    threat = z;
+                }
+            }
+            if (threat == null)
+            {
+                if (c.Status == "Fleeing from the infected!") c.Status = "Safe again";
+                return false;
+            }
+            if (c.CurrentJob.IsValid && _world.Jobs.TryGetValue(c.CurrentJob, out Job j)) Fail(c, j, "fled from the infected");
+            Vec3 away = (c.Position - threat.Position).Normalized;
+            if (away.SqrMagnitude < 0.01f) away = new Vec3(1, 0, 0);
+            Vec3 goal = c.Position + away * 12f;
+            if (c.HomeBed.IsValid && _world.Structures.TryGetValue(c.HomeBed, out Structure bed) && Vec3.DistanceXZ(bed.Position, threat.Position) > Vec3.DistanceXZ(c.Position, threat.Position))
+                goal = bed.Position;
+            c.MoveTarget = goal;
+            c.HasMoveTarget = true;
+            Movement.Step(c, WalkSpeed * 1.5f, 0.5f, dt);
+            c.Activity = ColonistActivity.Moving;
+            c.Status = "Fleeing from the infected!";
+            return true;
         }
 
         public void DamageColonist(EntityId id, float amount, string source)
