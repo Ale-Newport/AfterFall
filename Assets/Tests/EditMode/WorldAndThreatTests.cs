@@ -76,6 +76,27 @@ namespace Afterfall.Tests
     public class ZombieIntegrationTests
     {
         [Test]
+        public void DeathByDamage_IsHandledOnce()
+        {
+            GameSession s = TestSupport.NewSession(4242);
+            s.Threats.SpawningEnabled = false;
+            s.Player.Inventory.TryAdd("stone", 3);
+            int died = 0, messages = 0;
+            s.Events.Subscribe<PlayerDied>(e => died++);
+            s.Events.Subscribe<Notification>(n => { if (n.Message.StartsWith("You died")) messages++; });
+            s.DamagePlayer(1000f, "a test");
+            TestSupport.Run(s, 2);
+            Assert.AreEqual(1, died, "one death event");
+            Assert.AreEqual(1, messages, "one death message");
+            Assert.AreEqual(1, s.Player.Deaths);
+            Assert.AreEqual(1, s.World.Drops.Values.Count(d => d.IsBelongings));
+            Assert.IsTrue(s.Respawn().Ok);
+            s.DamagePlayer(1000f, "a second test");
+            TestSupport.Run(s, 1);
+            Assert.AreEqual(2, died, "the next death is handled again");
+        }
+
+        [Test]
         public void Zombie_DetectsChasesAndDamagesPlayer_ThenDiesToMelee()
         {
             GameSession s = TestSupport.NewSession(4242);

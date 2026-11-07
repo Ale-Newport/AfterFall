@@ -283,8 +283,14 @@ namespace Afterfall.Services
             if (SurvivalRules.Damage(Player.Vitals, amount)) HandleDeath(source);
         }
 
+        /// <summary>Set once a death has been processed (drop, counters, events) until the survivor respawns.</summary>
+        private bool _deathHandled;
+
+        /// <summary>Drops the belongings and announces the death; safe to call again for the same death.</summary>
         internal void HandleDeath(string cause)
         {
+            if (_deathHandled) return;
+            _deathHandled = true;
             PlayerState p = Player;
             var stacks = new List<ItemStack>();
             for (int i = 0; i < p.Inventory.SlotCount; i++)
@@ -319,6 +325,7 @@ namespace Afterfall.Services
                 spawn = bed.Position + new Vec3(1.2f, 0.2f, 0f);
             Player.Position = spawn;
             Player.Vitals.ResetForRespawn();
+            _deathHandled = false;
             Events.Publish(new PlayerRespawned(spawn));
             return OpResult.Success("You wake up, sore but alive.");
         }
