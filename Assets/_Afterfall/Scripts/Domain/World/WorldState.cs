@@ -142,6 +142,7 @@ namespace Afterfall.Domain.World
         public void AddStructure(Structure s)
         {
             Structures[s.Id] = s;
+            _sortedStructureIds = null;
             Ids.EnsureAbove(s.Id);
             RegisterStructureInventories(s);
             if (s.Power != null) MarkPowerTopologyChanged();
@@ -172,6 +173,7 @@ namespace Afterfall.Domain.World
             }
             if (s.Generator != null) UnregisterInventory(s.Generator.Fuel);
             Structures.Remove(id);
+            _sortedStructureIds = null;
             int removed = PowerLinks.RemoveAll(l => l.Involves(id));
             if (s.Power != null || removed > 0) MarkPowerTopologyChanged();
             if (Player != null && Player.SpawnStructureId == id) Player.SpawnStructureId = EntityId.None;
@@ -217,12 +219,22 @@ namespace Afterfall.Domain.World
             return false;
         }
 
-        /// <summary>Sorted structure ids for deterministic iteration.</summary>
-        public List<EntityId> SortedStructureIds()
+        private List<EntityId> _sortedStructureIds;
+
+        /// <summary>
+        /// Sorted structure ids for deterministic iteration. Cached and replaced (never mutated)
+        /// when structures are added or removed, so callers may safely add/remove while iterating;
+        /// they must look ids up with TryGetValue if they remove structures mid-loop.
+        /// </summary>
+        public IReadOnlyList<EntityId> SortedStructureIds()
         {
-            var ids = new List<EntityId>(Structures.Keys);
-            ids.Sort();
-            return ids;
+            if (_sortedStructureIds == null)
+            {
+                var ids = new List<EntityId>(Structures.Keys);
+                ids.Sort();
+                _sortedStructureIds = ids;
+            }
+            return _sortedStructureIds;
         }
     }
 }

@@ -39,7 +39,7 @@ Field names are case-insensitive camelCase versions of the C# properties. Item a
   "machine": { "station": "workshop", "inputSlots": 4, "outputSlots": 4, "fuelSlots": 0,
                "powerWatts": 500, "powerPriority": 2, "noiseRadius": 12, "autoTransferRange": 3.5 } }
 ```
-Optional components: `storage {slots, maxWeight}`, `craftingStation`, `machine`, `generator {capacityWatts, fuelSlots, noiseRadius}`, `battery {capacityKJ, maxRateWatts}`, `powerNode {range, isRelay}`, `light {powerWatts, range, powerPriority}`. Flags: `isDoor`, `isBed`, `isDefensive`, `blocksMovement`, `buildable` (`false` for world loot props).
+Optional components: `farm {seedItem, cropItem, yieldMin, yieldMax, seedReturnMin, seedReturnMax, growSeconds, waterPerSecond, irrigationRange}`, `storage {slots, maxWeight}`, `craftingStation`, `machine`, `generator {capacityWatts, fuelSlots, noiseRadius}`, `battery {capacityKJ, maxRateWatts}`, `powerNode {range, isRelay}`, `light {powerWatts, range, powerPriority}`. Flags: `isDoor`, `isBed`, `isDefensive`, `blocksMovement`, `buildable` (`false` for world loot props).
 
 **Visuals:** `visual` selects a builder in `Presentation/World/StructureVisuals.cs`. Add a `case` there for a new look; unknown keys fall back to a coloured box.
 
@@ -75,5 +75,11 @@ POIs are designed in code (`WorldGenerator.DefinePois` plus a `PlaceX` method). 
 4. Give it a reason to visit: unique loot or resources tied to progression.
 5. Run the tests. `WorldGeneratorTests` checks determinism and content counts.
 
-## NPCs (future)
-Colonists will be domain entities in `WorldState` (id, needs, skills, inventory, job) driven by a job scheduler that uses `ReservedTransfers` for hauling. No content format exists yet.
+## Survivors and colonists
+Recruitable survivors are placed by `WorldGenerator.PlaceSurvivors` (`SurvivorSeed`: name, position, POI, skills such as `"Build": 1.5`). Colonist behaviour (job types, planning, assignment) lives in `Domain/Colony/ColonySystem.cs`. To add a job type:
+1. Add it to `JobType`.
+2. Plan jobs in `PlanJobs`, execute them in `Execute`, and release every reservation in `Fail`.
+3. Expose a work priority in `UI/ColonyPanel.cs`.
+4. Add conservation tests in `ColonyTests`.
+
+Archetype ids: `wanderer`, `runner` (see `archetypes.json`). The threat director's spawn mix is in `ThreatDirector.PickArchetype`.

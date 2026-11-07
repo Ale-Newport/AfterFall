@@ -76,9 +76,27 @@ Automation levels:
 Structures with power components form networks: union-find over cables, rebuilt only when the topology changes. Poles relay to everything within 14 m; other parts link to the nearest node within 5–6 m, and cables can also be run manually in the strategic view. Each tick, consumers are sorted by priority (1 critical … 5 optional) and either fully powered or shed with a stated reason. Batteries absorb surplus and cover deficits. Generators burn fuel in proportion to delivered energy (fuel can 600 kJ, charcoal 150 kJ). Lamps draw power only at night.
 
 ## 11. Threats
+- **Runner** (night 25%, day 8% of spawns; leads announced groups): chase 5.0 m/s (faster than running, slower than sprinting), 35 HP, sight 26 m in a 150° cone, hearing ×1.3, 9 damage, 1.1 s attack cooldown.
+- **Breaching:** infected that stop making progress for 2.5 s next to a player-built barrier (wall, doorway, window wall, barricade) batter it for 1.5× their attack damage. This makes noise (14 m), and the player is warned. Crates and machines are never targeted.
+- **Prey:** the infected chase the nearest visible living target: the survivor or a recruited colonist.
 - **Wanderer:** sight 22 m in a 130° cone (darkness ×0.45–1, crouching ×0.6, sprinting ×1.15), proximity sense 2.5 m (never through walls), hearing of noise events (footsteps 4.5 m, sprinting 13 m, combat 9 m, harvesting 2–10 m). Chase speed 3.1 m/s (slower than running), 12 damage, 1.6 s attack cooldown. It loses the target after 5 s out of sight, then searches the last known position for 12 s.
 - **Threat director:** the population target is 7 by day and 14 by night, multiplied by density, plus heat / 12. Spawns happen 50–150 m from the player and never within 30 m of any player structure. Heat comes from running generators and machines and from lit lamps at night. At heat ≥ 35 at night, a group is announced with a compass direction 30 s before it arrives (15-minute cooldown). A dusk warning is issued every day.
 - Runner, armoured infected, animals and human factions are planned.
+
+## 11b. Colony (Phase 6 foundation)
+- Two survivors (Mara Voss at Dawson Farm, a hauler; Eli Brandt at Hartley's Workshop, a builder) can be recruited by talking to them when you have a free bedroll. The bedroll becomes their home.
+- **Planner (every 2 s):** creates jobs from base state: deliver missing blueprint materials, build fully supplied blueprints, keep machine inputs at three cycles' worth, keep fuel stocked, carry finished products to storage, refuel generators.
+- **Assignment:** urgency bucket (P0–P4) → personal work priority per job type (0 = never, 1–4) → skill-weighted distance. Each job has exactly one owner. Personal needs come first: put away carried items, eat or drink from storage below 35%, sleep in their bed at night.
+- **Execution is physical:** walk, pick up, carry (6 slots, 30 kg), deliver, build at the colonist's skill multiplier. Every haul holds a source reservation and a destination reservation (capacity, or a blueprint quota) from claim to delivery. A failure (target destroyed, items gone, fled) releases them, leaves the items with the colonist (later put away), and records the reason for the strategic UI.
+- **Safety:** colonists flee infected that are hunting within 9 m (their job fails cleanly), can be wounded and killed, and drop their pack where they fall.
+
+## 11c. Agriculture
+- Seed potatoes (start cache, barn, kitchens) unlock **Agriculture** (era II): planter beds (4 planks + 6 fiber).
+- A plot grows in 15 minutes of *watered* time; soil water drains at 0.08 per second. Water with a water bottle (the empty bottle is returned) or irrigate automatically within 10 m of an enabled electric water pump on a powered grid.
+- A harvest gives 3–5 potatoes (+16 food each) and 1–2 seeds back.
+
+## 11d. Audio
+All sound is synthesised at runtime: footsteps by distance travelled, harvest impacts by material, combat, infected groans and lunges, machine and generator loops tied to their state, wind and night ambience, UI and warning cues. **Captions** (on by default) describe important sounds with a direction ("[Infected groaning to your left]").
 
 ## 12. Strategic UI
 Shows the stockpile, electricity per grid, threat (heat, recently seen infected, announced groups), known locations, the selected structure's status, health and power with actions, world labels for machines, blueprints, POIs and seen infected, and fog of war over unexplored 16 m cells.
@@ -87,4 +105,4 @@ Shows the stockpile, electricity per grid, threat (heat, recently seen infected,
 Everything listed in the brief's §22 that exists in the prototype is saved: seed and settings, time, player, inventories (with reservations and durability), structures (blueprint progress, machine progress and fuel, generator burner, batteries, power state), cables, resource depletion, drops, zombies, tech progress, exploration, threat state and metrics. The terrain and props are regenerated from the seed.
 
 ## 14. Out of scope for the prototype (tracked in the roadmap)
-NPC colonists and jobs, conveyors and pipes, agriculture, weather and disasters, factions, animals, firearms, vehicles, multiple regions and streaming, audio, authored animation and models, localisation.
+Further NPC professions (farmer, guard, medic, mechanic), work zones, conveyors and pipes, weather and disasters, factions, animals, firearms, vehicles, multiple regions and streaming, authored animation, models and recorded audio, localisation.

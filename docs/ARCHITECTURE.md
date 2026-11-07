@@ -42,7 +42,9 @@ AFTERFALL is **simulation-first**: the game is a deterministic C# simulation tha
 | PlayerSystem | 10 Hz | needs, stamina, crafting queue, fog of war, POI discovery, item-acquisition knowledge, death |
 | PowerSystem | 4 Hz | rebuilds networks only when `PowerTopologyVersion` changes; balances supply and demand with priority shedding, batteries and fuel |
 | MachineSystem | 4 Hz | machine state machines: inputs, fuel, power, outputs, automation pull/push |
-| ZombieSystem | 10 Hz | perception → `ZombieBrain` → adapter (NavMesh in game, straight-line headless) |
+| ColonySystem | 4 Hz | job planning (every 2 s), assignment, physical execution, needs, fleeing |
+| FarmingSystem | 1 Hz | crop growth, soil water, pump irrigation |
+| ZombieSystem | 10 Hz | perception (player and colonists) → `ZombieBrain` → adapter (NavMesh in game, straight-line headless); breaching of blocking barriers |
 | ThreatDirector | 0.5 Hz | heat from noise and industry, population, fair spawns, announced raids, dusk warning |
 | ResourceRespawnSystem | 0.2 Hz | regrows renewable nodes out of view |
 
@@ -58,6 +60,8 @@ Power runs before machines in each tick, so machines see this tick's allocation.
 - `Structures` (`Structure`): a definition id, transform, `Blueprint` or `Complete` state, delivered materials, work, health. Optional components: `Storage`, `MachineState`, `GeneratorState`, `BatteryState`, `PowerState`. World loot containers are structures with `PlayerBuilt = false`.
 - `PowerLinks`: cables between structure ids.
 - `ResourceNodes`, `Drops` (ground containers, including the player's belongings after death), `Zombies`.
+- `Colonists` (`ColonistState`: needs, carry inventory, skills, work priorities, current job, home bed, recent failures) and `Jobs` (`Job`: type, priority, owner, state, haul data including live reservation tokens).
+- Structures may also carry a `CropState` (planter beds).
 - `Tech` (unlocked techs and trigger counters), `Exploration` (revealed cells, discovered POIs), `Threat`, `Metrics`.
 - `Layout` (`WorldLayout`): terrain heights, roads, POIs, props, spawn points. It is **regenerated from the seed** and not saved.
 
@@ -88,4 +92,4 @@ Every inventory has its own `EntityId` and is registered in `WorldState` with it
 
 ## Performance
 
-Headless measurement (`PerformanceTests`, Apple M2 Max, .NET 10): a busy settlement with 76 structures (40 machines plus generators) and 26 infected simulates at about **0.03 ms per 60 Hz frame**; machine ticks average 0.36 ms at 4 Hz. In-engine rendering and physics costs have **not** been measured yet. Known optimisation targets: the machine automation neighbour search is O(n²) (use a spatial grid); sorted id lists are allocated each tick.
+Headless measurement (`PerformanceTests`, Apple M2 Max, .NET 10): a busy settlement with 76 structures (40 machines plus generators) and 26 infected simulates at about **0.007 ms per 60 Hz frame** after caching the sorted structure list (it was 0.03 ms before); machine ticks average 0.06 ms at 4 Hz. In-engine rendering and physics costs have **not** been measured yet. Known optimisation target: the machine automation and colony planner neighbour searches are O(n²) over structures (use a spatial grid at larger scales).
