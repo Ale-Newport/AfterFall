@@ -11,7 +11,15 @@ namespace Afterfall.Domain.Colony
         Haul,
         Build,
         Eat,
-        Rest
+        Rest,
+        Farm
+    }
+
+    public enum FarmAction
+    {
+        Plant,
+        Water,
+        Harvest
     }
 
     public enum JobState
@@ -69,6 +77,9 @@ namespace Afterfall.Domain.Colony
         /// <summary>True when the destination is a blueprint (materials are delivered, not stored).</summary>
         public bool DeliverToBlueprint { get; set; }
 
+        /// <summary>Farm jobs: what to do at the planter bed.</summary>
+        public FarmAction Farm { get; set; }
+
         public bool IsActive => State == JobState.Open || State == JobState.Claimed;
     }
 
@@ -78,7 +89,8 @@ namespace Afterfall.Domain.Colony
         public Dictionary<JobType, int> Priorities { get; } = new Dictionary<JobType, int>
         {
             [JobType.Haul] = 3,
-            [JobType.Build] = 3
+            [JobType.Build] = 3,
+            [JobType.Farm] = 3
         };
 
         public int PriorityFor(JobType t) => Priorities.TryGetValue(t, out int p) ? p : 0;

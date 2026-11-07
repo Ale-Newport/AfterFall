@@ -66,7 +66,8 @@ namespace Afterfall.Persistence
                     Id = j.Id.Value, Type = j.Type.ToString(), Priority = j.Priority, State = j.State.ToString(), Assignee = j.AssigneeId.Value,
                     Description = j.Description, FailureReason = j.FailureReason, CreatedAt = j.CreatedAt, TargetStructure = j.TargetStructure.Value,
                     SourceInventory = j.SourceInventory.Value, DestinationInventory = j.DestinationInventory.Value, ItemId = j.ItemId, Quantity = j.Quantity,
-                    Stage = j.Stage.ToString(), SourceToken = j.SourceToken.Id, DestinationToken = j.DestinationToken.Id, DeliverToBlueprint = j.DeliverToBlueprint
+                    Stage = j.Stage.ToString(), SourceToken = j.SourceToken.Id, DestinationToken = j.DestinationToken.Id, DeliverToBlueprint = j.DeliverToBlueprint,
+                    Farm = j.Farm.ToString()
                 });
             }
             dto.UnlockedTechs.AddRange(w.Tech.Unlocked);
@@ -334,7 +335,8 @@ namespace Afterfall.Persistence
                     ItemId = jd.ItemId ?? "", Quantity = jd.Quantity, Stage = Enum.TryParse(jd.Stage, out HaulStage hs) ? hs : HaulStage.ToSource,
                     SourceToken = jd.SourceToken > 0 ? new ReservationToken(new EntityId(jd.SourceInventory), jd.SourceToken) : default,
                     DestinationToken = jd.DestinationToken > 0 ? new ReservationToken(new EntityId(jd.DestinationInventory), jd.DestinationToken) : default,
-                    DeliverToBlueprint = jd.DeliverToBlueprint
+                    DeliverToBlueprint = jd.DeliverToBlueprint,
+                    Farm = Enum.TryParse(jd.Farm, out FarmAction fa) ? fa : FarmAction.Plant
                 };
                 w.Jobs[j.Id] = j;
                 w.Ids.EnsureAbove(j.Id);

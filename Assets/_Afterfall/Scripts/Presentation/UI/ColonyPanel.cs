@@ -14,7 +14,7 @@ namespace Afterfall.Presentation.UI
     /// </summary>
     public sealed class ColonyPanel
     {
-        private static readonly JobType[] WorkTypes = { JobType.Haul, JobType.Build };
+        private static readonly JobType[] WorkTypes = { JobType.Haul, JobType.Build, JobType.Farm };
         private readonly GameController _gc;
         private readonly VisualElement _list;
         private readonly Label _summary;
@@ -71,6 +71,7 @@ namespace Afterfall.Presentation.UI
                 EntityId id = c.Id;
                 var box = _list.Put(UiKit.Div("list-item", "col"));
                 box.style.alignItems = Align.Stretch;
+                box.style.flexDirection = FlexDirection.Column; // .list-item is row by default
                 var head = box.Put(UiKit.Div("row"));
                 head.Add(UiKit.Text(c.Name, "subtitle", "grow"));
                 head.Add(UiKit.Btn("Locate", () =>

@@ -188,6 +188,7 @@ namespace Afterfall.Persistence
         public long SourceToken { get; set; }
         public long DestinationToken { get; set; }
         public bool DeliverToBlueprint { get; set; }
+        public string Farm { get; set; } = "";
     }
 
     public sealed class WorldDto

@@ -50,6 +50,7 @@ namespace Afterfall.Services
             Colony = new ColonySystem(World, Content, Events, Construction);
             Zombies.ColonistHit += (id, dmg) => Colony.DamageColonist(id, dmg, "the infected");
             Farming = new Afterfall.Domain.Farming.FarmingSystem(World, Content, Events, Tech);
+            Colony.Farming = Farming;
             Farming.PumpHasPower = s =>
             {
                 PowerNetworkInfo net = Power.NetworkOf(s.Id);

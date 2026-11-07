@@ -85,3 +85,39 @@ namespace Afterfall.Tests
         }
     }
 }
+
+namespace Afterfall.Tests
+{
+    public class FarmJobTests
+    {
+        [Test]
+        public void Colonist_PlantsWatersAndHarvests_FromStorage()
+        {
+            GameSession s = TestSupport.NewSession(9090);
+            s.Threats.SpawningEnabled = false;
+            foreach (EntityId id in s.World.Zombies.Keys.ToList()) s.World.Zombies.Remove(id);
+            s.World.Clock.Advance(s.World.Clock.DayLengthSeconds * 0.1);
+            s.World.Tech.Unlocked.Add("agriculture");
+            Vec3 p = s.Player.Position;
+            TestSupport.Build(s.World, "bed", new Vec3(p.X - 3, p.Y, p.Z));
+            Structure crate = TestSupport.Build(s.World, "storage_crate", new Vec3(p.X + 3, p.Y, p.Z));
+            Structure plot = TestSupport.Build(s.World, "planter_bed", new Vec3(p.X + 6, p.Y, p.Z + 4));
+            crate.Storage.TryAdd("seed_potato", 2);
+            crate.Storage.TryAdd("water_bottle", 2);
+            Afterfall.Domain.Colony.ColonistState c = s.World.Colonists.Values.First();
+            c.Position = p;
+            Assert.IsTrue(s.Recruit(c.Id).Ok);
+
+            TestSupport.Run(s, 40, 0.1);
+            Assert.IsTrue(plot.Crop.Planted, "planted with a seed from storage");
+            Assert.Greater(plot.Crop.Water, 50f, "watered with a stored water bottle");
+            Assert.AreEqual(1, crate.Storage.Count("seed_potato"));
+
+            plot.Crop.Growth = 1f;
+            TestSupport.Run(s, 40, 0.1);
+            Assert.GreaterOrEqual(crate.Storage.Count("potato"), 3, "the harvest was carried into storage");
+            Assert.Less(plot.Crop.Growth, 0.5f, "the ripe crop was harvested");
+            Assert.IsTrue(plot.Crop.Planted, "and the bed was replanted with returned seed");
+        }
+    }
+}

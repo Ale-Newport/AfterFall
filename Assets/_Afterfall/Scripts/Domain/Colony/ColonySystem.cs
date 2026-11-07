@@ -61,6 +61,7 @@ namespace Afterfall.Domain.Colony
         private readonly ContentDatabase _content;
         private readonly EventBus _bus;
         private readonly ConstructionService _construction;
+        private Farming.FarmingSystem _farming;
         private readonly Dictionary<EntityId, double> _nextAssign = new Dictionary<EntityId, double>();
         private double _nextPlan;
 
@@ -73,6 +74,13 @@ namespace Afterfall.Domain.Colony
         }
 
         public string Name => "Colony";
+
+        /// <summary>Enables Farm jobs (planting, watering, harvesting planter beds).</summary>
+        public Farming.FarmingSystem Farming
+        {
+            get => _farming;
+            set => _farming = value;
+        }
         public IColonistMovement Movement { get; set; } = new DirectColonistMovement();
 
         // ================================================================== recruitment
@@ -233,6 +241,7 @@ namespace Afterfall.Domain.Colony
                     continue;
                 }
                 if (s.Machine != null) PlanMachine(s, storages, now);
+                if (s.Crop != null && _farming != null) PlanFarm(s, storages, now);
                 if (s.Generator != null) PlanFuel(s.Id, s.Generator.Fuel, storages, now, energy: true);
             }
         }
@@ -296,6 +305,42 @@ namespace Afterfall.Domain.Colony
                     DestinationInventory = dest.Storage.Id, ItemId = st.ItemId, Quantity = Math.Min(qty, dest.Storage.SpaceFor(st.ItemId)), CreatedAt = now,
                     Description = $"Store {_content.Items.NameOf(st.ItemId)} from {_content.Building(s.DefId)?.Name}"
                 });
+            }
+        }
+
+        private void PlanFarm(Structure plot, List<Structure> storages, double now)
+        {
+            if (HasActiveJob(JobType.Farm, plot.Id, null)) return;
+            BuildingDefinition def = _content.Building(plot.DefId);
+            Farming.CropState crop = plot.Crop;
+            string name = def?.Name ?? "planter bed";
+            if (crop.Ready)
+            {
+                AddJob(new Job { Type = JobType.Farm, Farm = FarmAction.Harvest, TargetStructure = plot.Id, Description = $"Harvest {name}", CreatedAt = now });
+                return;
+            }
+            FarmAction action;
+            string item;
+            if (!crop.Planted)
+            {
+                action = FarmAction.Plant;
+                item = def.Farm.SeedItem;
+            }
+            else if (crop.Water < 30f && !crop.Irrigated)
+            {
+                action = FarmAction.Water;
+                item = "water_bottle";
+            }
+            else return;
+            foreach (Structure st in storages)
+            {
+                if (st.Storage.Available(item) - PendingOutgoing(st.Storage.Id, item) <= 0) continue;
+                AddJob(new Job
+                {
+                    Type = JobType.Farm, Farm = action, TargetStructure = plot.Id, SourceInventory = st.Storage.Id, ItemId = item, Quantity = 1, CreatedAt = now,
+                    Description = $"{(action == FarmAction.Plant ? "Plant" : "Water")} {name}"
+                });
+                return;
             }
         }
 
@@ -420,7 +465,7 @@ namespace Afterfall.Domain.Colony
         public bool Claim(ColonistState c, Job j)
         {
             if (j.State != JobState.Open || j.AssigneeId.IsValid) return false;
-            if (j.Type == JobType.Haul || j.Type == JobType.Eat)
+            if (j.Type == JobType.Haul || j.Type == JobType.Eat || (j.Type == JobType.Farm && j.SourceInventory.IsValid))
             {
                 Inventory src = _world.FindInventory(j.SourceInventory);
                 if (src == null || !src.TryReserveItems(j.ItemId, j.Quantity, out ReservationToken st))
@@ -484,6 +529,9 @@ namespace Afterfall.Domain.Colony
                     break;
                 case JobType.Eat:
                     ExecuteEat(c, j, dt);
+                    break;
+                case JobType.Farm:
+                    ExecuteFarm(c, j, dt);
                     break;
                 case JobType.Rest:
                     if (!_world.Structures.TryGetValue(j.TargetStructure, out Structure bed))
@@ -585,6 +633,50 @@ namespace Afterfall.Domain.Colony
                 return;
             }
             j.DestinationToken = default;
+            Complete(c, j);
+        }
+
+        private void ExecuteFarm(ColonistState c, Job j, float dt)
+        {
+            if (_farming == null || !_world.Structures.TryGetValue(j.TargetStructure, out Structure plot) || plot.Crop == null)
+            {
+                Fail(c, j, "the planter bed is gone");
+                return;
+            }
+            if (j.SourceInventory.IsValid && j.Stage == HaulStage.ToSource)
+            {
+                Inventory src = _world.FindInventory(j.SourceInventory);
+                if (src == null || !src.HasReservation(j.SourceToken))
+                {
+                    Fail(c, j, $"no {_content.Items.NameOf(j.ItemId)} left in storage");
+                    return;
+                }
+                if (!MoveTo(c, InventoryPosition(j.SourceInventory, c), dt, ArriveDistance)) return;
+                var taken = new List<ItemStack>();
+                if (!c.Carry.CanAccept(j.ItemId, 1) || !src.CommitOutgoing(j.SourceToken, taken))
+                {
+                    Fail(c, j, "could not pick up the supplies");
+                    return;
+                }
+                foreach (ItemStack st in taken) c.Carry.TryAddStack(st);
+                j.SourceToken = default;
+                j.Stage = HaulStage.ToDestination;
+                return;
+            }
+            if (!MoveTo(c, plot.Position, dt, ArriveDistance + FootprintRadius(plot))) return;
+            c.Activity = ColonistActivity.Working;
+            OpResult r;
+            switch (j.Farm)
+            {
+                case FarmAction.Plant: r = plot.Crop.Planted ? OpResult.Success() : _farming.Plant(plot, c.Carry); break;
+                case FarmAction.Water: r = plot.Crop.Water >= 90f ? OpResult.Success() : _farming.Water(plot, c.Carry); break;
+                default: r = plot.Crop.Ready ? _farming.Harvest(plot, c.Carry) : OpResult.Success(); break;
+            }
+            if (!r.Ok)
+            {
+                Fail(c, j, r.Message);
+                return;
+            }
             Complete(c, j);
         }
 
