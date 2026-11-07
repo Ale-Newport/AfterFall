@@ -37,14 +37,14 @@ namespace Afterfall.Presentation
                     Wall(root, main, dark, sx, sy, sz, col, 0f, 0f, 0f, 0f);
                     break;
                 case "doorway":
-                    Wall(root, main, dark, sx, sy, sz, col, 0f, 1.2f, 0f, 2.3f);
+                    Wall(root, main, dark, sx, sy, sz, col, 0f, 1.6f, 0f, 2.3f); // wide enough for NavMesh agents
                     break;
                 case "window_wall":
                     Wall(root, main, dark, sx, sy, sz, col, 0f, 1.2f, 1.0f, 2.1f);
                     if (ghost == null) Box(root, "Shutter", dark, new Vector3(0.75f, 1.55f, sz * 0.5f + 0.03f), new Vector3(0.3f, 1.1f, 0.04f), false);
                     break;
                 case "roof":
-                    Box(root, "Roof", main, new Vector3(0, sy * 0.5f, 0), new Vector3(sx, sy, sz), col);
+                    Shapes.NotWalkable(Box(root, "Roof", main, new Vector3(0, sy * 0.5f, 0), new Vector3(sx, sy, sz), col));
                     Box(root, "Eave", dark, new Vector3(0, sy * 0.5f, sz * 0.5f), new Vector3(sx, sy * 1.2f, 0.12f), false);
                     break;
                 case "crate":

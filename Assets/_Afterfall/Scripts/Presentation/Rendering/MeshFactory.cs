@@ -244,6 +244,18 @@ namespace Afterfall.Presentation
             return go;
         }
 
+        /// <summary>
+        /// Keeps a roof, ceiling or canopy out of the walkable NavMesh. It still blocks agents, but
+        /// nobody is placed on it (a survivor indoors used to snap onto the nearest roof) or routed over it.
+        /// </summary>
+        public static GameObject NotWalkable(GameObject go)
+        {
+            var m = go.AddComponent<Unity.AI.Navigation.NavMeshModifier>();
+            m.overrideArea = true;
+            m.area = UnityEngine.AI.NavMesh.GetAreaFromName("Not Walkable");
+            return go;
+        }
+
         /// <summary>A box part whose centre is at <paramref name="center"/>, with an optional box collider.</summary>
         public static GameObject Box(Transform parent, string name, Material material, Vector3 center, Vector3 size, bool collider = true, Quaternion? rot = null)
         {

@@ -49,7 +49,8 @@ namespace Afterfall.Presentation
             return go;
         }
 
-        private static void Building(Transform t, Vector3 s, Color wall, Color roof, bool gable, float doorOffset, float doorWidth = 1.2f, float doorHeight = 2.2f)
+        // Doors are 1.6 m wide: at 1.2 m the NavMesh (agent radius 0.35 m) only sometimes connected inside and outside.
+        private static void Building(Transform t, Vector3 s, Color wall, Color roof, bool gable, float doorOffset, float doorWidth = 1.6f, float doorHeight = 2.2f)
         {
             Material wm = MaterialLibrary.Lit(wall);
             Material trim = MaterialLibrary.Lit(wall * 0.75f);
@@ -71,12 +72,13 @@ namespace Afterfall.Presentation
             {
                 GameObject r = Shapes.Part(t, "Roof", MeshFactory.GableRoof(), rm, new Vector3(0, h, 0), new Vector3(s.x + 0.6f, Mathf.Min(2.2f, s.z * 0.35f), s.z + 0.8f));
                 r.AddComponent<MeshCollider>().sharedMesh = MeshFactory.GableRoof();
-                Shapes.Box(t, "Ceiling", wm, new Vector3(0, h - 0.05f, 0), new Vector3(s.x, 0.1f, s.z));
+                Shapes.NotWalkable(r);
+                Shapes.NotWalkable(Shapes.Box(t, "Ceiling", wm, new Vector3(0, h - 0.05f, 0), new Vector3(s.x, 0.1f, s.z)));
             }
             else
             {
-                Shapes.Box(t, "Roof", rm, new Vector3(0, h + 0.1f, 0), new Vector3(s.x + 0.4f, 0.2f, s.z + 0.4f));
-                Shapes.Box(t, "Parapet", trim, new Vector3(0, h + 0.35f, halfZ + 0.1f), new Vector3(s.x + 0.4f, 0.3f, 0.2f));
+                Shapes.NotWalkable(Shapes.Box(t, "Roof", rm, new Vector3(0, h + 0.1f, 0), new Vector3(s.x + 0.4f, 0.2f, s.z + 0.4f)));
+                Shapes.NotWalkable(Shapes.Box(t, "Parapet", trim, new Vector3(0, h + 0.35f, halfZ + 0.1f), new Vector3(s.x + 0.4f, 0.3f, 0.2f)));
             }
             // Debris inside for atmosphere
             Shapes.Box(t, "Debris", MaterialLibrary.Lit(new Color(0.3f, 0.27f, 0.22f)), new Vector3(halfX * 0.4f, 0.2f, -halfZ * 0.3f), new Vector3(0.8f, 0.3f, 0.5f), true, Quaternion.Euler(0, 25, 8));
@@ -99,6 +101,7 @@ namespace Afterfall.Presentation
         {
             GameObject r = Shapes.Part(t, "Canvas", MeshFactory.GableRoof(), MaterialLibrary.Lit(new Color(0.42f, 0.47f, 0.33f)), Vector3.zero, new Vector3(s.z, s.y, s.x), Quaternion.Euler(0, 90, 0));
             r.AddComponent<BoxCollider>().size = new Vector3(1f, 1f, 0.8f);
+            Shapes.NotWalkable(r);
         }
 
         private static void Firepit(Transform t)
@@ -145,7 +148,7 @@ namespace Afterfall.Presentation
             float hx = s.x * 0.4f, hz = s.z * 0.35f;
             foreach (Vector3 c in new[] { new Vector3(-hx, 0, -hz), new Vector3(hx, 0, -hz), new Vector3(-hx, 0, hz), new Vector3(hx, 0, hz) })
                 Shapes.Box(t, "Pillar", steel, c + new Vector3(0, s.y * 0.5f, 0), new Vector3(0.3f, s.y, 0.3f));
-            Shapes.Box(t, "Roof", MaterialLibrary.Lit(new Color(0.78f, 0.75f, 0.68f)), new Vector3(0, s.y, 0), new Vector3(s.x, 0.4f, s.z));
+            Shapes.NotWalkable(Shapes.Box(t, "Roof", MaterialLibrary.Lit(new Color(0.78f, 0.75f, 0.68f)), new Vector3(0, s.y, 0), new Vector3(s.x, 0.4f, s.z)));
             Shapes.Box(t, "Stripe", MaterialLibrary.Lit(new Color(0.7f, 0.2f, 0.15f)), new Vector3(0, s.y, s.z * 0.5f + 0.02f), new Vector3(s.x, 0.25f, 0.05f), false);
         }
 
