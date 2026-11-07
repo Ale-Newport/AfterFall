@@ -156,9 +156,14 @@ namespace Afterfall.Presentation
             ZombieView v = _gc.Sync.ZombieViewOf(zombie.Id);
             if (v == null || !v.OnNavMesh) return _fallback.GetNavStatus(zombie);
             NavMeshAgent a = v.Agent;
+            bool arrived = !a.pathPending && a.remainingDistance <= a.stoppingDistance + 0.4f;
+            // The end of a partial path (a wall or barricade in the way) is not the goal: keep pursuing,
+            // so the stall turns into a breach instead of the infected giving up and searching.
+            Vector3 end = a.pathEndPosition - v.LastDestination;
+            bool shortOfGoal = a.pathStatus == NavMeshPathStatus.PathPartial && !float.IsNaN(v.LastDestination.x) && new Vector2(end.x, end.z).magnitude > 1.0f;
             var s = new ZombieNavStatus
             {
-                ReachedDestination = !a.pathPending && a.remainingDistance <= a.stoppingDistance + 0.4f,
+                ReachedDestination = arrived && !shortOfGoal,
                 PathFailed = v.PathFailed
             };
             v.PathFailed = false;

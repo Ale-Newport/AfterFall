@@ -157,16 +157,42 @@ namespace Afterfall.Presentation
             view.Def = def;
             view.BuiltComplete = s.IsComplete;
             view.CacheParts();
-            if (s.IsComplete && def.BlocksMovement && def.Category != BuildingCategory.WorldProp)
+            if (s.IsComplete && def.BlocksMovement && def.Category != BuildingCategory.WorldProp) AddObstacles(go, def);
+            _structures[s.Id] = view;
+        }
+
+        /// <summary>Parts lower than this are stepped onto (foundations); parts starting higher are overhead (lintels, roofs).</summary>
+        private const float StepHeight = 0.6f, HeadHeight = 1.9f;
+
+        /// <summary>
+        /// Carves the NavMesh with one obstacle per solid box part that blocks a walking person.
+        /// A single footprint box sealed doorway openings and turned foundations into holes.
+        /// </summary>
+        private static void AddObstacles(GameObject go, BuildingDefinition def)
+        {
+            Transform root = go.transform;
+            bool any = false;
+            foreach (BoxCollider box in go.GetComponentsInChildren<BoxCollider>())
             {
-                var obstacle = go.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+                if (box.isTrigger || box.GetComponent<UnityEngine.AI.NavMeshObstacle>() != null) continue;
+                float centerY = root.InverseTransformPoint(box.transform.TransformPoint(box.center)).y;
+                float halfY = 0.5f * box.size.y * Mathf.Abs(box.transform.lossyScale.y / root.lossyScale.y);
+                if (centerY + halfY < StepHeight || centerY - halfY > HeadHeight) continue;
+                var obstacle = box.gameObject.AddComponent<UnityEngine.AI.NavMeshObstacle>();
                 obstacle.carving = true;
                 obstacle.carveOnlyStationary = true;
                 obstacle.shape = UnityEngine.AI.NavMeshObstacleShape.Box;
-                obstacle.center = new Vector3(0, def.SizeY * 0.5f, 0);
-                obstacle.size = new Vector3(def.SizeX, Mathf.Max(0.5f, def.SizeY), def.SizeZ);
+                obstacle.center = box.center;
+                obstacle.size = box.size;
+                any = true;
             }
-            _structures[s.Id] = view;
+            if (any || def.SizeY < StepHeight) return;
+            var whole = go.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+            whole.carving = true;
+            whole.carveOnlyStationary = true;
+            whole.shape = UnityEngine.AI.NavMeshObstacleShape.Box;
+            whole.center = new Vector3(0, def.SizeY * 0.5f, 0);
+            whole.size = new Vector3(def.SizeX, Mathf.Max(0.5f, def.SizeY), def.SizeZ);
         }
 
         private void SyncZombieViews()
