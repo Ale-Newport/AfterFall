@@ -49,7 +49,8 @@ namespace Afterfall.Presentation.UI
             foreach (ColonistState c in colonists)
             {
                 if (!_rows.TryGetValue(c.Id, out var row)) continue;
-                row.Status.text = c.Activity == ColonistActivity.Down ? c.Status : $"{c.Activity}: {c.Status}";
+                string activity = c.Activity.ToString();
+                row.Status.text = c.Activity == ColonistActivity.Down || c.Status.StartsWith(activity, System.StringComparison.OrdinalIgnoreCase) ? c.Status : $"{activity}: {c.Status}";
                 row.Needs.text = $"Health {c.Vitals.Health:0} · food {c.Vitals.Hunger:0}% · water {c.Vitals.Thirst:0}% · carrying {c.Carry.TotalWeight:0.#} kg";
                 row.Failures.text = c.RecentFailures.Count > 0 ? "Recent problem: " + c.RecentFailures[0] : "";
                 foreach (JobType t in WorkTypes)

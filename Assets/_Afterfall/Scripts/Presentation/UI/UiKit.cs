@@ -45,6 +45,30 @@ namespace Afterfall.Presentation.UI
         }
 
         public static string Watts(float w) => w >= 1000f ? $"{w / 1000f:0.0} kW" : $"{w:0} W";
+
+        /// <summary>Player-facing name of a machine state.</summary>
+        public static string Describe(Afterfall.Domain.Industry.MachineStatus status)
+        {
+            switch (status)
+            {
+                case Afterfall.Domain.Industry.MachineStatus.WaitingForInput: return "Waiting for input";
+                case Afterfall.Domain.Industry.MachineStatus.OutputFull: return "Output full";
+                case Afterfall.Domain.Industry.MachineStatus.MissingPower: return "No power";
+                case Afterfall.Domain.Industry.MachineStatus.MissingFuel: return "No fuel";
+                case Afterfall.Domain.Industry.MachineStatus.RecipeNotConfigured: return "No recipe chosen";
+                case Afterfall.Domain.Industry.MachineStatus.Disabled: return "Switched off";
+                case Afterfall.Domain.Industry.MachineStatus.Unbuilt: return "Not built";
+                default: return status.ToString();
+            }
+        }
+
+        /// <summary>"State: detail", without repeating the state when the detail already starts with it.</summary>
+        public static string StatusText(Afterfall.Domain.Industry.MachineState m)
+        {
+            string state = Describe(m.Status);
+            if (string.IsNullOrEmpty(m.StatusDetail)) return state;
+            return m.StatusDetail.StartsWith(state, System.StringComparison.OrdinalIgnoreCase) ? m.StatusDetail : $"{state}: {m.StatusDetail}";
+        }
     }
 
     /// <summary>A labelled progress bar.</summary>

@@ -87,6 +87,7 @@ namespace Afterfall.Presentation.UI
             bool tactical = _gc.CameraRig.TacticalActive;
             bool windows = _ui.AnyWindowOpen;
             UiKit.Show(_hotbarRow, !tactical);
+            _gc.Ui.SetToastsBesidePanel(tactical);
             UiKit.Show(_vitals, true);
             UiKit.Show(_crosshair, !tactical && !windows && !v.IsDead);
             for (int i = 0; i < _hotbar.Length; i++)

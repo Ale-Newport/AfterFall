@@ -395,7 +395,7 @@ namespace Afterfall.Presentation.UI
             if (s.Machine != null)
             {
                 MachineState m = s.Machine;
-                _status.text = $"Status: {m.Status}";
+                _status.text = $"Status: {UiKit.Describe(m.Status)}";
                 _detail.text = m.StatusDetail;
                 UiKit.SetClass(_detail, "bad", m.Status != MachineStatus.Working && m.Status != MachineStatus.Idle);
                 RecipeDefinition r = Gc.Session.Content.Recipe(m.RecipeId);
@@ -416,7 +416,7 @@ namespace Afterfall.Presentation.UI
                         RecipeDefinition rec = rr;
                         bool unlocked = Gc.Session.World.Tech.IsUnlocked(rr.RequiredTech);
                         string label = $"{rr.Name}: {string.Join(" + ", rr.Inputs.Select(a => $"{a.Quantity} {items.NameOf(a.ItemId)}"))} -> {string.Join(", ", rr.Outputs.Select(a => $"{a.Quantity} {items.NameOf(a.ItemId)}"))} ({rr.Duration:0.#}s)";
-                        Button b = UiKit.Btn(unlocked ? label : "Locked — " + Gc.Session.Tech.DescribeRequirements(rr.RequiredTech), () => { Report(Gc.Session.SetMachineRecipe(_id, rec.Id)); _recipeShown = null; }, "btn--small");
+                        Button b = UiKit.Btn(unlocked ? label : "Locked — " + Gc.Session.Tech.DescribeRequirements(rr.RequiredTech), () => { Report(Gc.Session.SetMachineRecipe(_id, rec.Id)); _recipeShown = null; }, "btn--small", "btn--list");
                         b.style.unityTextAlign = TextAnchor.MiddleLeft;
                         if (m.RecipeId == rr.Id) b.AddToClassList("btn--selected");
                         if (!unlocked) b.AddToClassList("btn--disabled");

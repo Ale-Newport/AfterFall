@@ -220,7 +220,7 @@ namespace Afterfall.Presentation
             }
             if (!s.PlayerBuilt && s.Storage != null) return $"[E] Search {Def.Name}{(s.Searched ? (s.Storage.IsEmpty ? " (empty)" : " (searched)") : "")}";
             if (s.Storage != null) return $"[E] Open {Def.Name}{own}";
-            if (s.Machine != null) return $"[E] Operate {Def.Name} — {s.Machine.Status}: {s.Machine.StatusDetail}{own}";
+            if (s.Machine != null) return $"[E] Operate {Def.Name} — {UI.UiKit.StatusText(s.Machine)}{own}";
             if (s.Generator != null) return $"[E] Generator — {s.Generator.Status}{own}";
             if (!string.IsNullOrEmpty(Def.CraftingStation)) return $"[E] Use {Def.Name}{own}";
             if (Def.IsBed) return (gc.Session.Player.SpawnStructureId == s.Id ? $"{Def.Name} (your respawn point)" : $"[E] Rest — set respawn point") + own;

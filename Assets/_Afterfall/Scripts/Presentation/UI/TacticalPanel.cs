@@ -161,7 +161,7 @@ namespace Afterfall.Presentation.UI
                 {
                     bool unlocked = _gc.Session.World.Tech.IsUnlocked(r.RequiredTech);
                     string label = $"{r.Name}  ({string.Join(" + ", r.Inputs.Select(a => $"{a.Quantity} {_gc.Session.Content.Items.NameOf(a.ItemId)}"))} -> {string.Join(", ", r.Outputs.Select(a => $"{a.Quantity} {_gc.Session.Content.Items.NameOf(a.ItemId)}"))})";
-                    Button b = UiKit.Btn(unlocked ? label : "Locked: " + r.Name, () => { Toast(_gc.Session.SetMachineRecipe(id, r.Id)); _builtFor = EntityId.None; }, "btn--small");
+                    Button b = UiKit.Btn(unlocked ? label : "Locked: " + r.Name, () => { Toast(_gc.Session.SetMachineRecipe(id, r.Id)); _builtFor = EntityId.None; }, "btn--small", "btn--list");
                     if (s.Machine.RecipeId == r.Id) b.AddToClassList("btn--selected");
                     if (!unlocked) b.AddToClassList("btn--disabled");
                     _recipeList.Add(b);
@@ -215,7 +215,7 @@ namespace Afterfall.Presentation.UI
                 BuildingDefinition d = _gc.Session.Content.Building(s.DefId);
                 bool important = s.Machine != null || s.Generator != null || !s.IsComplete;
                 if (!important) continue;
-                string text = !s.IsComplete ? $"{d.Name} (blueprint)" : s.Machine != null ? $"{d.Name}: {s.Machine.Status}" : $"{d.Name}: {(s.Generator.Running ? UiKit.Watts(s.Generator.OutputWatts) : "off")}";
+                string text = !s.IsComplete ? $"{d.Name} (blueprint)" : s.Machine != null ? $"{d.Name}: {UiKit.Describe(s.Machine.Status)}" : $"{d.Name}: {(s.Generator.Running ? UiKit.Watts(s.Generator.OutputWatts) : "off")}";
                 bool bad = TacticalController.IsBlocked(s) || (s.Generator != null && !s.Generator.Running);
                 Place(Next(text, bad ? "overlay-label--bad" : null), s.Position.ToUnity() + Vector3.up * (d.SizeY + 1f));
             }

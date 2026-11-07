@@ -106,6 +106,9 @@ namespace Afterfall.Presentation.UI
             return e;
         }
 
+        /// <summary>Moves toasts left of the strategic view's right-hand panel so they do not cover it.</summary>
+        public void SetToastsBesidePanel(bool beside) => UiKit.SetClass((VisualElement)_toastLayer.userData, "toasts--beside-panel", beside);
+
         public void ShowTooltip(string text, Vector2 panelPosition)
         {
             if (string.IsNullOrEmpty(text))

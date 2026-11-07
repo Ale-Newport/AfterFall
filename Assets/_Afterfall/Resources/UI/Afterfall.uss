@@ -53,6 +53,7 @@
 .btn--primary:hover { background-color: rgb(150, 112, 46); }
 .btn--danger { background-color: rgb(110, 40, 34); }
 .btn--small { padding: 2px 8px; font-size: 14px; }
+.btn--list { white-space: normal; -unity-text-align: middle-left; }
 .btn--disabled { opacity: 0.45; }
 .btn--selected { border-color: rgb(250, 210, 110); background-color: rgb(92, 80, 48); }
 .menu-btn { width: 340px; height: 52px; font-size: 22px; }
@@ -109,6 +110,7 @@
 .hud-warning { position: absolute; left: 18px; top: 14px; width: 420px; }
 
 .toasts { position: absolute; right: 18px; top: 52px; width: 440px; align-items: flex-end; }
+.toasts--beside-panel { right: 410px; }
 .toast {
     background-color: rgba(20, 22, 20, 0.92); border-radius: 5px; padding: 6px 10px; margin-bottom: 4px;
     border-left-width: 4px; border-left-color: rgb(160, 160, 150); white-space: normal; font-size: 15px;

@@ -246,7 +246,7 @@ namespace Afterfall.Presentation
         {
             BuildingDefinition d = gc.Session.Content.Building(s.DefId);
             if (!s.IsComplete) return $"Blueprint — {gc.Session.Construction.WorkProgress01(s) * 100:0}%";
-            if (s.Machine != null) return $"{s.Machine.Status}: {s.Machine.StatusDetail}";
+            if (s.Machine != null) return UI.UiKit.StatusText(s.Machine);
             if (s.Generator != null) return s.Generator.Status;
             if (s.Battery != null) return $"Stored {s.Battery.StoredJoules / 1000:0}/{d.Battery.CapacityKJ:0} kJ ({s.Battery.FlowWatts:+0;-0;0} W)";
             if (d.Light != null) return s.Power?.Reason ?? "";
