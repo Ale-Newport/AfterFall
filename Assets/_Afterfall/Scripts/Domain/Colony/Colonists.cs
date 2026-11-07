@@ -145,6 +145,9 @@ namespace Afterfall.Domain.Colony
     {
         /// <summary>Advances movement toward <see cref="ColonistState.MoveTarget"/>; returns true when within <paramref name="arriveDistance"/>.</summary>
         bool Step(ColonistState c, float speed, float arriveDistance, float dt);
+
+        /// <summary>True when there is no route to <see cref="ColonistState.MoveTarget"/> (the colonist has stalled short of it).</summary>
+        bool CannotReach(ColonistState c);
     }
 
     public sealed class DirectColonistMovement : IColonistMovement
@@ -164,5 +167,7 @@ namespace Afterfall.Domain.Colony
             c.Yaw = (float)(Math.Atan2(delta.X, delta.Z) * 180.0 / Math.PI);
             return dist - step <= arriveDistance;
         }
+
+        public bool CannotReach(ColonistState c) => false;
     }
 }

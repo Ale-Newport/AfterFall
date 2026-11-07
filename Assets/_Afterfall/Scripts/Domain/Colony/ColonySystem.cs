@@ -146,7 +146,12 @@ namespace Afterfall.Domain.Colony
                     _nextAssign[c.Id] = now + 1.0;
                     Assign(c, now);
                 }
-                if (c.CurrentJob.IsValid) Execute(c, (float)dt);
+                if (c.CurrentJob.IsValid && c.HasMoveTarget && Movement.CannotReach(c) && _world.Jobs.TryGetValue(c.CurrentJob, out Job stuck))
+                {
+                    Fail(c, stuck, "can't find a way there");
+                    c.HasMoveTarget = false;
+                }
+                else if (c.CurrentJob.IsValid) Execute(c, (float)dt);
                 else
                 {
                     c.Activity = ColonistActivity.Idle;
@@ -344,6 +349,9 @@ namespace Afterfall.Domain.Colony
             }
         }
 
+        /// <summary>Content tag of items colonists may burn on their own (wood, charcoal, fuel cans).</summary>
+        public const string FuelTag = "fuel";
+
         private void PlanFuel(EntityId machineId, Inventory fuel, List<Structure> storages, double now, bool energy)
         {
             int have = 0;
@@ -357,7 +365,8 @@ namespace Afterfall.Domain.Colony
                 {
                     ItemDefinition d = _content.Items.Get(kv.Key);
                     float value = energy ? d.EnergyKJ : d.BurnSeconds;
-                    if (value <= bestValue || !fuel.Accepts(d.Id) || st.Storage.Available(d.Id) - PendingOutgoing(st.Storage.Id, d.Id) <= 0) continue;
+                    // Only dedicated fuels: colonists must not burn building materials such as planks.
+                    if (value <= bestValue || !d.HasTag(FuelTag) || !fuel.Accepts(d.Id) || st.Storage.Available(d.Id) - PendingOutgoing(st.Storage.Id, d.Id) <= 0) continue;
                     best = d.Id;
                     bestValue = value;
                 }

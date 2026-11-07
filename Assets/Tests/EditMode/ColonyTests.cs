@@ -95,6 +95,53 @@ namespace Afterfall.Tests
         }
 
         [Test]
+        public void Colonists_RefuelOnlyWithDedicatedFuel_NotBuildingMaterials()
+        {
+            GameSession s = Base(out ColonistState c, out Structure crate);
+            Vec3 p = s.Player.Position;
+            Structure furnace = TestSupport.Build(s.World, "furnace", new Vec3(p.X + 12, p.Y, p.Z + 6));
+            s.Machines.SetRecipe(furnace, "smelt_iron");
+            crate.Storage.TryAdd("iron_ore", 4);
+            crate.Storage.TryAdd("planks", 10);
+            TestSupport.Run(s, 40, 0.1);
+            Assert.AreEqual(10, crate.Storage.Count("planks"), "planks stay in storage");
+            Assert.AreEqual(0, furnace.Machine.Fuel.Count("planks"));
+
+            crate.Storage.TryAdd("wood", 4);
+            TestSupport.Run(s, 40, 0.1);
+            Assert.Greater(furnace.Machine.Fuel.Count("wood") + Total(s, "iron_ingot"), 0, "wood is used as fuel");
+            Assert.AreEqual(10, crate.Storage.Count("planks"));
+        }
+
+        [Test]
+        public void UnreachableTarget_FailsJobWithReason_AndReleasesReservations()
+        {
+            GameSession s = Base(out ColonistState c, out Structure crate);
+            Vec3 p = s.Player.Position;
+            Structure furnace = TestSupport.Build(s.World, "furnace", new Vec3(p.X + 12, p.Y, p.Z + 8));
+            s.Machines.SetRecipe(furnace, "smelt_iron");
+            crate.Storage.TryAdd("iron_ore", 6);
+            int ore = Total(s, "iron_ore");
+            var walls = new BlockedMovement();
+            s.Colony.Movement = walls;
+            TestSupport.Run(s, 10, 0.1);
+            Assert.IsTrue(c.RecentFailures.Any(f => f.Contains("can't find a way there")), "the colonist gives up and says why");
+            Assert.AreEqual(ore, Total(s, "iron_ore"), "no ore was lost");
+            Assert.IsTrue(s.World.AllInventories.All(inv => inv.Reservations.All(r => s.World.Jobs.Values.Any(j => j.IsActive && (j.SourceToken.Id == r.Id || j.DestinationToken.Id == r.Id)))), "no orphaned reservations");
+
+            s.Colony.Movement = new DirectColonistMovement { GroundHeight = q => s.World.Layout.HeightAt(q.X, q.Z) };
+            TestSupport.Run(s, 60, 0.1);
+            Assert.Greater(furnace.Machine.Input.Count("iron_ore") + furnace.Machine.Output.Count("iron_ingot"), 0, "once a route exists the furnace is supplied");
+        }
+
+        /// <summary>Movement that never gets anywhere and reports that the target cannot be reached.</summary>
+        private sealed class BlockedMovement : IColonistMovement
+        {
+            public bool Step(ColonistState c, float speed, float arriveDistance, float dt) => false;
+            public bool CannotReach(ColonistState c) => true;
+        }
+
+        [Test]
         public void InterruptedHaul_ReleasesReservations_AndKeepsItems()
         {
             GameSession s = Base(out ColonistState c, out Structure crate);

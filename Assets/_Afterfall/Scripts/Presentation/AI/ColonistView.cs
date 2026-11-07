@@ -13,6 +13,9 @@ namespace Afterfall.Presentation
         public NavMeshAgent Agent;
         public HumanoidRig Rig;
         public Vector3 LastDestination = new Vector3(float.NaN, 0, 0);
+
+        /// <summary>Seconds spent standing at the end of a path that does not reach the destination.</summary>
+        public float StalledTime;
         private GameController _gc;
         private Vector3 _lastPos;
         private float _speed;
@@ -169,10 +172,22 @@ namespace Afterfall.Presentation
             if (float.IsNaN(v.LastDestination.x) || (target - v.LastDestination).sqrMagnitude > 0.25f)
             {
                 v.LastDestination = target;
+                v.StalledTime = 0f;
                 if (!v.Agent.SetDestination(target)) return _fallback.Step(c, speed, arriveDistance, dt);
             }
+            bool stalled = !v.Agent.pathPending && v.Agent.pathStatus != NavMeshPathStatus.PathComplete && v.Agent.velocity.sqrMagnitude < 0.04f;
+            v.StalledTime = stalled ? v.StalledTime + dt : 0f;
             // A target inside a carved obstacle (crate, machine) can only be approached to its edge.
             return !v.Agent.pathPending && v.Agent.remainingDistance <= Mathf.Max(v.Agent.stoppingDistance, arriveDistance) && flat.magnitude <= arriveDistance + 1.5f;
         }
+
+        public bool CannotReach(ColonistState c)
+        {
+            ColonistView v = _gc.Sync != null ? _gc.Sync.ColonistViewOf(c.Id) : null;
+            return v != null && v.OnNavMesh && v.StalledTime > StallLimit;
+        }
+
+        /// <summary>Game seconds a colonist may stand at the end of a partial path before the job is given up.</summary>
+        public const float StallLimit = 4f;
     }
 }
