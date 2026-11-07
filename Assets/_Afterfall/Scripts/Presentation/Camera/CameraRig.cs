@@ -42,7 +42,6 @@ namespace Afterfall.Presentation
             cull[Layers.Interactable] = 120f;
             cull[Layers.Zombie] = 160f;
             rig._camera.layerCullDistances = cull;
-            rig._camera.layerCullSpherical = true;
             camGo.AddComponent<AudioListener>();
             rig._brain = camGo.AddComponent<CinemachineBrain>();
             rig._brain.DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Styles.EaseInOut, 0.9f);

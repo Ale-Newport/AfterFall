@@ -46,9 +46,13 @@ namespace Afterfall.Presentation
             t.materialTemplate = MaterialLibrary.Terrain();
             t.heightmapPixelError = 4f;
             t.basemapDistance = 220f;
-            t.drawInstanced = true;
+            // Instanced terrain needs a hidden normal-map shader that player builds strip, leaving the
+            // ground unlit; the regular path lights it from mesh normals.
+            t.drawInstanced = false;
             return t;
         }
+
+        private const float Smoothness = 0.06f;
 
         private static TerrainLayer Layer(string name, Color a, Color b, float tile, int seed)
         {
@@ -65,12 +69,13 @@ namespace Afterfall.Presentation
                     float edge = Mathf.Min(Mathf.Min(x, size - 1 - x), Mathf.Min(y, size - 1 - y)) / 8f;
                     n = Mathf.Lerp(0.5f, n, Mathf.Clamp01(edge));
                     Color c = Color.Lerp(b, a, Mathf.Clamp01(n * 0.85f + n2 * 0.15f));
+                    c.a = Smoothness; // URP terrain reads layer smoothness from the diffuse alpha
                     px[y * size + x] = c;
                 }
             }
             tex.SetPixels32(px);
             tex.Apply(true);
-            return new TerrainLayer { name = name, diffuseTexture = tex, tileSize = new Vector2(tile, tile), smoothness = 0.05f, metallic = 0f };
+            return new TerrainLayer { name = name, diffuseTexture = tex, tileSize = new Vector2(tile, tile), smoothness = Smoothness, metallic = 0f };
         }
 
         private static void PaintSplat(WorldLayout layout, int seed, TerrainData data)
