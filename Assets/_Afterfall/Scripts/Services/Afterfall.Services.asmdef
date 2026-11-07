@@ -1,0 +1,20 @@
+{
+    "name": "Afterfall.Services",
+    "rootNamespace": "Afterfall.Services",
+    "references": [
+        "Afterfall.Core",
+        "Afterfall.Domain",
+        "Afterfall.Persistence"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Newtonsoft.Json.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

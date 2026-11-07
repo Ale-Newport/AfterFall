@@ -1,0 +1,275 @@
+[
+  {
+    "id": "rope",
+    "name": "Rope",
+    "inputs": [
+      "fiber:4"
+    ],
+    "outputs": [
+      "rope:1"
+    ],
+    "duration": 2,
+    "category": "Basics"
+  },
+  {
+    "id": "split_planks",
+    "name": "Split Planks (by hand)",
+    "inputs": [
+      "wood:1"
+    ],
+    "outputs": [
+      "planks:2"
+    ],
+    "duration": 3,
+    "category": "Basics"
+  },
+  {
+    "id": "stone_axe",
+    "name": "Stone Axe",
+    "inputs": [
+      "wood:2",
+      "stone:3",
+      "rope:1"
+    ],
+    "outputs": [
+      "stone_axe:1"
+    ],
+    "duration": 4,
+    "category": "Tools"
+  },
+  {
+    "id": "stone_pickaxe",
+    "name": "Stone Pickaxe",
+    "inputs": [
+      "wood:2",
+      "stone:4",
+      "rope:1"
+    ],
+    "outputs": [
+      "stone_pickaxe:1"
+    ],
+    "duration": 4,
+    "category": "Tools"
+  },
+  {
+    "id": "bandage",
+    "name": "Bandage",
+    "inputs": [
+      "cloth:2"
+    ],
+    "outputs": [
+      "bandage:1"
+    ],
+    "duration": 2,
+    "category": "Medical"
+  },
+  {
+    "id": "saw_planks",
+    "name": "Saw Planks",
+    "inputs": [
+      "wood:2"
+    ],
+    "outputs": [
+      "planks:6"
+    ],
+    "station": "workbench",
+    "duration": 3,
+    "category": "Basics"
+  },
+  {
+    "id": "hammer",
+    "name": "Hammer",
+    "inputs": [
+      "wood:1",
+      "scrap_metal:3",
+      "rope:1"
+    ],
+    "outputs": [
+      "hammer:1"
+    ],
+    "station": "workbench",
+    "duration": 5,
+    "category": "Tools"
+  },
+  {
+    "id": "nails",
+    "name": "Nails",
+    "inputs": [
+      "scrap_metal:2"
+    ],
+    "outputs": [
+      "nails:12"
+    ],
+    "station": "workbench",
+    "duration": 3,
+    "category": "Basics"
+  },
+  {
+    "id": "machete",
+    "name": "Machete",
+    "inputs": [
+      "scrap_metal:4",
+      "wood:1",
+      "cloth:1"
+    ],
+    "outputs": [
+      "machete:1"
+    ],
+    "station": "workbench",
+    "duration": 6,
+    "category": "Weapons"
+  },
+  {
+    "id": "medkit",
+    "name": "First Aid Kit",
+    "inputs": [
+      "bandage:2",
+      "cloth:2"
+    ],
+    "outputs": [
+      "medkit:1"
+    ],
+    "station": "workbench",
+    "duration": 5,
+    "category": "Medical"
+  },
+  {
+    "id": "metal_axe",
+    "name": "Iron Axe",
+    "inputs": [
+      "iron_ingot:3",
+      "wood:2",
+      "rope:1"
+    ],
+    "outputs": [
+      "metal_axe:1"
+    ],
+    "station": "workbench",
+    "requiredTech": "metalworking",
+    "duration": 6,
+    "category": "Tools"
+  },
+  {
+    "id": "metal_pickaxe",
+    "name": "Iron Pickaxe",
+    "inputs": [
+      "iron_ingot:3",
+      "wood:2",
+      "rope:1"
+    ],
+    "outputs": [
+      "metal_pickaxe:1"
+    ],
+    "station": "workbench",
+    "requiredTech": "metalworking",
+    "duration": 6,
+    "category": "Tools"
+  },
+  {
+    "id": "smelt_iron",
+    "name": "Smelt Iron Ore",
+    "inputs": [
+      "iron_ore:2"
+    ],
+    "outputs": [
+      "iron_ingot:1"
+    ],
+    "station": "furnace",
+    "duration": 8,
+    "category": "Smelting"
+  },
+  {
+    "id": "smelt_scrap",
+    "name": "Smelt Scrap",
+    "inputs": [
+      "scrap_metal:4"
+    ],
+    "outputs": [
+      "iron_ingot:1"
+    ],
+    "station": "furnace",
+    "duration": 8,
+    "category": "Smelting"
+  },
+  {
+    "id": "charcoal",
+    "name": "Make Charcoal",
+    "inputs": [
+      "wood:3"
+    ],
+    "outputs": [
+      "charcoal:2"
+    ],
+    "station": "furnace",
+    "duration": 10,
+    "category": "Smelting"
+  },
+  {
+    "id": "gears",
+    "name": "Machine Gears",
+    "inputs": [
+      "iron_ingot:1"
+    ],
+    "outputs": [
+      "gear:2"
+    ],
+    "station": "workshop",
+    "duration": 6,
+    "category": "Machining"
+  },
+  {
+    "id": "mech_parts",
+    "name": "Mechanical Parts",
+    "inputs": [
+      "iron_ingot:1",
+      "gear:1"
+    ],
+    "outputs": [
+      "mechanical_parts:2"
+    ],
+    "station": "workshop",
+    "duration": 8,
+    "category": "Machining"
+  },
+  {
+    "id": "metal_pipe",
+    "name": "Metal Pipe",
+    "inputs": [
+      "iron_ingot:2"
+    ],
+    "outputs": [
+      "metal_pipe:1"
+    ],
+    "station": "workshop",
+    "duration": 8,
+    "category": "Machining"
+  },
+  {
+    "id": "electric_motor",
+    "name": "Electric Motor",
+    "inputs": [
+      "copper_wire:3",
+      "gear:2",
+      "iron_ingot:1"
+    ],
+    "outputs": [
+      "electric_motor:1"
+    ],
+    "station": "workshop",
+    "duration": 12,
+    "category": "Machining"
+  },
+  {
+    "id": "pump_water",
+    "name": "Pump Clean Water",
+    "inputs": [
+      "empty_bottle:1"
+    ],
+    "outputs": [
+      "water_bottle:1"
+    ],
+    "station": "water_pump",
+    "duration": 5,
+    "category": "Water"
+  }
+]

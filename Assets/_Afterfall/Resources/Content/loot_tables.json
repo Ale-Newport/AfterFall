@@ -1,0 +1,420 @@
+[
+  {
+    "id": "start_cache",
+    "entries": [
+      {
+        "itemId": "water_bottle",
+        "min": 2,
+        "max": 2,
+        "chance": 1.0
+      },
+      {
+        "itemId": "canned_food",
+        "min": 1,
+        "max": 1,
+        "chance": 1.0
+      },
+      {
+        "itemId": "bandage",
+        "min": 1,
+        "max": 1,
+        "chance": 1.0
+      },
+      {
+        "itemId": "cloth",
+        "min": 2,
+        "max": 2,
+        "chance": 1.0
+      }
+    ]
+  },
+  {
+    "id": "kitchen",
+    "entries": [
+      {
+        "itemId": "canned_food",
+        "min": 1,
+        "max": 2,
+        "chance": 0.6
+      },
+      {
+        "itemId": "snack_bar",
+        "min": 1,
+        "max": 2,
+        "chance": 0.4
+      },
+      {
+        "itemId": "water_bottle",
+        "min": 1,
+        "max": 1,
+        "chance": 0.4
+      },
+      {
+        "itemId": "empty_bottle",
+        "min": 1,
+        "max": 2,
+        "chance": 0.4
+      },
+      {
+        "itemId": "cloth",
+        "min": 1,
+        "max": 2,
+        "chance": 0.2
+      }
+    ]
+  },
+  {
+    "id": "fridge",
+    "entries": [
+      {
+        "itemId": "water_bottle",
+        "min": 1,
+        "max": 2,
+        "chance": 0.5
+      },
+      {
+        "itemId": "canned_food",
+        "min": 1,
+        "max": 1,
+        "chance": 0.3
+      },
+      {
+        "itemId": "empty_bottle",
+        "min": 1,
+        "max": 1,
+        "chance": 0.3
+      }
+    ]
+  },
+  {
+    "id": "wardrobe",
+    "entries": [
+      {
+        "itemId": "cloth",
+        "min": 2,
+        "max": 4,
+        "chance": 0.8
+      },
+      {
+        "itemId": "bandage",
+        "min": 1,
+        "max": 1,
+        "chance": 0.2
+      },
+      {
+        "itemId": "rope",
+        "min": 1,
+        "max": 1,
+        "chance": 0.2
+      }
+    ]
+  },
+  {
+    "id": "toolbox",
+    "entries": [
+      {
+        "itemId": "nails",
+        "min": 6,
+        "max": 12,
+        "chance": 0.5
+      },
+      {
+        "itemId": "scrap_metal",
+        "min": 2,
+        "max": 4,
+        "chance": 0.6
+      },
+      {
+        "itemId": "hammer",
+        "min": 1,
+        "max": 1,
+        "chance": 0.15
+      },
+      {
+        "itemId": "copper_wire",
+        "min": 1,
+        "max": 2,
+        "chance": 0.25
+      },
+      {
+        "itemId": "mechanical_parts",
+        "min": 1,
+        "max": 1,
+        "chance": 0.25
+      },
+      {
+        "itemId": "lead_pipe",
+        "min": 1,
+        "max": 1,
+        "chance": 0.08
+      }
+    ]
+  },
+  {
+    "id": "medical",
+    "entries": [
+      {
+        "itemId": "bandage",
+        "min": 1,
+        "max": 3,
+        "chance": 0.8
+      },
+      {
+        "itemId": "medkit",
+        "min": 1,
+        "max": 1,
+        "chance": 0.3
+      },
+      {
+        "itemId": "cloth",
+        "min": 1,
+        "max": 2,
+        "chance": 0.3
+      }
+    ]
+  },
+  {
+    "id": "general",
+    "entries": [
+      {
+        "itemId": "scrap_metal",
+        "min": 1,
+        "max": 3,
+        "chance": 0.5
+      },
+      {
+        "itemId": "cloth",
+        "min": 1,
+        "max": 2,
+        "chance": 0.4
+      },
+      {
+        "itemId": "rope",
+        "min": 1,
+        "max": 1,
+        "chance": 0.3
+      },
+      {
+        "itemId": "canned_food",
+        "min": 1,
+        "max": 1,
+        "chance": 0.2
+      },
+      {
+        "itemId": "empty_bottle",
+        "min": 1,
+        "max": 1,
+        "chance": 0.3
+      }
+    ]
+  },
+  {
+    "id": "store",
+    "entries": [
+      {
+        "itemId": "snack_bar",
+        "min": 1,
+        "max": 3,
+        "chance": 0.7
+      },
+      {
+        "itemId": "water_bottle",
+        "min": 1,
+        "max": 2,
+        "chance": 0.6
+      },
+      {
+        "itemId": "canned_food",
+        "min": 1,
+        "max": 2,
+        "chance": 0.5
+      },
+      {
+        "itemId": "empty_bottle",
+        "min": 1,
+        "max": 2,
+        "chance": 0.3
+      }
+    ]
+  },
+  {
+    "id": "workshop",
+    "entries": [
+      {
+        "itemId": "mechanical_parts",
+        "min": 1,
+        "max": 3,
+        "chance": 0.75
+      },
+      {
+        "itemId": "gear",
+        "min": 1,
+        "max": 2,
+        "chance": 0.35
+      },
+      {
+        "itemId": "copper_wire",
+        "min": 1,
+        "max": 3,
+        "chance": 0.6
+      },
+      {
+        "itemId": "scrap_metal",
+        "min": 2,
+        "max": 5,
+        "chance": 0.8
+      },
+      {
+        "itemId": "nails",
+        "min": 8,
+        "max": 16,
+        "chance": 0.5
+      },
+      {
+        "itemId": "lead_pipe",
+        "min": 1,
+        "max": 1,
+        "chance": 0.15
+      },
+      {
+        "itemId": "iron_ingot",
+        "min": 1,
+        "max": 2,
+        "chance": 0.25
+      }
+    ]
+  },
+  {
+    "id": "electrical_minor",
+    "entries": [
+      {
+        "itemId": "copper_wire",
+        "min": 2,
+        "max": 4,
+        "chance": 0.8
+      },
+      {
+        "itemId": "battery",
+        "min": 1,
+        "max": 1,
+        "chance": 0.3
+      },
+      {
+        "itemId": "circuit_board",
+        "min": 1,
+        "max": 1,
+        "chance": 0.3
+      }
+    ]
+  },
+  {
+    "id": "electrical",
+    "entries": [
+      {
+        "itemId": "copper_wire",
+        "min": 3,
+        "max": 6,
+        "chance": 1.0
+      },
+      {
+        "itemId": "battery",
+        "min": 1,
+        "max": 2,
+        "chance": 0.6
+      },
+      {
+        "itemId": "circuit_board",
+        "min": 1,
+        "max": 2,
+        "chance": 0.7
+      },
+      {
+        "itemId": "mechanical_parts",
+        "min": 1,
+        "max": 2,
+        "chance": 0.4
+      }
+    ]
+  },
+  {
+    "id": "schematic",
+    "entries": [
+      {
+        "itemId": "schematic_generator",
+        "min": 1,
+        "max": 1,
+        "chance": 1.0
+      },
+      {
+        "itemId": "circuit_board",
+        "min": 1,
+        "max": 1,
+        "chance": 1.0
+      },
+      {
+        "itemId": "copper_wire",
+        "min": 2,
+        "max": 3,
+        "chance": 0.8
+      }
+    ]
+  },
+  {
+    "id": "mining",
+    "entries": [
+      {
+        "itemId": "rope",
+        "min": 1,
+        "max": 2,
+        "chance": 0.5
+      },
+      {
+        "itemId": "stone_pickaxe",
+        "min": 1,
+        "max": 1,
+        "chance": 0.5
+      },
+      {
+        "itemId": "canned_food",
+        "min": 1,
+        "max": 1,
+        "chance": 0.3
+      },
+      {
+        "itemId": "metal_pickaxe",
+        "min": 1,
+        "max": 1,
+        "chance": 0.05
+      }
+    ]
+  },
+  {
+    "id": "barn",
+    "entries": [
+      {
+        "itemId": "fiber",
+        "min": 4,
+        "max": 8,
+        "chance": 0.7
+      },
+      {
+        "itemId": "rope",
+        "min": 1,
+        "max": 2,
+        "chance": 0.5
+      },
+      {
+        "itemId": "cloth",
+        "min": 1,
+        "max": 3,
+        "chance": 0.4
+      },
+      {
+        "itemId": "wood",
+        "min": 3,
+        "max": 6,
+        "chance": 0.5
+      }
+    ]
+  }
+]

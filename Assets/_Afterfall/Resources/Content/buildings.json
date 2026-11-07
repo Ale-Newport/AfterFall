@@ -1,0 +1,520 @@
+[
+  {
+    "id": "foundation",
+    "name": "Wooden Foundation",
+    "description": "A level 3\u00d73 m platform. Walls and roofs need one underneath.",
+    "category": "Structure",
+    "cost": [
+      "planks:6"
+    ],
+    "buildSeconds": 4,
+    "maxHealth": 400,
+    "sizeX": 3,
+    "sizeY": 0.4,
+    "sizeZ": 3,
+    "visual": "foundation",
+    "color": "#9C7A54",
+    "snap": "Foundation",
+    "providesSupport": true,
+    "maxSlopeDegrees": 30,
+    "requiredTech": "survival"
+  },
+  {
+    "id": "wall",
+    "name": "Wooden Wall",
+    "description": "Blocks the infected and the wind.",
+    "category": "Structure",
+    "cost": [
+      "planks:4",
+      "nails:6"
+    ],
+    "buildSeconds": 3,
+    "maxHealth": 300,
+    "sizeX": 3,
+    "sizeY": 3,
+    "sizeZ": 0.25,
+    "visual": "wall",
+    "color": "#A7835B",
+    "snap": "Wall",
+    "requiresSupport": true,
+    "isDefensive": true,
+    "requiredTech": "survival"
+  },
+  {
+    "id": "doorway",
+    "name": "Doorway",
+    "description": "A wall with an opening to walk through.",
+    "category": "Structure",
+    "cost": [
+      "planks:4",
+      "nails:8"
+    ],
+    "buildSeconds": 3,
+    "maxHealth": 260,
+    "sizeX": 3,
+    "sizeY": 3,
+    "sizeZ": 0.25,
+    "visual": "doorway",
+    "color": "#A7835B",
+    "snap": "Wall",
+    "requiresSupport": true,
+    "isDefensive": true,
+    "requiredTech": "survival"
+  },
+  {
+    "id": "window_wall",
+    "name": "Window Wall",
+    "description": "A wall with a shuttered window.",
+    "category": "Structure",
+    "cost": [
+      "planks:3",
+      "nails:6"
+    ],
+    "buildSeconds": 3,
+    "maxHealth": 240,
+    "sizeX": 3,
+    "sizeY": 3,
+    "sizeZ": 0.25,
+    "visual": "window_wall",
+    "color": "#A7835B",
+    "snap": "Wall",
+    "requiresSupport": true,
+    "isDefensive": true,
+    "requiredTech": "survival"
+  },
+  {
+    "id": "roof",
+    "name": "Wooden Roof",
+    "description": "Keeps the weather out. Rests on walls.",
+    "category": "Structure",
+    "cost": [
+      "planks:5",
+      "nails:6"
+    ],
+    "buildSeconds": 4,
+    "maxHealth": 300,
+    "sizeX": 3,
+    "sizeY": 0.25,
+    "sizeZ": 3,
+    "visual": "roof",
+    "color": "#6E4F33",
+    "snap": "Roof",
+    "requiresSupport": true,
+    "providesSupport": true,
+    "requiredTech": "survival"
+  },
+  {
+    "id": "storage_crate",
+    "name": "Storage Crate",
+    "description": "20 slots of storage. Machines next to it can pull inputs from it.",
+    "category": "Storage",
+    "cost": [
+      "planks:6",
+      "nails:6"
+    ],
+    "buildSeconds": 3,
+    "maxHealth": 150,
+    "sizeX": 1.2,
+    "sizeY": 0.8,
+    "sizeZ": 0.8,
+    "visual": "crate",
+    "color": "#8E6B43",
+    "storage": {
+      "slots": 20
+    },
+    "requiredTech": "survival"
+  },
+  {
+    "id": "workbench",
+    "name": "Workbench",
+    "description": "Crafting station for tools, planks, nails and weapons.",
+    "category": "Crafting",
+    "cost": [
+      "wood:6",
+      "stone:4"
+    ],
+    "buildSeconds": 4,
+    "maxHealth": 200,
+    "sizeX": 2,
+    "sizeY": 1,
+    "sizeZ": 1,
+    "visual": "workbench",
+    "color": "#7B5B3A",
+    "craftingStation": "workbench",
+    "requiredTech": "survival"
+  },
+  {
+    "id": "bed",
+    "name": "Bedroll",
+    "description": "Sleep here to set your respawn point.",
+    "category": "Furniture",
+    "cost": [
+      "cloth:4",
+      "fiber:10",
+      "planks:2"
+    ],
+    "buildSeconds": 3,
+    "maxHealth": 80,
+    "sizeX": 2,
+    "sizeY": 0.4,
+    "sizeZ": 1,
+    "visual": "bed",
+    "color": "#5D6D7E",
+    "isBed": true,
+    "blocksMovement": false,
+    "requiredTech": "survival"
+  },
+  {
+    "id": "barricade",
+    "name": "Log Barricade",
+    "description": "Sturdy obstacle that blocks the infected.",
+    "category": "Defense",
+    "cost": [
+      "wood:6",
+      "rope:2"
+    ],
+    "buildSeconds": 5,
+    "maxHealth": 500,
+    "sizeX": 3,
+    "sizeY": 1.6,
+    "sizeZ": 0.6,
+    "visual": "barricade",
+    "color": "#6D4C2F",
+    "isDefensive": true,
+    "maxSlopeDegrees": 30,
+    "requiredTech": "survival"
+  },
+  {
+    "id": "furnace",
+    "name": "Stone Furnace",
+    "description": "Smelts ore and scrap into iron and burns wood into charcoal. Burns fuel while working.",
+    "category": "Industry",
+    "cost": [
+      "stone:14",
+      "wood:2"
+    ],
+    "buildSeconds": 6,
+    "maxHealth": 350,
+    "sizeX": 1.6,
+    "sizeY": 1.8,
+    "sizeZ": 1.6,
+    "visual": "furnace",
+    "color": "#7F8C8D",
+    "machine": {
+      "station": "furnace",
+      "inputSlots": 3,
+      "outputSlots": 4,
+      "fuelSlots": 2,
+      "noiseRadius": 6,
+      "autoTransferRange": 3.5
+    },
+    "requiredTech": "metalworking"
+  },
+  {
+    "id": "workshop",
+    "name": "Machine Workshop",
+    "description": "Powered lathe and press: gears, parts, pipes and motors. Needs 500 W.",
+    "category": "Industry",
+    "cost": [
+      "planks:8",
+      "iron_ingot:6",
+      "mechanical_parts:3",
+      "copper_wire:2"
+    ],
+    "buildSeconds": 8,
+    "maxHealth": 350,
+    "sizeX": 2.4,
+    "sizeY": 1.6,
+    "sizeZ": 1.4,
+    "visual": "workshop",
+    "color": "#5D6D7E",
+    "machine": {
+      "station": "workshop",
+      "inputSlots": 4,
+      "outputSlots": 4,
+      "powerWatts": 500,
+      "powerPriority": 2,
+      "noiseRadius": 12,
+      "autoTransferRange": 3.5
+    },
+    "requiredTech": "electricity"
+  },
+  {
+    "id": "water_pump",
+    "name": "Electric Water Pump",
+    "description": "Fills empty bottles with clean water. Needs 300 W and must stand near water.",
+    "category": "Industry",
+    "cost": [
+      "metal_pipe:2",
+      "gear:4",
+      "mechanical_parts:2",
+      "electric_motor:1"
+    ],
+    "buildSeconds": 8,
+    "maxHealth": 300,
+    "sizeX": 1.4,
+    "sizeY": 2,
+    "sizeZ": 1.4,
+    "visual": "pump",
+    "color": "#2874A6",
+    "machine": {
+      "station": "water_pump",
+      "inputSlots": 4,
+      "outputSlots": 6,
+      "powerWatts": 300,
+      "powerPriority": 1,
+      "noiseRadius": 8,
+      "autoTransferRange": 3.5
+    },
+    "requiresWater": true,
+    "requiredTech": "water_works"
+  },
+  {
+    "id": "generator",
+    "name": "Diesel Generator",
+    "description": "Burns fuel cans or charcoal to produce up to 2000 W. Loud.",
+    "category": "Power",
+    "cost": [
+      "scrap_metal:12",
+      "mechanical_parts:4",
+      "copper_wire:6",
+      "circuit_board:1"
+    ],
+    "buildSeconds": 8,
+    "maxHealth": 300,
+    "sizeX": 1.8,
+    "sizeY": 1.2,
+    "sizeZ": 1.0,
+    "visual": "generator",
+    "color": "#B03A2E",
+    "generator": {
+      "capacityWatts": 2000,
+      "fuelSlots": 2,
+      "noiseRadius": 25
+    },
+    "powerNode": {
+      "range": 6
+    },
+    "requiredTech": "electricity"
+  },
+  {
+    "id": "power_pole",
+    "name": "Power Pole",
+    "description": "Relays electricity to everything within 14 m.",
+    "category": "Power",
+    "cost": [
+      "wood:3",
+      "copper_wire:2"
+    ],
+    "buildSeconds": 3,
+    "maxHealth": 150,
+    "sizeX": 0.3,
+    "sizeY": 5,
+    "sizeZ": 0.3,
+    "visual": "pole",
+    "color": "#6E5135",
+    "powerNode": {
+      "range": 14,
+      "isRelay": true
+    },
+    "blocksMovement": false,
+    "requiredTech": "electricity"
+  },
+  {
+    "id": "lamp",
+    "name": "Electric Lamp",
+    "description": "Lights up your base at night (60 W).",
+    "category": "Lighting",
+    "cost": [
+      "scrap_metal:2",
+      "copper_wire:2"
+    ],
+    "buildSeconds": 2,
+    "maxHealth": 80,
+    "sizeX": 0.4,
+    "sizeY": 2.4,
+    "sizeZ": 0.4,
+    "visual": "lamp",
+    "color": "#F4D03F",
+    "light": {
+      "powerWatts": 60,
+      "range": 14,
+      "powerPriority": 4
+    },
+    "powerNode": {
+      "range": 6
+    },
+    "blocksMovement": false,
+    "requiredTech": "electricity"
+  },
+  {
+    "id": "battery_bank",
+    "name": "Battery Bank",
+    "description": "Stores 3600 kJ. Charges from surplus generation and covers shortfalls.",
+    "category": "Power",
+    "cost": [
+      "battery:4",
+      "copper_wire:4",
+      "scrap_metal:6"
+    ],
+    "buildSeconds": 5,
+    "maxHealth": 200,
+    "sizeX": 1.2,
+    "sizeY": 1.2,
+    "sizeZ": 0.8,
+    "visual": "battery",
+    "color": "#1B4F72",
+    "battery": {
+      "capacityKJ": 3600,
+      "maxRateWatts": 1500
+    },
+    "powerNode": {
+      "range": 6
+    },
+    "requiredTech": "electricity"
+  },
+  {
+    "id": "loot_cabinet",
+    "name": "Kitchen Cabinet",
+    "description": "",
+    "category": "WorldProp",
+    "cost": [],
+    "buildSeconds": 1,
+    "maxHealth": 120,
+    "sizeX": 1.0,
+    "sizeY": 0.9,
+    "sizeZ": 0.5,
+    "visual": "cabinet",
+    "color": "#B9A27F",
+    "buildable": false,
+    "storage": {
+      "slots": 10
+    }
+  },
+  {
+    "id": "loot_fridge",
+    "name": "Refrigerator",
+    "description": "",
+    "category": "WorldProp",
+    "cost": [],
+    "buildSeconds": 1,
+    "maxHealth": 120,
+    "sizeX": 0.8,
+    "sizeY": 1.8,
+    "sizeZ": 0.7,
+    "visual": "fridge",
+    "color": "#D5D8DC",
+    "buildable": false,
+    "storage": {
+      "slots": 8
+    }
+  },
+  {
+    "id": "loot_wardrobe",
+    "name": "Wardrobe",
+    "description": "",
+    "category": "WorldProp",
+    "cost": [],
+    "buildSeconds": 1,
+    "maxHealth": 120,
+    "sizeX": 1.2,
+    "sizeY": 2.0,
+    "sizeZ": 0.6,
+    "visual": "wardrobe",
+    "color": "#7E5E3C",
+    "buildable": false,
+    "storage": {
+      "slots": 10
+    }
+  },
+  {
+    "id": "loot_toolbox",
+    "name": "Toolbox",
+    "description": "",
+    "category": "WorldProp",
+    "cost": [],
+    "buildSeconds": 1,
+    "maxHealth": 120,
+    "sizeX": 0.7,
+    "sizeY": 0.4,
+    "sizeZ": 0.4,
+    "visual": "toolbox",
+    "color": "#C0392B",
+    "buildable": false,
+    "storage": {
+      "slots": 8
+    }
+  },
+  {
+    "id": "loot_medcab",
+    "name": "Medicine Cabinet",
+    "description": "",
+    "category": "WorldProp",
+    "cost": [],
+    "buildSeconds": 1,
+    "maxHealth": 120,
+    "sizeX": 0.8,
+    "sizeY": 1.2,
+    "sizeZ": 0.3,
+    "visual": "medcab",
+    "color": "#ECF0F1",
+    "buildable": false,
+    "storage": {
+      "slots": 8
+    }
+  },
+  {
+    "id": "loot_crate",
+    "name": "Supply Crate",
+    "description": "",
+    "category": "WorldProp",
+    "cost": [],
+    "buildSeconds": 1,
+    "maxHealth": 120,
+    "sizeX": 1.0,
+    "sizeY": 0.8,
+    "sizeZ": 0.8,
+    "visual": "crate",
+    "color": "#7D6B4F",
+    "buildable": false,
+    "storage": {
+      "slots": 16
+    }
+  },
+  {
+    "id": "loot_shelf",
+    "name": "Store Shelf",
+    "description": "",
+    "category": "WorldProp",
+    "cost": [],
+    "buildSeconds": 1,
+    "maxHealth": 120,
+    "sizeX": 1.8,
+    "sizeY": 1.6,
+    "sizeZ": 0.5,
+    "visual": "shelf",
+    "color": "#95A5A6",
+    "buildable": false,
+    "storage": {
+      "slots": 12
+    }
+  },
+  {
+    "id": "loot_locker",
+    "name": "Equipment Locker",
+    "description": "",
+    "category": "WorldProp",
+    "cost": [],
+    "buildSeconds": 1,
+    "maxHealth": 120,
+    "sizeX": 0.8,
+    "sizeY": 1.9,
+    "sizeZ": 0.5,
+    "visual": "locker",
+    "color": "#566573",
+    "buildable": false,
+    "storage": {
+      "slots": 12
+    }
+  }
+]

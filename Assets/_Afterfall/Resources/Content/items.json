@@ -1,0 +1,445 @@
+[
+  {
+    "id": "wood",
+    "name": "Log",
+    "description": "A length of timber. Burns in furnaces; cut into planks at a workbench.",
+    "category": "Natural",
+    "maxStack": 30,
+    "weight": 1.5,
+    "icon": "WD",
+    "color": "#8B5A2B",
+    "burnSeconds": 15,
+    "tags": [
+      "fuel"
+    ]
+  },
+  {
+    "id": "stone",
+    "name": "Stone",
+    "description": "Rough stone for tools, furnaces and foundations.",
+    "category": "Natural",
+    "maxStack": 30,
+    "weight": 1.2,
+    "icon": "ST",
+    "color": "#8C8C8C"
+  },
+  {
+    "id": "fiber",
+    "name": "Plant Fiber",
+    "description": "Tough plant fibres. Twist into rope.",
+    "category": "Natural",
+    "maxStack": 50,
+    "weight": 0.05,
+    "icon": "FB",
+    "color": "#7FA650",
+    "burnSeconds": 2
+  },
+  {
+    "id": "iron_ore",
+    "name": "Iron Ore",
+    "description": "Rust-red ore. Smelt it in a furnace.",
+    "category": "Natural",
+    "maxStack": 30,
+    "weight": 2.0,
+    "icon": "FE",
+    "color": "#A0522D"
+  },
+  {
+    "id": "berries",
+    "name": "Wild Berries",
+    "description": "A handful of edible berries.",
+    "category": "FoodMedicine",
+    "maxStack": 20,
+    "weight": 0.05,
+    "icon": "BR",
+    "color": "#8E2B5E",
+    "consumable": {
+      "hunger": 7,
+      "thirst": 3
+    }
+  },
+  {
+    "id": "scrap_metal",
+    "name": "Scrap Metal",
+    "description": "Twisted metal salvaged from wrecks. Can be smelted into iron.",
+    "category": "Salvaged",
+    "maxStack": 40,
+    "weight": 0.5,
+    "icon": "SC",
+    "color": "#7A7F87"
+  },
+  {
+    "id": "cloth",
+    "name": "Cloth Rags",
+    "description": "Old fabric. Bandages, bedding.",
+    "category": "Salvaged",
+    "maxStack": 30,
+    "weight": 0.1,
+    "icon": "CL",
+    "color": "#C8B79A",
+    "burnSeconds": 3
+  },
+  {
+    "id": "empty_bottle",
+    "name": "Empty Bottle",
+    "description": "A clean plastic bottle. Fill it with a water pump.",
+    "category": "Salvaged",
+    "maxStack": 10,
+    "weight": 0.2,
+    "icon": "EB",
+    "color": "#9FC7D9"
+  },
+  {
+    "id": "copper_wire",
+    "name": "Copper Wire",
+    "description": "Stripped copper wiring. Essential for anything electrical.",
+    "category": "Electrical",
+    "maxStack": 30,
+    "weight": 0.1,
+    "icon": "CW",
+    "color": "#C87533"
+  },
+  {
+    "id": "battery",
+    "name": "Car Battery",
+    "description": "Still holds some charge. Used in battery banks.",
+    "category": "Electrical",
+    "maxStack": 10,
+    "weight": 1.0,
+    "icon": "BT",
+    "color": "#3B4A5A"
+  },
+  {
+    "id": "circuit_board",
+    "name": "Circuit Board",
+    "description": "Salvaged control electronics.",
+    "category": "Electrical",
+    "maxStack": 10,
+    "weight": 0.2,
+    "icon": "CB",
+    "color": "#2E7D4F"
+  },
+  {
+    "id": "schematic_generator",
+    "name": "Generator Schematic",
+    "description": "Maintenance manual for a diesel generator. Reading it unlocks Electrification.",
+    "category": "Electrical",
+    "maxStack": 1,
+    "weight": 0.1,
+    "icon": "SG",
+    "color": "#E3C565",
+    "tags": [
+      "schematic"
+    ]
+  },
+  {
+    "id": "planks",
+    "name": "Wooden Planks",
+    "description": "Sawn planks \u2014 the backbone of early construction.",
+    "category": "Processed",
+    "maxStack": 40,
+    "weight": 0.6,
+    "icon": "PL",
+    "color": "#C19A6B",
+    "burnSeconds": 6
+  },
+  {
+    "id": "rope",
+    "name": "Rope",
+    "description": "Twisted fibre rope.",
+    "category": "Processed",
+    "maxStack": 20,
+    "weight": 0.2,
+    "icon": "RP",
+    "color": "#B59B6A"
+  },
+  {
+    "id": "nails",
+    "name": "Nails",
+    "description": "Fasteners cut from scrap metal.",
+    "category": "Construction",
+    "maxStack": 100,
+    "weight": 0.01,
+    "icon": "NL",
+    "color": "#9EA4AA"
+  },
+  {
+    "id": "iron_ingot",
+    "name": "Iron Ingot",
+    "description": "Refined iron, ready for tools and machine parts.",
+    "category": "Processed",
+    "maxStack": 30,
+    "weight": 1.0,
+    "icon": "IN",
+    "color": "#B8BCC2"
+  },
+  {
+    "id": "charcoal",
+    "name": "Charcoal",
+    "description": "Burns long and hot. Also usable as generator fuel.",
+    "category": "Processed",
+    "maxStack": 30,
+    "weight": 0.5,
+    "icon": "CH",
+    "color": "#2B2B2B",
+    "burnSeconds": 45,
+    "energyKJ": 150,
+    "tags": [
+      "fuel"
+    ]
+  },
+  {
+    "id": "fuel_can",
+    "name": "Fuel Can",
+    "description": "A can of old diesel. Generator fuel.",
+    "category": "Processed",
+    "maxStack": 5,
+    "weight": 4.0,
+    "icon": "FU",
+    "color": "#C0392B",
+    "energyKJ": 600,
+    "tags": [
+      "fuel"
+    ]
+  },
+  {
+    "id": "canned_food",
+    "name": "Canned Beans",
+    "description": "Still edible. Probably.",
+    "category": "FoodMedicine",
+    "maxStack": 10,
+    "weight": 0.4,
+    "icon": "CF",
+    "color": "#D4A017",
+    "consumable": {
+      "hunger": 35,
+      "thirst": -3
+    }
+  },
+  {
+    "id": "snack_bar",
+    "name": "Snack Bar",
+    "description": "Stale but calorie-dense.",
+    "category": "FoodMedicine",
+    "maxStack": 10,
+    "weight": 0.1,
+    "icon": "SB",
+    "color": "#E67E22",
+    "consumable": {
+      "hunger": 15
+    }
+  },
+  {
+    "id": "water_bottle",
+    "name": "Water Bottle",
+    "description": "Clean drinking water.",
+    "category": "FoodMedicine",
+    "maxStack": 10,
+    "weight": 0.6,
+    "icon": "WB",
+    "color": "#3498DB",
+    "consumable": {
+      "thirst": 40,
+      "returns": "empty_bottle"
+    }
+  },
+  {
+    "id": "bandage",
+    "name": "Bandage",
+    "description": "Stops bleeding and patches wounds.",
+    "category": "FoodMedicine",
+    "maxStack": 10,
+    "weight": 0.05,
+    "icon": "BD",
+    "color": "#ECF0F1",
+    "consumable": {
+      "health": 20
+    }
+  },
+  {
+    "id": "medkit",
+    "name": "First Aid Kit",
+    "description": "Proper treatment for serious injuries.",
+    "category": "FoodMedicine",
+    "maxStack": 5,
+    "weight": 0.5,
+    "icon": "MK",
+    "color": "#E74C3C",
+    "consumable": {
+      "health": 55
+    }
+  },
+  {
+    "id": "stone_axe",
+    "name": "Stone Axe",
+    "description": "Chops trees. A crude weapon in a pinch.",
+    "category": "Tool",
+    "maxStack": 1,
+    "weight": 1.4,
+    "icon": "AX",
+    "color": "#8D6E63",
+    "maxDurability": 60,
+    "tool": {
+      "type": "Axe",
+      "gatherPower": 2.0,
+      "damage": 12,
+      "staminaCost": 7,
+      "cooldown": 0.85,
+      "range": 1.8
+    }
+  },
+  {
+    "id": "stone_pickaxe",
+    "name": "Stone Pickaxe",
+    "description": "Breaks rock and ore.",
+    "category": "Tool",
+    "maxStack": 1,
+    "weight": 1.6,
+    "icon": "PX",
+    "color": "#8D6E63",
+    "maxDurability": 60,
+    "tool": {
+      "type": "Pickaxe",
+      "gatherPower": 2.0,
+      "damage": 10,
+      "staminaCost": 8,
+      "cooldown": 0.9,
+      "range": 1.8
+    }
+  },
+  {
+    "id": "hammer",
+    "name": "Hammer",
+    "description": "Builds twice as fast, repairs structures, salvages scrap better.",
+    "category": "Tool",
+    "maxStack": 1,
+    "weight": 1.0,
+    "icon": "HM",
+    "color": "#95A5A6",
+    "maxDurability": 150,
+    "tool": {
+      "type": "Hammer",
+      "gatherPower": 1.6,
+      "damage": 13,
+      "staminaCost": 6,
+      "cooldown": 0.7,
+      "range": 1.6
+    }
+  },
+  {
+    "id": "metal_axe",
+    "name": "Iron Axe",
+    "description": "Bites deep into timber \u2014 and the infected.",
+    "category": "Tool",
+    "maxStack": 1,
+    "weight": 1.8,
+    "icon": "AX",
+    "color": "#BDC3C7",
+    "maxDurability": 180,
+    "tool": {
+      "type": "Axe",
+      "gatherPower": 3.0,
+      "damage": 20,
+      "staminaCost": 7,
+      "cooldown": 0.8,
+      "range": 1.9
+    }
+  },
+  {
+    "id": "metal_pickaxe",
+    "name": "Iron Pickaxe",
+    "description": "Mines ore quickly.",
+    "category": "Tool",
+    "maxStack": 1,
+    "weight": 2.0,
+    "icon": "PX",
+    "color": "#BDC3C7",
+    "maxDurability": 180,
+    "tool": {
+      "type": "Pickaxe",
+      "gatherPower": 3.0,
+      "damage": 16,
+      "staminaCost": 8,
+      "cooldown": 0.85,
+      "range": 1.9
+    }
+  },
+  {
+    "id": "machete",
+    "name": "Machete",
+    "description": "A proper weapon. Fast, sharp, reliable.",
+    "category": "Tool",
+    "maxStack": 1,
+    "weight": 0.9,
+    "icon": "MC",
+    "color": "#D0D3D4",
+    "maxDurability": 140,
+    "tool": {
+      "type": "Weapon",
+      "gatherPower": 1.0,
+      "damage": 28,
+      "staminaCost": 9,
+      "cooldown": 0.7,
+      "range": 2.0
+    }
+  },
+  {
+    "id": "lead_pipe",
+    "name": "Lead Pipe",
+    "description": "Heavy and dependable.",
+    "category": "Tool",
+    "maxStack": 1,
+    "weight": 2.2,
+    "icon": "LP",
+    "color": "#707B7C",
+    "maxDurability": 220,
+    "tool": {
+      "type": "Weapon",
+      "gatherPower": 1.0,
+      "damage": 19,
+      "staminaCost": 10,
+      "cooldown": 0.95,
+      "range": 1.9
+    }
+  },
+  {
+    "id": "gear",
+    "name": "Gear",
+    "description": "Machined iron gear.",
+    "category": "Mechanical",
+    "maxStack": 40,
+    "weight": 0.3,
+    "icon": "GR",
+    "color": "#A6ACAF"
+  },
+  {
+    "id": "mechanical_parts",
+    "name": "Mechanical Parts",
+    "description": "Bearings, springs and linkages.",
+    "category": "Mechanical",
+    "maxStack": 30,
+    "weight": 0.5,
+    "icon": "MP",
+    "color": "#7B7D7D"
+  },
+  {
+    "id": "metal_pipe",
+    "name": "Metal Pipe",
+    "description": "Plumbing for pumps.",
+    "category": "Mechanical",
+    "maxStack": 10,
+    "weight": 1.5,
+    "icon": "MT",
+    "color": "#85929E"
+  },
+  {
+    "id": "electric_motor",
+    "name": "Electric Motor",
+    "description": "Turns electricity into motion.",
+    "category": "Mechanical",
+    "maxStack": 5,
+    "weight": 4.0,
+    "icon": "EM",
+    "color": "#1F618D"
+  }
+]

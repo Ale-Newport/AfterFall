@@ -1,0 +1,16 @@
+{
+    "name": "Afterfall.Domain",
+    "rootNamespace": "Afterfall.Domain",
+    "references": [
+        "Afterfall.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

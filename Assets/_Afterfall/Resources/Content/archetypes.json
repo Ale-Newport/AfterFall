@@ -1,0 +1,20 @@
+[
+  {
+    "id": "wanderer",
+    "name": "Wanderer",
+    "maxHealth": 60,
+    "walkSpeed": 0.9,
+    "investigateSpeed": 1.4,
+    "chaseSpeed": 3.1,
+    "sightRange": 22,
+    "sightFovDegrees": 130,
+    "proximitySense": 2.5,
+    "hearingMultiplier": 1.0,
+    "attackRange": 1.7,
+    "attackDamage": 12,
+    "attackCooldown": 1.6,
+    "loseTargetSeconds": 5,
+    "searchSeconds": 12,
+    "wanderRadius": 14
+  }
+]

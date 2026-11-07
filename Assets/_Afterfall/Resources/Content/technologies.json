@@ -1,0 +1,76 @@
+[
+  {
+    "id": "survival",
+    "name": "Survival Basics",
+    "era": 1,
+    "description": "Tools, shelter, storage and simple defences.",
+    "conditions": [
+      {
+        "trigger": "Start"
+      }
+    ]
+  },
+  {
+    "id": "metalworking",
+    "name": "Metalworking",
+    "era": 3,
+    "description": "Furnaces, smelting and iron tools.",
+    "prerequisites": [
+      "survival"
+    ],
+    "conditions": [
+      {
+        "trigger": "BuildStructure",
+        "target": "workbench",
+        "count": 1,
+        "description": "Build a Workbench"
+      },
+      {
+        "trigger": "AcquireItem",
+        "target": "iron_ore",
+        "count": 1,
+        "description": "Find Iron Ore (Old Quarry, northern ridge)"
+      }
+    ]
+  },
+  {
+    "id": "electricity",
+    "name": "Electrification",
+    "era": 4,
+    "description": "Generators, power poles, lamps, batteries and the powered Machine Workshop.",
+    "prerequisites": [
+      "metalworking"
+    ],
+    "conditions": [
+      {
+        "trigger": "AcquireItem",
+        "target": "schematic_generator",
+        "count": 1,
+        "description": "Recover a Generator Schematic (Ridge Substation)"
+      },
+      {
+        "trigger": "CraftItem",
+        "target": "iron_ingot",
+        "count": 2,
+        "description": "Smelt 2 Iron Ingots"
+      }
+    ]
+  },
+  {
+    "id": "water_works",
+    "name": "Water Works",
+    "era": 5,
+    "description": "Electric pumps that turn empty bottles into clean water.",
+    "prerequisites": [
+      "electricity"
+    ],
+    "conditions": [
+      {
+        "trigger": "CraftItem",
+        "target": "gear",
+        "count": 4,
+        "description": "Machine 4 Gears in the Workshop"
+      }
+    ]
+  }
+]

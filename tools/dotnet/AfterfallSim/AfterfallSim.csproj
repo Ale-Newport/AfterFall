@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Compiles the engine-independent AFTERFALL simulation (Core, Domain, Services,
+    Persistence) exactly as Unity does: .NET Standard 2.1 API surface, C# 9.
+    The sources are the files under Assets/ — nothing is duplicated.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>AfterfallSim</AssemblyName>
+    <RootNamespace>Afterfall</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../Assets/_Afterfall/Scripts/Core/**/*.cs" />
+    <Compile Include="../../../Assets/_Afterfall/Scripts/Domain/**/*.cs" />
+    <Compile Include="../../../Assets/_Afterfall/Scripts/Services/**/*.cs" />
+    <Compile Include="../../../Assets/_Afterfall/Scripts/Persistence/**/*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Same major/minor as com.unity.nuget.newtonsoft-json 3.2.2 (13.0.2). -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+  </ItemGroup>
+</Project>
