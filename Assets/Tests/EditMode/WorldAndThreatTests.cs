@@ -214,3 +214,30 @@ namespace Afterfall.Tests
         }
     }
 }
+
+namespace Afterfall.Tests
+{
+    public class ArchetypeTests
+    {
+        [Test]
+        public void Runner_IsFasterThanRunningSurvivorButFragile()
+        {
+            var runner = TestSupport.Content.Archetype("runner");
+            var wanderer = TestSupport.Content.Archetype("wanderer");
+            Assert.AreEqual("runner", runner.Id);
+            Assert.Greater(runner.ChaseSpeed, 4.6f, "outruns a running survivor — sprint to escape");
+            Assert.Less(runner.ChaseSpeed, 7.2f, "a sprinting survivor can still escape");
+            Assert.Less(runner.MaxHealth, wanderer.MaxHealth);
+        }
+
+        [Test]
+        public void NightSpawns_IncludeRunners()
+        {
+            GameSession s = TestSupport.NewSession(31337);
+            int runners = 0;
+            for (int i = 0; i < 400; i++) if (s.Threats.PickArchetype(true) == "runner") runners++;
+            Assert.Greater(runners, 60);
+            Assert.Less(runners, 140);
+        }
+    }
+}

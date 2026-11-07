@@ -65,7 +65,7 @@ namespace Afterfall.Domain.Threats
             {
                 if (TryPickSpawn(MinSpawnDistance, out Vec3 point))
                 {
-                    _zombies.Spawn(Jitter(point, 3f), "wanderer", _rng);
+                    _zombies.Spawn(Jitter(point, 3f), PickArchetype(night), _rng);
                     t.SpawnedTotal++;
                     t.LastSpawnAt = now;
                 }
@@ -111,7 +111,7 @@ namespace Afterfall.Domain.Threats
                 int count = 3 + (int)Math.Min(3, t.Heat / 25f);
                 for (int i = 0; i < count; i++)
                 {
-                    ZombieState z = _zombies.Spawn(Jitter(t.PendingRaidOrigin, 4f), "wanderer", _rng);
+                    ZombieState z = _zombies.Spawn(Jitter(t.PendingRaidOrigin, 4f), i == 0 ? "runner" : "wanderer", _rng);
                     if (!hasBase) continue;
                     z.Mode = ZombieMode.Investigate;
                     z.ModeTime = 0f;
@@ -132,6 +132,13 @@ namespace Afterfall.Domain.Threats
             string msg = $"The noise from your base is drawing the infected. A group approaches from the {dir}.";
             _bus?.Publish(new ThreatWarningIssued(msg));
             _bus?.Publish(new Notification(msg, Severity.Danger));
+        }
+
+        /// <summary>Runners are rare by day and common at night.</summary>
+        public string PickArchetype(bool night)
+        {
+            if (!_content.Archetypes.ContainsKey("runner")) return "wanderer";
+            return _rng.Chance(night ? 0.25f : 0.08f) ? "runner" : "wanderer";
         }
 
         private void Despawn()
