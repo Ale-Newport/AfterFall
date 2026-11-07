@@ -470,7 +470,7 @@ namespace Afterfall.Presentation.UI
             Root.Add(UiKit.Text("Pick a blueprint. Blueprints can be placed without materials; deliver materials and hold E to build. Unlock more by discovering knowledge and building infrastructure.", "muted"));
             var tabs = Root.Put(UiKit.Div("row"));
             tabs.Add(UiKit.Btn("All", () => { _filter = null; Rebuild(); }, "btn--small"));
-            foreach (BuildingCategory c in new[] { BuildingCategory.Structure, BuildingCategory.Storage, BuildingCategory.Crafting, BuildingCategory.Industry, BuildingCategory.Power, BuildingCategory.Lighting, BuildingCategory.Defense, BuildingCategory.Furniture })
+            foreach (BuildingCategory c in new[] { BuildingCategory.Structure, BuildingCategory.Storage, BuildingCategory.Crafting, BuildingCategory.Industry, BuildingCategory.Power, BuildingCategory.Lighting, BuildingCategory.Defense, BuildingCategory.Furniture, BuildingCategory.Farming })
             {
                 BuildingCategory cc = c;
                 tabs.Add(UiKit.Btn(c.ToString(), () => { _filter = cc; Rebuild(); }, "btn--small"));

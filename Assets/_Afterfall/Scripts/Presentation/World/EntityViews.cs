@@ -97,7 +97,8 @@ namespace Afterfall.Presentation
     {
         public BuildingDefinition Def;
         public bool BuiltComplete;
-        private Transform _engine, _fire, _lampHead, _indicator;
+        private Transform _engine, _fire, _lampHead, _indicator, _crops, _soil;
+        private Material _soilMat;
         private Light _light;
         private Material _fireMat, _lampMat;
         private float _vibe;
@@ -112,6 +113,13 @@ namespace Afterfall.Presentation
             _fire = FindDeep(transform, "Fire");
             _lampHead = FindDeep(transform, "LampHead");
             _indicator = FindDeep(transform, "Indicator");
+            _crops = FindDeep(transform, "Crops");
+            _soil = FindDeep(transform, "Soil");
+            if (_soil != null && BuiltComplete)
+            {
+                _soilMat = new Material(_soil.GetComponent<Renderer>().sharedMaterial);
+                _soil.GetComponent<Renderer>().sharedMaterial = _soilMat;
+            }
             if (_fire != null)
             {
                 _fireMat = MaterialLibrary.EmissiveInstance(new Color(0.1f, 0.08f, 0.07f), Color.black);
@@ -164,6 +172,17 @@ namespace Afterfall.Presentation
             {
                 _indicator.localScale = s.Machine.Status == MachineStatus.Working ? new Vector3(0.2f, 0.1f + Mathf.PingPong(Time.time, 0.05f), 0.2f) : new Vector3(0.2f, 0.1f, 0.2f);
             }
+            if (_crops != null && s.Crop != null)
+            {
+                bool planted = s.Crop.Planted;
+                _crops.gameObject.SetActive(planted);
+                if (planted)
+                {
+                    float g = Mathf.Clamp01(s.Crop.Growth);
+                    _crops.localScale = new Vector3(1f, Mathf.Lerp(0.15f, 1.6f, g), 1f) * Mathf.Lerp(0.4f, 1f, g);
+                }
+                if (_soilMat != null) MaterialLibrary.SetColor(_soilMat, Color.Lerp(new Color(0.45f, 0.36f, 0.25f), new Color(0.16f, 0.11f, 0.07f), s.Crop.Water / 100f));
+            }
             if (_light != null)
             {
                 bool on = s.Power != null && s.Power.Powered && s.Enabled;
@@ -190,6 +209,15 @@ namespace Afterfall.Presentation
             string own = s.PlayerBuilt ? "  · [Hold X] Demolish" : "";
             if (s.PlayerBuilt && s.Health < Def.MaxHealth - 0.5f && IsPassive())
                 return $"[E] Repair {Def.Name} ({s.Health:0}/{Def.MaxHealth:0}) — {RepairCostText(gc, s)}{own}";
+            if (s.Crop != null && Def.Farm != null)
+            {
+                string crop = gc.Session.Content.Items.NameOf(Def.Farm.CropItem);
+                string water = s.Crop.Irrigated ? "irrigated" : $"soil water {s.Crop.Water:0}%";
+                if (!s.Crop.Planted) return $"[E] Plant {gc.Session.Content.Items.NameOf(Def.Farm.SeedItem)} (have {gc.Session.Player.Inventory.Count(Def.Farm.SeedItem)}) · {water}{own}";
+                if (s.Crop.Ready) return $"[E] Harvest {crop}{own}";
+                string action = s.Crop.Water < 30f && !s.Crop.Irrigated ? "[E] Water (uses a water bottle) · " : "";
+                return $"{action}{crop} growing {s.Crop.Growth * 100:0}% · {water}{(s.Crop.Water <= 0f && !s.Crop.Irrigated ? " — DRY, not growing" : "")}{own}";
+            }
             if (!s.PlayerBuilt && s.Storage != null) return $"[E] Search {Def.Name}{(s.Searched ? (s.Storage.IsEmpty ? " (empty)" : " (searched)") : "")}";
             if (s.Storage != null) return $"[E] Open {Def.Name}{own}";
             if (s.Machine != null) return $"[E] Operate {Def.Name} — {s.Machine.Status}: {s.Machine.StatusDetail}{own}";
@@ -216,6 +244,12 @@ namespace Afterfall.Presentation
                 gc.Toast(rep.Message, rep.Ok ? Severity.Success : Severity.Warning);
                 return;
             }
+            if (s.Crop != null)
+            {
+                OpResult fr = !s.Crop.Planted ? gc.Session.PlantCrop(s.Id) : s.Crop.Ready ? gc.Session.HarvestCrop(s.Id) : gc.Session.WaterCrop(s.Id);
+                gc.Toast(fr.Message, fr.Ok ? Severity.Success : Severity.Warning);
+                return;
+            }
             if (s.Storage != null) gc.Ui.OpenContainer(s.Storage.Id, Def.Name);
             else if (s.Machine != null || s.Generator != null || s.Battery != null) gc.Ui.OpenMachine(s.Id);
             else if (!string.IsNullOrEmpty(Def.CraftingStation)) gc.Ui.OpenInventory(true);
@@ -232,7 +266,7 @@ namespace Afterfall.Presentation
         }
 
         /// <summary>Pieces with no other use (walls, barricades, foundations) are repaired with E.</summary>
-        private bool IsPassive() => Def.Storage == null && Def.Machine == null && Def.Generator == null && Def.Battery == null && Def.Light == null && !Def.IsBed && string.IsNullOrEmpty(Def.CraftingStation);
+        private bool IsPassive() => Def.Farm == null && Def.Storage == null && Def.Machine == null && Def.Generator == null && Def.Battery == null && Def.Light == null && !Def.IsBed && string.IsNullOrEmpty(Def.CraftingStation);
 
         private static string RepairCostText(GameController gc, Structure s)
         {

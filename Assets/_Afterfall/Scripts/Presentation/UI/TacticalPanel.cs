@@ -24,6 +24,7 @@ namespace Afterfall.Presentation.UI
         private EntityId _builtFor = EntityId.None;
         private float _slow;
         private readonly List<Label> _labelPool = new List<Label>();
+        private readonly ColonyPanel _colony;
 
         public VisualElement Root { get; }
 
@@ -46,6 +47,8 @@ namespace Afterfall.Presentation.UI
             _threat = _left.Put(UiKit.Text("", "wrap"));
             _left.Add(UiKit.Text("Known locations", "subtitle"));
             _places = _left.Put(UiKit.Text("", "muted"));
+            _colony = new ColonyPanel(gc);
+            _right.Add(_colony.Root);
 
             _right = Root.Put(UiKit.Div("panel", "tactical-right"));
             _selection = _right;
@@ -68,6 +71,7 @@ namespace Afterfall.Presentation.UI
             _slow = 0.25f;
             RefreshOverview();
             RefreshSelection();
+            _colony.Refresh();
         }
 
         private void RefreshOverview()
@@ -217,6 +221,12 @@ namespace Afterfall.Presentation.UI
             }
             foreach (PoiInfo p in _gc.Session.World.Layout.Pois)
                 if (_gc.Session.World.Exploration.DiscoveredPois.Contains(p.Id)) Place(Next(p.Name, null), p.Center.ToUnity() + Vector3.up * 12f);
+            foreach (KeyValuePair<EntityId, ColonistView> kv in _gc.Sync.Colonists)
+            {
+                if (kv.Value == null || !_gc.Session.World.Colonists.TryGetValue(kv.Key, out Afterfall.Domain.Colony.ColonistState c) || !c.Recruited) continue;
+                bool trouble = c.Activity == Afterfall.Domain.Colony.ColonistActivity.Down || c.Status.StartsWith("Fleeing");
+                Place(Next($"{c.Name}: {c.Activity}", trouble ? "overlay-label--bad" : "overlay-label--good"), kv.Value.transform.position + Vector3.up * 2.4f);
+            }
             foreach (KeyValuePair<EntityId, float> kv in _gc.Tactical.SeenZombies)
             {
                 ZombieView v = _gc.Sync.ZombieViewOf(kv.Key);

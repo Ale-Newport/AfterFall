@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Afterfall.Core;
 using Afterfall.Domain.AI;
+using Afterfall.Domain.Colony;
 using Afterfall.Domain.Construction;
 using Afterfall.Domain.World;
 using UnityEngine;
@@ -23,11 +24,15 @@ namespace Afterfall.Presentation
         private readonly Dictionary<EntityId, StructureView> _structures = new Dictionary<EntityId, StructureView>();
         private readonly Dictionary<EntityId, DropView> _drops = new Dictionary<EntityId, DropView>();
         private readonly Dictionary<EntityId, ZombieView> _zombies = new Dictionary<EntityId, ZombieView>();
+        private readonly Dictionary<EntityId, ColonistView> _colonists = new Dictionary<EntityId, ColonistView>();
+        private Transform _colonistsRoot;
         private int _version = -1;
         private float _zombieScan;
 
         public IReadOnlyDictionary<EntityId, StructureView> Structures => _structures;
         public IReadOnlyDictionary<EntityId, ZombieView> Zombies => _zombies;
+        public IReadOnlyDictionary<EntityId, ColonistView> Colonists => _colonists;
+        public ColonistView ColonistViewOf(EntityId id) => _colonists.TryGetValue(id, out ColonistView v) ? v : null;
 
         public void Initialize(GameController gc)
         {
@@ -36,6 +41,7 @@ namespace Afterfall.Presentation
             _structuresRoot = Root("Structures");
             _dropsRoot = Root("Drops");
             _zombiesRoot = Root("Infected");
+            _colonistsRoot = Root("Survivors");
             Reconcile();
         }
 
@@ -126,6 +132,11 @@ namespace Afterfall.Presentation
                 go.AddComponent<DropView>().Id = d.Id;
                 _drops[d.Id] = go.GetComponent<DropView>();
             }
+
+            // Survivors and colonists
+            RemoveMissing(_colonists, w.Colonists);
+            foreach (ColonistState c in w.Colonists.Values)
+                if (!_colonists.ContainsKey(c.Id)) _colonists[c.Id] = ColonistView.Create(_colonistsRoot, c, _gc);
 
             SyncZombieViews();
         }

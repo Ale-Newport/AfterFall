@@ -117,6 +117,18 @@ namespace Afterfall.Presentation
                     Box(root, "Terminals", M(new Color(0.8f, 0.2f, 0.15f)), new Vector3(0, sy * 0.92f, 0), new Vector3(sx * 0.9f, 0.08f, 0.15f), false);
                     if (col) Collider(root, new Vector3(0, sy * 0.5f, 0), new Vector3(sx, sy, sz));
                     break;
+                case "planter":
+                    Box(root, "Frame", dark, new Vector3(0, sy * 0.5f, 0), new Vector3(sx, sy, sz), false);
+                    Box(root, "Soil", M(new Color(0.24f, 0.17f, 0.11f)), new Vector3(0, sy + 0.01f, 0), new Vector3(sx * 0.9f, 0.04f, sz * 0.85f), false).name = "Soil";
+                    if (ghost == null)
+                    {
+                        var crops = new GameObject("Crops").transform;
+                        crops.SetParent(root, false);
+                        crops.localPosition = new Vector3(0, sy, 0);
+                        for (int i = 0; i < 6; i++)
+                            Shapes.Part(crops, "Plant", MeshFactory.Blob(i), MaterialLibrary.Lit(new Color(0.3f, 0.5f, 0.22f)), new Vector3((i % 3 - 1) * sx * 0.3f, 0f, (i / 3 - 0.5f) * sz * 0.45f), new Vector3(0.35f, 0.4f, 0.35f));
+                    }
+                    break;
                 case "cabinet":
                 case "fridge":
                 case "wardrobe":

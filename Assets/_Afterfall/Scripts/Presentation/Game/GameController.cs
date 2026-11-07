@@ -86,6 +86,7 @@ namespace Afterfall.Presentation
             Sync = new GameObject("Entities").AddComponent<WorldSync>();
             Sync.transform.SetParent(_worldRoot, false);
             Sync.Initialize(this);
+            Session.Colony.Movement = new NavColonistMovement(this);
             yield return null;
 
             Vector3 spawn = Session.Player.Position.ToUnity();
