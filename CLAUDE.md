@@ -49,7 +49,7 @@ Rules:
 - Never commit secrets, `Library/`, `Temp/`, `Logs/`, `UserSettings/`, builds or `tools/**/bin|obj`.
 
 ## Current milestone
-Phase 5 (integrated playable prototype). Unity 6000.3.28f1 is installed and licensed on the development Mac. EditMode (122) and PlayMode (5) tests pass in Unity. A macOS build passes the scripted tour, which builds a powered settlement with a recruited colonist and crops. No human playtest has happened yet. Next priorities are in `docs/PROGRESS.md` → "Next development tasks". After any presentation change, run `tools/run-unity-checks.sh` and look at the tour screenshots before claiming it works.
+Phase 5 (integrated playable prototype). Unity 6000.3.28f1 is installed and licensed on the development Mac. EditMode (124) and PlayMode (5) tests pass in Unity. A macOS build passes the scripted tour, which exercises every system: construction, machines, the power grid, colonists, farming, defence, death and saves. No human playtest has happened yet; the tour drives commands, not the mouse and keyboard. Next priorities are in `docs/PROGRESS.md` → "Next development tasks". After any presentation change, run `tools/run-unity-checks.sh` and look at the tour screenshots before claiming it works.
 
 ## Constraints
 - Do not claim Unity-tested or visually verified behaviour unless it was actually run.
