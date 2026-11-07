@@ -39,6 +39,7 @@ namespace Afterfall.Presentation
             Ui = UiManager.Create(this);
             Ui.ShowMainMenu();
             if (!string.IsNullOrEmpty(error)) Ui.Toast("Content failed to load: " + error, Severity.Danger);
+            AutoTour.TryAttach(this);
         }
 
         public static ContentDatabase LoadContent(out string error)

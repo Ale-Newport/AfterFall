@@ -65,6 +65,22 @@ PlayMode smoke tests (`Assets/Tests/PlayMode/GameSmokeTests.cs`) load `Main.unit
 
 **These have never been executed** (no licensed editor was available). Treat them as the first thing to run.
 
+### Scripted tour of a build
+`-afterfall-tour <dir>` makes the game drive itself (`Presentation/Game/AutoTour.cs`). It:
+- captures the main menu;
+- starts a Survival game with seed 20261107 and waits for the NavMesh;
+- harvests a branch pile and opens the backpack and build menu;
+- shows a foundation placement preview;
+- spawns a Wanderer and a Runner, then opens the strategic view;
+- jumps to 22:00;
+- saves and reloads.
+
+It writes a PNG for each step and `tour-report.txt` (load times, frame times, every error logged), then quits.
+
+```bash
+open -W -n Builds/macOS/AFTERFALL.app --args -afterfall-tour "$PWD/Logs/tour" -screen-fullscreen 0 -screen-width 1600 -screen-height 900
+```
+
 ## Manual playtest script (acceptance scenario)
 1. Launch → **New Game** (Survival). You spawn at a camp beside a crate.
 2. Move (WASD) and rotate the camera (mouse). Explore the forest edge and walk to Millbrook (north-east).
