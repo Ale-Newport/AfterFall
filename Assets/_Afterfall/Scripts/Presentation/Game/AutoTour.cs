@@ -70,6 +70,26 @@ namespace Afterfall.Presentation
             yield return Seconds(2f);
             yield return Capture("02_start_camp");
             yield return MeasureFrames("start camp", 5f);
+            LogRendering();
+            SkipTo(gc, 12.5);
+            yield return Seconds(1.5f);
+            yield return Capture("02b_midday");
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-afterfall-tour-diag") >= 0)
+            {
+                RenderSettings.sun.shadows = LightShadows.None;
+                yield return Seconds(0.5f);
+                yield return Capture("02c_midday_no_shadows");
+                RenderSettings.sun.shadows = LightShadows.Soft;
+                SkipTo(gc, 15.5);
+                yield return Seconds(1f);
+                yield return Capture("02d_afternoon");
+                foreach (Renderer r in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+                {
+                    if (r.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.Off || !r.enabled) continue;
+                    Vector3 size = r.bounds.size;
+                    if (size.x > 60f || size.z > 60f) Line($"Large shadow caster: {r.name} ({r.GetType().Name}) size {size} layer {LayerMask.LayerToName(r.gameObject.layer)} material {r.sharedMaterial?.name}");
+                }
+            }
 
             ResourceNodeView node = FindObjectsByType<ResourceNodeView>(FindObjectsSortMode.None)
                 .Where(v => v.Def.Id == "branch_pile")
@@ -85,7 +105,7 @@ namespace Afterfall.Presentation
             }
             else Line("FAIL: no branch pile found");
 
-            gc.Ui.OpenInventory(true);
+            gc.Ui.OpenInventory(false);
             yield return Seconds(0.5f);
             yield return Capture("03_inventory_crafting");
             gc.Ui.CloseWindow();
@@ -116,11 +136,17 @@ namespace Afterfall.Presentation
             yield return Seconds(2f);
             yield return Capture("07_strategic_view");
             yield return MeasureFrames("strategic view", 3f);
+            Vector3 far = gc.Player.transform.position + new Vector3(140f, 0f, 60f);
+            gc.CameraRig.Tactical.Focus(far, 0f);
+            yield return Seconds(1f);
+            yield return Capture("07b_strategic_unexplored");
+            Transform fog = gc.Tactical.transform.Find("FogOfWar");
+            Renderer fogRenderer = fog != null ? fog.GetComponent<Renderer>() : null;
+            Line(fogRenderer == null ? "FAIL: no fog-of-war renderer" :
+                $"Fog of war: active {fog.gameObject.activeInHierarchy}, visible {fogRenderer.isVisible}, shader {fogRenderer.sharedMaterial.shader.name}, queue {fogRenderer.sharedMaterial.renderQueue}, layer {LayerMask.LayerToName(fog.gameObject.layer)}");
             gc.SetTactical(false);
 
-            SimulationClock clock = gc.Session.World.Clock;
-            double toNight = ((22.0 / 24.0) - clock.TimeOfDay01 + 1.0) % 1.0 * clock.DayLengthSeconds;
-            clock.Advance(toNight);
+            SkipTo(gc, 22.0);
             yield return Seconds(2f);
             yield return Capture("08_night");
 
@@ -133,6 +159,22 @@ namespace Afterfall.Presentation
             yield return Seconds(1.5f);
             yield return Capture("09_after_reload");
             Finish();
+        }
+
+        private static void SkipTo(GameController gc, double hour)
+        {
+            SimulationClock clock = gc.Session.World.Clock;
+            clock.Advance((hour / 24.0 - clock.TimeOfDay01 + 1.0) % 1.0 * clock.DayLengthSeconds);
+        }
+
+        private void LogRendering()
+        {
+            var rp = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline;
+            object Prop(string name) => rp?.GetType().GetProperty(name)?.GetValue(rp);
+            Light sun = RenderSettings.sun;
+            Line($"Quality '{QualitySettings.names[QualitySettings.GetQualityLevel()]}', pipeline '{rp?.name}', main light shadows {Prop("supportsMainLightShadows")}, " +
+                 $"shadow distance {Prop("shadowDistance")}, cascades {Prop("shadowCascadeCount")}");
+            Line(sun == null ? "No RenderSettings.sun" : $"Sun: enabled {sun.enabled}, intensity {sun.intensity:0.00}, shadows {sun.shadows}, rotation {sun.transform.eulerAngles}");
         }
 
         private void ZombieSpawnNear(GameController gc, float distance, string archetype)
