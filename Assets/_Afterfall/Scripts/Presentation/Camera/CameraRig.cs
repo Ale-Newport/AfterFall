@@ -105,6 +105,13 @@ namespace Afterfall.Presentation
             _thirdPerson.Priority = on ? 0 : 10;
         }
 
+        /// <summary>Points the shoulder camera (used by the scripted tour).</summary>
+        public void Look(float yaw, float pitch)
+        {
+            _yaw = yaw;
+            _pitch = Mathf.Clamp(pitch, -40f, 70f);
+        }
+
         public void Shake(float amount)
         {
             if (_gc.Settings.CameraShake) _shake = Mathf.Max(_shake, amount);

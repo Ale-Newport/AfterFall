@@ -44,7 +44,19 @@ for step in "${steps[@]}"; do
       rm -rf "$OUT/tour"
       open -W -n Builds/macOS/AFTERFALL.app --args -afterfall-tour "$PWD/$OUT/tour" \
         -screen-fullscreen 0 -screen-width 1600 -screen-height 900 -logFile "$PWD/$OUT/tour-player.log"
-      if [ -f "$OUT/tour/tour-report.txt" ]; then cat "$OUT/tour/tour-report.txt" | head -40; else echo "tour: no report, see $OUT/tour-player.log"; status=1; fi ;;
+      report="$OUT/tour/tour-report.txt"
+      if [ -f "$report" ]; then
+        sed -n '1,/^Errors logged/p' "$report" | grep -v "^Captured"
+        fails=$(grep -c "^FAIL" "$report")
+        errors=$(sed -n 's/^Errors logged: //p' "$report")
+        if [ "$fails" -gt 0 ] || [ "${errors:-1}" -gt 0 ]; then
+          echo "tour: $fails failed check(s), ${errors:-unknown} error(s) logged (details in $report)"
+          status=1
+        fi
+      else
+        echo "tour: no report, see $OUT/tour-player.log"
+        status=1
+      fi ;;
     *) echo "unknown step: $step"; status=2 ;;
   esac
 done

@@ -38,6 +38,12 @@ namespace Afterfall.Presentation
 
         public void Begin(BuildingDefinition def)
         {
+            CreateGhost(def);
+            _gc.Toast($"Placing {def.Name}: LMB place · R rotate · RMB/Esc cancel", Severity.Info);
+        }
+
+        private void CreateGhost(BuildingDefinition def)
+        {
             Cancel();
             _def = def;
             _ghost = new GameObject("Ghost_" + def.Id);
@@ -45,7 +51,6 @@ namespace Afterfall.Presentation
             StructureVisuals.Build(_ghost.transform, def, _validMat, false);
             foreach (Collider c in _ghost.GetComponentsInChildren<Collider>()) Destroy(c);
             Shapes.SetLayerRecursive(_ghost, Layers.Ghost);
-            _gc.Toast($"Placing {def.Name}: LMB place · R rotate · RMB/Esc cancel", Severity.Info);
         }
 
         public void Cancel()
@@ -95,6 +100,12 @@ namespace Afterfall.Presentation
                 LastResult = null;
                 return;
             }
+            Evaluate(hit, tactical);
+        }
+
+        /// <summary>Snaps, probes and validates the ghost at a surface hit.</summary>
+        private void Evaluate(RaycastHit hit, bool tactical)
+        {
             _ghost.SetActive(true);
             Structure support = SupportFromHit(hit);
             Vector3 pos = hit.point;
@@ -137,12 +148,7 @@ namespace Afterfall.Presentation
 
         private void TryPlace()
         {
-            if (LastResult == null || !LastResult.Valid)
-            {
-                _gc.Toast(LastResult == null ? "No valid surface." : string.Join(" ", LastResult.Reasons), Severity.Warning);
-                return;
-            }
-            OpResult r = _gc.Session.PlaceBlueprint(_def.Id, _position.ToSim(), _yawApplied, _probe, out Structure s);
+            OpResult r = Place(out Structure s);
             if (!r.Ok)
             {
                 _gc.Toast(r.Message, Severity.Warning);
@@ -150,6 +156,36 @@ namespace Afterfall.Presentation
             }
             List<ItemAmount> missing = _gc.Session.Construction.RemainingCost(s);
             _gc.Toast(missing.Count > 0 ? $"{_def.Name} blueprint placed — bring the materials and hold E to build." : $"{_def.Name} blueprint placed — hold E to build.", Severity.Success);
+        }
+
+        private OpResult Place(out Structure s)
+        {
+            s = null;
+            if (LastResult == null) return OpResult.Fail("no_surface", "No valid surface.");
+            if (!LastResult.Valid) return OpResult.Fail("invalid", string.Join(" ", LastResult.Reasons));
+            return _gc.Session.PlaceBlueprint(_def.Id, _position.ToSim(), _yawApplied, _probe, out s);
+        }
+
+        /// <summary>
+        /// Plans <paramref name="def"/> on the surface under <paramref name="point"/> as if it were aimed at
+        /// from the strategic view: the same snapping, physics probe and rules as interactive placement.
+        /// Used by the scripted tour.
+        /// </summary>
+        public OpResult PlanAt(BuildingDefinition def, Vector3 point, float yaw, out Structure structure)
+        {
+            structure = null;
+            CreateGhost(def);
+            _yaw = yaw;
+            OpResult r;
+            if (!Physics.Raycast(point + Vector3.up * 80f, Vector3.down, out RaycastHit hit, 160f, Layers.PlacementSurfaceMask, QueryTriggerInteraction.Ignore))
+                r = OpResult.Fail("no_surface", "No surface below.");
+            else
+            {
+                Evaluate(hit, true);
+                r = Place(out structure);
+            }
+            Cancel();
+            return r;
         }
 
         private void BuildProbe(Vector3 pos, float yaw, bool onSupport, bool tactical)
