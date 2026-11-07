@@ -2,9 +2,14 @@
 
 AFTERFALL is a single-player 3D open-world survival, crafting, base-building and industrial-automation game built with **Unity 6.3 LTS**. You wake up alone in a quiet, ruined valley. You scavenge, build shelter, smelt metal, bring electricity back, and automate production. The long-term goal is a settlement that grows into a connected industrial civilization.
 
-> **Status: early playable prototype (Phases 0–5 in progress).** The simulation core is implemented and tested headlessly. The Unity presentation layer compiles against the official Unity 6000.3.28f1 reference assemblies. It **has not yet been run inside a licensed Unity Editor**, so in-engine behaviour (rendering, physics feel, UI layout) is unverified. See [docs/PROGRESS.md](docs/PROGRESS.md) for exactly what is verified.
+> **Status: early playable prototype (Phases 0–5 in progress).** The game runs in Unity 6000.3.28f1. In Unity, all 120 EditMode tests and the 5 PlayMode smoke tests pass. A macOS build plays a scripted tour with no errors and holds the 120 Hz vsync cap on an Apple M2 Max: new game, harvesting, crafting, a building preview, infected, the strategic view, night, then save and reload. A person has not yet played the full acceptance loop, and the Windows build is untested. See [docs/PROGRESS.md](docs/PROGRESS.md) for exactly what is verified.
 
-There are no screenshots yet: none will be published until real in-engine captures exist.
+| | |
+|---|---|
+| ![Start camp in the morning](docs/screenshots/start-camp-morning.jpg) | ![Placing a foundation](docs/screenshots/build-placement.jpg) |
+| ![Infected approaching](docs/screenshots/infected.jpg) | ![Strategic view](docs/screenshots/strategic-view.jpg) |
+
+_Captured by the scripted tour of the macOS build (`-afterfall-tour`); procedural placeholder art._
 
 ## Design pillars
 
@@ -104,7 +109,9 @@ Every binding can be changed in **Settings**.
 dotnet test tools/dotnet/AfterfallSim.Tests/AfterfallSim.Tests.csproj
 ```
 
-This runs the EditMode test suite (119 tests) headlessly: inventory conservation, reservations, crafting, construction, machines, power, AI, threats, world generation, saves and colonist jobs, farming and full gameplay-loop scenarios. The same test files run inside Unity's Test Runner, where PlayMode smoke tests also run. See [docs/TESTING.md](docs/TESTING.md), including how to compile-check the Unity code without a licensed editor.
+This runs the EditMode test suite (120 tests) headlessly: inventory conservation, reservations, crafting, construction, machines, power, AI, threats, world generation, saves and colonist jobs, farming and full gameplay-loop scenarios.
+
+With Unity installed and licensed, `tools/run-unity-checks.sh` runs the same suite inside Unity, the PlayMode smoke tests, a macOS build and the scripted tour (screenshots, frame times and an error count in `Logs/unity-checks/`). See [docs/TESTING.md](docs/TESTING.md).
 
 ## Documentation
 

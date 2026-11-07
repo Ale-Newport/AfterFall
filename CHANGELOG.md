@@ -2,6 +2,22 @@
 
 All notable changes, grouped by milestone. Dates are UTC.
 
+## [Unreleased] — First runs in Unity (2026-11-07)
+
+### Added
+- `-afterfall-tour <dir>`: a scripted tour of a build. It visits the main screens, captures screenshots, logs rendering state and frame times, counts logged errors, then quits.
+- `tools/run-unity-checks.sh`: EditMode and PlayMode tests, a macOS build and the tour in one command.
+- In-engine screenshots in the README.
+
+### Fixed
+- Saves were rejected as corrupt under Unity's Mono runtime: the checksum depended on number formatting.
+- Terrain was invisible, then unlit and glossy, in player builds (instanced terrain variants stripped; smoothness read from texture alpha).
+- Illegible HUD bar labels, an empty banner, an overflowing panel heading, see-through windows, and the wording of the crafting-station message.
+- A URP warning on every new game (`Camera.layerCullSpherical`).
+
+### Changed
+- Unity 6000.3.28f1 serialization upgrades of project settings and URP assets; `Packages/packages-lock.json` is committed.
+
 ## [Unreleased] — Phase 6 groundwork (2026-11-07)
 
 ### Added

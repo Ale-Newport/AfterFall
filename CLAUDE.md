@@ -35,7 +35,8 @@ Rules:
 - Headless tests (EditMode suite on .NET): `dotnet test tools/dotnet/AfterfallSim.Tests/AfterfallSim.Tests.csproj`
 - Compile-check the Unity assemblies without a license: `python3 tools/unity-compile-check/compile_check.py --unity <Unity.app/Contents> --packages <extracted package sources>` (see docs/TESTING.md)
 - Missing `.meta` files: `python3 tools/generate_meta.py` (`--check` to verify)
-- Unity tests: `<Unity> -batchmode -projectPath . -runTests -testPlatform EditMode|PlayMode -testResults <file>`
+- In-Unity checks (tests, macOS build, scripted tour with screenshots): `tools/run-unity-checks.sh [editmode|playmode|build|tour]`
+- Unity tests directly: `<Unity> -batchmode -projectPath . -runTests -testPlatform EditMode|PlayMode -testResults <file>`
 - Builds: `-executeMethod Afterfall.EditorTools.BuildCommands.BuildMacOS` / `BuildWindows`
 - One-time repository setup: `./tools/setup-dev.sh` (local Git LFS plus the commit-msg hook)
 
@@ -47,7 +48,7 @@ Rules:
 - Never commit secrets, `Library/`, `Temp/`, `Logs/`, `UserSettings/`, builds or `tools/**/bin|obj`.
 
 ## Current milestone
-Phase 5 (integrated playable prototype). The code is complete for the acceptance loop but **not yet run in a licensed Unity Editor**. Next priorities are in `docs/PROGRESS.md` → "Next development tasks". The first task in any session with Unity available: open the project, run Play, fix in-engine issues, run the EditMode and PlayMode tests, record the results.
+Phase 5 (integrated playable prototype). Unity 6000.3.28f1 is installed and licensed on the development Mac. EditMode (120) and PlayMode (5) tests pass in Unity, and a macOS build passes the scripted tour. Machines, electricity, colonists and farming have not been exercised in the engine yet, and no human playtest has happened. Next priorities are in `docs/PROGRESS.md` → "Next development tasks". After any presentation change, run `tools/run-unity-checks.sh` and look at the tour screenshots before claiming it works.
 
 ## Constraints
 - Do not claim Unity-tested or visually verified behaviour unless it was actually run.

@@ -30,7 +30,7 @@ Requirements: .NET SDK 10 (`brew install dotnet`). On macOS Homebrew installs yo
 | AcceptanceLoopTests | **organic early game** (bare hands → tools → workbench → planks → foundation → drink → save/load → continue) and the **industrial chain** (workbench → metalworking → furnace smelting → electrification → generator + workshop → gears → water works → fuel outage → refuel → resume) |
 | PerformanceTests | busy-settlement simulation budget (prints per-system timings) |
 
-Last result: **119 passed, 0 failed** (see docs/PROGRESS.md for the date and environment).
+Last result: **120 passed, 0 failed** (see docs/PROGRESS.md for the date and environment).
 
 ## 2. Unity compile check — no Unity license required
 `tools/unity-compile-check/compile_check.py` compiles every asmdef assembly (runtime, editor, EditMode and PlayMode tests) with the .NET SDK against **Unity's own reference assemblies** and the **source** of the pinned packages, using Unity-like scripting defines. It runs in two passes: `player` (no `UNITY_EDITOR`) and `editor`.
@@ -48,7 +48,7 @@ python3 tools/unity-compile-check/compile_check.py \
 It caught two real Unity 6.3 issues before Unity was ever opened: the new `UnityEngine.EntityId` type, and `VisualElement.Add` returning void.
 
 ## 3. Unity Test Runner (EditMode + PlayMode) — needs a licensed editor
-In the editor, use **Window → General → Test Runner**. From the command line:
+In the editor, use **Window → General → Test Runner**. From the command line, `tools/run-unity-checks.sh [editmode|playmode|build|tour]` runs any or all steps. It writes XML results, logs and screenshots to `Logs/unity-checks/` and prints a summary with failing tests. Close the project in the editor first, because Unity locks it. The underlying commands are:
 
 ```bash
 UNITY="/Applications/Unity/Hub/Editor/6000.3.28f1/Unity.app/Contents/MacOS/Unity"
@@ -63,7 +63,9 @@ PlayMode smoke tests (`Assets/Tests/PlayMode/GameSmokeTests.cs`) load `Main.unit
 - `Harvesting_AddsItemsToInventory`
 - `SaveAndLoad_RestoresPlayerAndInventory`
 
-**These have never been executed** (no licensed editor was available). Treat them as the first thing to run.
+Last result (2026-11-07, 6000.3.28f1): **EditMode 120/120, PlayMode 5/5** (plus the Input System's 2 integration tests, included through `testables`).
+
+The first Unity run failed 7 save tests that pass on .NET. Unity's Mono formats some re-read doubles differently, which broke the save checksum. Engine-specific behaviour like this is why the in-Unity run matters even with a green .NET suite. `PersistenceTests.Checksum_DoesNotDependOnNumberFormatting` now covers it.
 
 ### Scripted tour of a build
 `-afterfall-tour <dir>` makes the game drive itself (`Presentation/Game/AutoTour.cs`). It:
