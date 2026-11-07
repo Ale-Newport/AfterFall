@@ -213,6 +213,8 @@ namespace Afterfall.Presentation
                 if (c.GetComponentInParent<PlayerCharacter>() != null && _def.Snap != SnapMode.Free) continue;
                 EntityView view = c.GetComponentInParent<EntityView>();
                 if (view is StructureView sv && sv.Def != null && sv.Def.ProvidesSupport && onSupport) continue;
+                // Wall pieces meet at foundation corners; the same edge twice is refused by DuplicateAt.
+                if (view is StructureView wall && wall.Def != null && wall.Def.Snap == SnapMode.Wall && _def.Snap == SnapMode.Wall && onSupport) continue;
                 _probe.Blocked = true;
                 _probe.BlockedBy = Describe(c);
                 break;
@@ -377,12 +379,16 @@ namespace Afterfall.Presentation
             return false;
         }
 
+        /// <summary>The same piece already planned here; any wall-type piece occupies its edge in either orientation.</summary>
         private bool DuplicateAt(Vector3 pos)
         {
+            bool wallSlot = _def.Snap == SnapMode.Wall;
             foreach (Structure s in _gc.Session.World.Structures.Values)
             {
-                if (s.DefId != _def.Id) continue;
-                if (Vector3.Distance(s.Position.ToUnity(), pos) < 0.3f && Mathf.Abs(Mathf.DeltaAngle(s.Yaw, _yawApplied)) < 5f) return true;
+                bool sameSlot = s.DefId == _def.Id || (wallSlot && _gc.Session.Content.Building(s.DefId)?.Snap == SnapMode.Wall);
+                if (!sameSlot || Vector3.Distance(s.Position.ToUnity(), pos) >= 0.3f) continue;
+                float turn = Mathf.Abs(Mathf.DeltaAngle(s.Yaw, _yawApplied));
+                if (turn < 5f || (wallSlot && turn > 175f)) return true;
             }
             return false;
         }
