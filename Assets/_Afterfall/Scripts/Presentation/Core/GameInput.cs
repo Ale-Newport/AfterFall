@@ -107,13 +107,27 @@ namespace Afterfall.Presentation
                         InputBinding b = a.bindings[i];
                         if (b.isComposite) continue;
                         if (b.path.StartsWith("<Gamepad>", StringComparison.Ordinal) || b.path.Contains("Arrow")) continue;
-                        string label = b.isPartOfComposite ? $"{map.name}: {a.name} {b.name}" : $"{map.name}: {a.name}";
+                        string label = b.isPartOfComposite ? $"{map.name}: {a.name} {PartLabel(a.name, b.name)}" : $"{map.name}: {a.name}";
                         if (!b.isPartOfComposite && i > 0) label += " (alt)";
                         list.Add((label, a, i));
                     }
                 }
             }
             return list;
+        }
+
+        /// <summary>Player-facing name of a composite part: movement reads forward/back, not up/down.</summary>
+        private static string PartLabel(string action, string part)
+        {
+            bool movement = action.StartsWith("Move", StringComparison.Ordinal) || action == "Pan";
+            switch (part.ToLowerInvariant())
+            {
+                case "up": return movement ? "Forward" : "Up";
+                case "down": return movement ? "Back" : "Down";
+                case "left": return "Left";
+                case "right": return "Right";
+                default: return part.Length > 0 ? char.ToUpperInvariant(part[0]) + part.Substring(1) : part;
+            }
         }
 
         public static string Display(InputAction action, int bindingIndex)

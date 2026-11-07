@@ -54,6 +54,16 @@
 .btn--danger { background-color: rgb(110, 40, 34); }
 .btn--small { padding: 2px 8px; font-size: 14px; }
 .btn--list { white-space: normal; -unity-text-align: middle-left; }
+
+/* Text inputs: the default theme draws a white field, which hides our light text. */
+.unity-base-text-field__input, .unity-text-field__input {
+    background-color: rgb(30, 32, 28);
+    color: rgb(236, 230, 214);
+    border-color: rgb(120, 112, 86);
+    --unity-cursor-color: rgb(240, 214, 140);
+    --unity-selection-color: rgba(200, 160, 70, 0.45);
+}
+.unity-base-field__label { color: rgb(220, 214, 196); }
 .btn--disabled { opacity: 0.45; }
 .btn--selected { border-color: rgb(250, 210, 110); background-color: rgb(92, 80, 48); }
 .menu-btn { width: 340px; height: 52px; font-size: 22px; }
