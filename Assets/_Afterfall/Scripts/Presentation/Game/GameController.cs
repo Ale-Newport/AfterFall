@@ -25,6 +25,7 @@ namespace Afterfall.Presentation
         private readonly Dictionary<string, float> _throttle = new Dictionary<string, float>();
         private IInteractable _target;
         private float _holdTick;
+        private float _demolishHold;
         private float _autosave = AutosaveInterval;
         private Transform _worldRoot;
         private NavMeshSurface _surface;
@@ -41,6 +42,7 @@ namespace Afterfall.Presentation
         public BuildController Build { get; private set; }
         public TacticalController Tactical { get; private set; }
         public Terrain Terrain { get; private set; }
+        public AudioDirector Audio { get; private set; }
         public bool Running { get; private set; }
         public bool NavReady { get; private set; }
         public string CurrentSlot { get; set; } = "save1";
@@ -99,6 +101,9 @@ namespace Afterfall.Presentation
             Tactical.transform.SetParent(transform, false);
             Tactical.Initialize(this);
             gameObject.AddComponent<DebugOverlay>().Initialize(this);
+            Audio = new GameObject("Audio").AddComponent<AudioDirector>();
+            Audio.transform.SetParent(transform, false);
+            Audio.Initialize(this);
             Session.Zombies.Adapter = new NavZombieAdapter(this);
             Subscribe();
             Ui.AttachGame(this);
@@ -265,6 +270,19 @@ namespace Afterfall.Presentation
                 }
             }
 
+            if (_target is StructureView sv && i.Deconstruct.IsPressed())
+            {
+                _demolishHold += Time.deltaTime;
+                CurrentPrompt = $"Demolishing {sv.Def.Name}… {Mathf.Clamp01(_demolishHold / 1.2f) * 100:0}%";
+                if (_demolishHold >= 1.2f)
+                {
+                    _demolishHold = 0f;
+                    OpResult r = Session.Demolish(sv.Id);
+                    Toast(r.Message, r.Ok ? Severity.Info : Severity.Warning);
+                }
+            }
+            else _demolishHold = 0f;
+
             if (i.Primary.WasPressedThisFrame() || (i.Primary.IsPressed() && Session.Now >= Session.Player.NextActionTime && _target is ResourceNodeView))
             {
                 if (_target is ResourceNodeView node) HarvestTarget(node);
@@ -319,6 +337,7 @@ namespace Afterfall.Presentation
             if (r.Code == "busy") return;
             Player.FaceAim();
             Player.Rig.PlaySwing();
+            Audio.PlayAt("swing", Player.transform.position + Vector3.up, 0.4f);
             if (r.Ok)
             {
                 CameraRig.Shake(0.15f);
@@ -343,6 +362,7 @@ namespace Afterfall.Presentation
             OpResult r = Session.MeleeAttack(ids);
             if (r.Code == "busy") return;
             Player.Rig.PlaySwing();
+            Audio.PlayAt("swing", Player.transform.position + Vector3.up, 0.6f);
             if (!r.Ok)
             {
                 ToastThrottled(r.Message, Severity.Warning);
@@ -351,7 +371,9 @@ namespace Afterfall.Presentation
             foreach (EntityId id in ids)
             {
                 ZombieView v = Sync.ZombieViewOf(id);
-                if (v != null) v.Rig.Flash();
+                if (v == null) continue;
+                v.Rig.Flash();
+                Audio.PlayAt("hit_flesh", v.transform.position + Vector3.up * 1.2f, 0.9f);
             }
             if (ids.Count > 0) CameraRig.Shake(0.25f);
         }

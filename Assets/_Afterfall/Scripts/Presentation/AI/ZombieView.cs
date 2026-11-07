@@ -171,7 +171,11 @@ namespace Afterfall.Presentation
                     p.Y = _gc.Session.World.Layout.HeightAt(p.X, p.Z);
                     zombie.Position = p;
                 }
-                if (decision.Attack && v != null) v.Rig.PlaySwing();
+                if (decision.Attack && v != null)
+                {
+                    v.Rig.PlaySwing();
+                    _gc.Audio?.ZombieAttack(v.transform.position);
+                }
                 return;
             }
 
@@ -207,7 +211,11 @@ namespace Afterfall.Presentation
                 dir.y = 0;
                 if (dir.sqrMagnitude > 0.01f) zombie.Yaw = Quaternion.LookRotation(dir).eulerAngles.y;
             }
-            if (decision.Attack) v.Rig.PlaySwing();
+            if (decision.Attack)
+            {
+                v.Rig.PlaySwing();
+                _gc.Audio?.ZombieAttack(v.transform.position);
+            }
         }
     }
 }

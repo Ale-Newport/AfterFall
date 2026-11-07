@@ -13,6 +13,8 @@ namespace Afterfall.Presentation
         public float FieldOfView = 55f;
         public bool ShowFps;
         public bool CameraShake = true;
+        public float MasterVolume = 0.8f;
+        public bool Captions = true;
 
         public static AppSettings Load()
         {
@@ -23,7 +25,9 @@ namespace Afterfall.Presentation
                 UiScale = PlayerPrefs.GetFloat(Prefix + "uiScale", 1f),
                 FieldOfView = PlayerPrefs.GetFloat(Prefix + "fov", 55f),
                 ShowFps = PlayerPrefs.GetInt(Prefix + "fps", 0) == 1,
-                CameraShake = PlayerPrefs.GetInt(Prefix + "shake", 1) == 1
+                CameraShake = PlayerPrefs.GetInt(Prefix + "shake", 1) == 1,
+                MasterVolume = PlayerPrefs.GetFloat(Prefix + "volume", 0.8f),
+                Captions = PlayerPrefs.GetInt(Prefix + "captions", 1) == 1
             };
             s.Clamp();
             return s;
@@ -38,6 +42,8 @@ namespace Afterfall.Presentation
             PlayerPrefs.SetFloat(Prefix + "fov", FieldOfView);
             PlayerPrefs.SetInt(Prefix + "fps", ShowFps ? 1 : 0);
             PlayerPrefs.SetInt(Prefix + "shake", CameraShake ? 1 : 0);
+            PlayerPrefs.SetFloat(Prefix + "volume", MasterVolume);
+            PlayerPrefs.SetInt(Prefix + "captions", Captions ? 1 : 0);
             PlayerPrefs.Save();
         }
 
@@ -46,6 +52,7 @@ namespace Afterfall.Presentation
             MouseSensitivity = Mathf.Clamp(MouseSensitivity, 0.1f, 4f);
             UiScale = Mathf.Clamp(UiScale, 0.7f, 1.6f);
             FieldOfView = Mathf.Clamp(FieldOfView, 40f, 80f);
+            MasterVolume = Mathf.Clamp01(MasterVolume);
         }
     }
 }

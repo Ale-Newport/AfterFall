@@ -16,7 +16,7 @@ namespace Afterfall.Presentation.UI
         private readonly UiManager _ui;
         private readonly GameController _gc;
         private readonly Bar _health, _stamina, _hunger, _thirst;
-        private readonly Label _carry, _equipped, _clock, _prompt, _mode, _warnings, _craftLabel, _placeTitle, _placeCost, _placeReasons;
+        private readonly Label _carry, _equipped, _clock, _prompt, _mode, _warnings, _craftLabel, _placeTitle, _placeCost, _placeReasons, _caption;
         private readonly Bar _craftBar;
         private readonly VisualElement _crosshair, _craftPanel, _placePanel, _vitals, _hotbarRow;
         private readonly ItemSlot[] _hotbar = new ItemSlot[PlayerState.HotbarSize];
@@ -43,6 +43,7 @@ namespace Afterfall.Presentation.UI
             _warnings = Root.Put(UiKit.Text("", "hud-warning", "warn"));
             _crosshair = Root.Put(UiKit.Div("hud-crosshair"));
             _prompt = Root.Put(UiKit.Text("", "hud-prompt"));
+            _caption = Root.Put(UiKit.Text("", "hud-caption"));
 
             _hotbarRow = Root.Put(UiKit.Div("hud-hotbar"));
             for (int i = 0; i < _hotbar.Length; i++)
@@ -103,6 +104,10 @@ namespace Afterfall.Presentation.UI
             else _mode.text = "";
 
             _warnings.text = Warnings(v, carried);
+            AudioDirector audio = _gc.Audio;
+            bool caption = audio != null && Time.unscaledTime < audio.CaptionUntil && !string.IsNullOrEmpty(audio.Caption);
+            _caption.text = caption ? audio.Caption : "";
+            UiKit.Show(_caption, caption);
 
             CraftJob job = p.Crafting.Jobs.Count > 0 ? p.Crafting.Jobs[0] : null;
             UiKit.Show(_craftPanel, job != null);

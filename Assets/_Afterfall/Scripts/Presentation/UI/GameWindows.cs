@@ -299,6 +299,7 @@ namespace Afterfall.Presentation.UI
             _status = statusRow.Put(UiKit.Text("", "subtitle"));
             statusRow.Add(UiKit.Div("spacer"));
             _toggle = statusRow.Put(UiKit.Btn("Switch off", () => { Report(Gc.Session.ToggleEnabled(_id)); }, "btn--small"));
+            statusRow.Add(UiKit.Btn("Repair", () => Report(Gc.Session.Repair(_id)), "btn--small"));
             _detail = Root.Put(UiKit.Text("", "wrap"));
             _progress = Root.Put(new Bar(new Color(0.8f, 0.6f, 0.25f)));
             _power = Root.Put(UiKit.Text("", "muted"));

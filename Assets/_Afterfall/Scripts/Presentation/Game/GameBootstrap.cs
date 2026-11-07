@@ -31,6 +31,7 @@ namespace Afterfall.Presentation
             Application.targetFrameRate = 120;
             QualitySettings.vSyncCount = 1;
             Settings = AppSettings.Load();
+            AudioListener.volume = Settings.MasterVolume;
             Input = new GameInput();
             Saves = new SaveService(new SaveFileStore(SaveDirectory));
             Content = LoadContent(out string error);
@@ -71,21 +72,40 @@ namespace Afterfall.Presentation
             EndGame();
             Ui.HideMainMenu();
             Ui.ShowLoading("Generating world…");
+            StartCoroutine(NewGameRoutine(preset, seed));
+        }
+
+        private System.Collections.IEnumerator NewGameRoutine(DifficultyPreset preset, int seed)
+        {
+            yield return null; // let the loading screen render before the synchronous generation step
             GameSession session = NewGameFactory.Create(Content, seed, GameSettings.FromPreset(preset));
             _game = GameController.Create(this, session, "save1");
         }
 
         public void LoadGame(string slot)
         {
-            LoadResult result = Saves.Load(slot, Content);
-            if (!result.Ok)
+            if (!Saves.Store.Exists(slot))
             {
-                Ui.Toast("Could not load: " + result.Error, Severity.Danger);
+                Ui.Toast($"No save named '{slot}'.", Severity.Warning);
                 return;
             }
             EndGame();
             Ui.HideMainMenu();
             Ui.ShowLoading("Loading " + slot + "…");
+            StartCoroutine(LoadRoutine(slot));
+        }
+
+        private System.Collections.IEnumerator LoadRoutine(string slot)
+        {
+            yield return null;
+            LoadResult result = Saves.Load(slot, Content);
+            if (!result.Ok)
+            {
+                Ui.HideLoading();
+                Ui.ShowMainMenu();
+                Ui.Toast("Could not load: " + result.Error, Severity.Danger);
+                yield break;
+            }
             _game = GameController.Create(this, result.Session, slot == SaveService.AutoSlot || slot == SaveService.QuickSlot ? "save1" : slot);
             foreach (string w in result.Warnings) Ui.Toast(w, Severity.Warning);
         }
@@ -109,6 +129,7 @@ namespace Afterfall.Presentation
         public void ApplySettings()
         {
             Ui.ApplyScale(Settings.UiScale);
+            AudioListener.volume = Settings.MasterVolume;
             if (_game != null && _game.CameraRig != null) _game.CameraRig.ApplySettings(Settings);
         }
 

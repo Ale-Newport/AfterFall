@@ -210,6 +210,10 @@ namespace Afterfall.Presentation.UI
             fov.RegisterValueChangedCallback(e => { s.FieldOfView = e.newValue; Apply(); });
             var scale = Root.Put(new Slider("Interface scale", 0.7f, 1.6f) { value = s.UiScale });
             scale.RegisterValueChangedCallback(e => { s.UiScale = e.newValue; Apply(); });
+            var volume = Root.Put(new Slider("Master volume", 0f, 1f) { value = s.MasterVolume });
+            volume.RegisterValueChangedCallback(e => { s.MasterVolume = e.newValue; Apply(); });
+            var captions = Root.Put(new Toggle("Sound captions (subtitles for important sounds)") { value = s.Captions });
+            captions.RegisterValueChangedCallback(e => { s.Captions = e.newValue; Apply(); });
             var invert = Root.Put(new Toggle("Invert vertical look") { value = s.InvertY });
             invert.RegisterValueChangedCallback(e => { s.InvertY = e.newValue; Apply(); });
             var shake = Root.Put(new Toggle("Camera shake") { value = s.CameraShake });
