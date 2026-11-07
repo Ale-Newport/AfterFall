@@ -52,6 +52,7 @@ namespace Afterfall.Domain.World
             PlaceQuarry(layout, seed);
             PlaceFarm(layout, seed);
             PlaceRoadside(layout, seed);
+            PlaceSurvivors(layout);
             PlaceVegetation(layout, seed);
             PlaceForestSpawns(layout, seed);
             return layout;
@@ -372,6 +373,18 @@ namespace Afterfall.Domain.World
                     }
                 }
             }
+        }
+
+        private static void PlaceSurvivors(WorldLayout l)
+        {
+            var mara = new SurvivorSeed { Name = "Mara Voss", PoiId = "farm", Position = l.Ground(250, 126) };
+            mara.Skills["Haul"] = 1.3f;
+            mara.Skills["Build"] = 0.9f;
+            l.Survivors.Add(mara);
+            var eli = new SurvivorSeed { Name = "Eli Brandt", PoiId = "workshop", Position = l.Ground(406, 304) };
+            eli.Skills["Build"] = 1.5f;
+            eli.Skills["Haul"] = 0.9f;
+            l.Survivors.Add(eli);
         }
 
         // ------------------------------------------------------------------ vegetation & resources

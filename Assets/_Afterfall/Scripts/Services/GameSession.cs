@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Afterfall.Core;
 using Afterfall.Domain.AI;
+using Afterfall.Domain.Colony;
 using Afterfall.Domain.Construction;
 using Afterfall.Domain.Content;
 using Afterfall.Domain.Crafting;
@@ -46,6 +47,8 @@ namespace Afterfall.Services
             Machines = new MachineSystem(World, Content, Events, Tech);
             Zombies = new ZombieSystem(World, Content, Events);
             Threats = new ThreatDirector(World, Content, Events, Zombies);
+            Colony = new ColonySystem(World, Content, Events, Construction);
+            if (Colony.Movement is DirectColonistMovement walk) walk.GroundHeight = p => World.Layout.HeightAt(p.X, p.Z);
             _playerSystem = new PlayerSystem(this);
 
             Zombies.PlayerHit += (z, dmg) => DamagePlayer(dmg, "the infected");
@@ -56,6 +59,7 @@ namespace Afterfall.Services
             Scheduler.Register(_playerSystem, 10);
             Scheduler.Register(Power, 4);
             Scheduler.Register(Machines, 4);
+            Scheduler.Register(Colony, 4);
             Scheduler.Register(Zombies, 10);
             Scheduler.Register(Threats, 0.5);
             Scheduler.Register(new ResourceRespawnSystem(World, Content), 0.2);
@@ -72,6 +76,7 @@ namespace Afterfall.Services
         public MachineSystem Machines { get; }
         public ZombieSystem Zombies { get; }
         public ThreatDirector Threats { get; }
+        public ColonySystem Colony { get; }
 
         public PlayerState Player => World.Player;
         public double Now => World.Clock.ElapsedSeconds;
@@ -518,6 +523,29 @@ namespace Afterfall.Services
 
         public OpResult DisconnectPower(EntityId a, EntityId b) => PowerLinker.Unlink(World, a, b);
 
+        // ================================================================== colony
+
+        public OpResult Recruit(EntityId colonistId) => Colony.Recruit(colonistId, Player.Position);
+
+        public OpResult SetWorkPriority(EntityId colonistId, JobType type, int priority)
+        {
+            if (!World.Colonists.TryGetValue(colonistId, out ColonistState c) || !c.Recruited) return OpResult.Fail("missing", "No such colonist.");
+            if (type == JobType.Eat || type == JobType.Rest) return OpResult.Fail("personal", "Eating and resting are personal needs.");
+            c.Work.Priorities[type] = Math.Max(0, Math.Min(4, priority));
+            return OpResult.Success(priority == 0 ? $"{c.Name} will no longer {type.ToString().ToLowerInvariant()}." : $"{c.Name}: {type} priority {priority}.");
+        }
+
+        public int RecruitedCount
+        {
+            get
+            {
+                int n = 0;
+                foreach (ColonistState c in World.Colonists.Values)
+                    if (c.Recruited && c.Activity != ColonistActivity.Down) n++;
+                return n;
+            }
+        }
+
         // ================================================================== overview (strategic UI)
 
         /// <summary>Totals across the player's backpack and all player-built storage.</summary>
@@ -536,6 +564,8 @@ namespace Afterfall.Services
             Add(Player.Inventory);
             foreach (Structure s in World.Structures.Values)
                 if (s.PlayerBuilt && s.IsComplete) Add(s.Storage);
+            foreach (ColonistState c in World.Colonists.Values)
+                if (c.Recruited) Add(c.Carry);
             return totals;
         }
 

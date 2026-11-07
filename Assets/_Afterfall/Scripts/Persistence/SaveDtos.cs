@@ -147,6 +147,48 @@ namespace Afterfall.Persistence
         public float DeadTime { get; set; }
     }
 
+    public sealed class ColonistDto
+    {
+        public long Id { get; set; }
+        public string Name { get; set; } = "";
+        public bool Recruited { get; set; }
+        public Vec3 Position { get; set; }
+        public float Yaw { get; set; }
+        public SurvivalState Vitals { get; set; }
+        public InventoryDto Carry { get; set; }
+        public Dictionary<string, float> Skills { get; set; } = new Dictionary<string, float>();
+        public Dictionary<string, int> Work { get; set; } = new Dictionary<string, int>();
+        public long CurrentJob { get; set; }
+        public string Activity { get; set; } = "";
+        public string Status { get; set; } = "";
+        public long HomeBed { get; set; }
+        public Vec3 MoveTarget { get; set; }
+        public bool HasMoveTarget { get; set; }
+        public float Morale { get; set; }
+        public List<string> RecentFailures { get; set; } = new List<string>();
+    }
+
+    public sealed class JobDto
+    {
+        public long Id { get; set; }
+        public string Type { get; set; } = "";
+        public int Priority { get; set; }
+        public string State { get; set; } = "";
+        public long Assignee { get; set; }
+        public string Description { get; set; } = "";
+        public string FailureReason { get; set; } = "";
+        public double CreatedAt { get; set; }
+        public long TargetStructure { get; set; }
+        public long SourceInventory { get; set; }
+        public long DestinationInventory { get; set; }
+        public string ItemId { get; set; } = "";
+        public int Quantity { get; set; }
+        public string Stage { get; set; } = "";
+        public long SourceToken { get; set; }
+        public long DestinationToken { get; set; }
+        public bool DeliverToBlueprint { get; set; }
+    }
+
     public sealed class WorldDto
     {
         public int Seed { get; set; }
@@ -162,6 +204,8 @@ namespace Afterfall.Persistence
         public List<NodeDto> Nodes { get; set; } = new List<NodeDto>();
         public List<DropDto> Drops { get; set; } = new List<DropDto>();
         public List<ZombieDto> Zombies { get; set; } = new List<ZombieDto>();
+        public List<ColonistDto> Colonists { get; set; } = new List<ColonistDto>();
+        public List<JobDto> Jobs { get; set; } = new List<JobDto>();
         public List<string> UnlockedTechs { get; set; } = new List<string>();
         public Dictionary<string, int> TechProgress { get; set; } = new Dictionary<string, int>();
 

@@ -164,6 +164,17 @@ namespace Afterfall.Domain.World
         public string PoiId { get; set; } = "";
     }
 
+    /// <summary>A survivor who can be recruited, placed by the generator.</summary>
+    public sealed class SurvivorSeed
+    {
+        public string Name { get; set; } = "";
+        public Vec3 Position { get; set; }
+        public string PoiId { get; set; } = "";
+
+        /// <summary>Job type name → skill multiplier (e.g. Build 1.4).</summary>
+        public Dictionary<string, float> Skills { get; } = new Dictionary<string, float>();
+    }
+
     /// <summary>Generated static description of the playable region.</summary>
     public sealed class WorldLayout
     {
@@ -182,6 +193,7 @@ namespace Afterfall.Domain.World
         public List<Vec3> ZombieSpawnPoints { get; } = new List<Vec3>();
         public List<NodeSeed> Nodes { get; } = new List<NodeSeed>();
         public List<ContainerSeed> Containers { get; } = new List<ContainerSeed>();
+        public List<SurvivorSeed> Survivors { get; } = new List<SurvivorSeed>();
 
         public float HeightAt(float x, float z) => Height.Sample(x, z);
         public Vec3 Ground(float x, float z) => new Vec3(x, Height.Sample(x, z), z);

@@ -62,6 +62,14 @@ namespace Afterfall.Services
             var session = new GameSession(content, world);
             session.Tech.Evaluate();
 
+            foreach (SurvivorSeed sv in world.Layout.Survivors)
+            {
+                var skills = new System.Collections.Generic.Dictionary<Afterfall.Domain.Colony.JobType, float>();
+                foreach (var kv in sv.Skills)
+                    if (Enum.TryParse(kv.Key, out Afterfall.Domain.Colony.JobType jt)) skills[jt] = kv.Value;
+                session.Colony.CreateSurvivor(sv.Name, sv.Position, skills);
+            }
+
             // Initial infected population around points of interest, never near the start.
             var zr = DeterministicRandom.Derive(seed, "initial_zombies");
             foreach (Vec3 p in world.Layout.ZombieSpawnPoints)

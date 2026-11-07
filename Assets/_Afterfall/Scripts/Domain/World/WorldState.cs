@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Afterfall.Core;
 using Afterfall.Domain.AI;
+using Afterfall.Domain.Colony;
 using Afterfall.Domain.Construction;
 using Afterfall.Domain.Items;
 using Afterfall.Domain.Technology;
@@ -93,6 +94,8 @@ namespace Afterfall.Domain.World
         public Dictionary<EntityId, ResourceNodeState> ResourceNodes { get; } = new Dictionary<EntityId, ResourceNodeState>();
         public Dictionary<EntityId, WorldDrop> Drops { get; } = new Dictionary<EntityId, WorldDrop>();
         public Dictionary<EntityId, ZombieState> Zombies { get; } = new Dictionary<EntityId, ZombieState>();
+        public Dictionary<EntityId, ColonistState> Colonists { get; } = new Dictionary<EntityId, ColonistState>();
+        public Dictionary<EntityId, Job> Jobs { get; } = new Dictionary<EntityId, Job>();
         public TechnologyState Tech { get; } = new TechnologyState();
         public ExplorationState Exploration { get; }
         public ThreatState Threat { get; } = new ThreatState();
@@ -188,6 +191,14 @@ namespace Afterfall.Domain.World
             if (!Drops.TryGetValue(id, out WorldDrop d)) return;
             UnregisterInventory(d.Contents);
             Drops.Remove(id);
+            MarkChanged();
+        }
+
+        public void AddColonist(ColonistState c)
+        {
+            Colonists[c.Id] = c;
+            Ids.EnsureAbove(c.Id);
+            RegisterInventory(c.Carry, c.Id);
             MarkChanged();
         }
 

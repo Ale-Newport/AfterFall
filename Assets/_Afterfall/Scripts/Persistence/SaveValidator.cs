@@ -43,6 +43,12 @@ namespace Afterfall.Persistence
                 Check(d.Contents.Id, "drop contents");
             }
             foreach (var z in w.Zombies.Values) Check(z.Id, "zombie");
+            foreach (var c in w.Colonists.Values)
+            {
+                Check(c.Id, "colonist " + c.Name);
+                Check(c.Carry.Id, "pack of " + c.Name);
+            }
+            foreach (var j in w.Jobs.Values) Check(j.Id, "job");
 
             foreach (Inventory inv in w.AllInventories)
             {

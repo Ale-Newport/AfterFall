@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Afterfall.Core;
 using Afterfall.Domain.AI;
+using Afterfall.Domain.Colony;
 using Afterfall.Domain.Construction;
 using Afterfall.Domain.Content;
 using Afterfall.Domain.Industry;
@@ -44,6 +45,28 @@ namespace Afterfall.Persistence
                 {
                     Id = z.Id.Value, Archetype = z.Archetype, Position = z.Position, Yaw = z.Yaw, Health = z.Health, Mode = z.Mode,
                     Home = z.Home, MoveTarget = z.MoveTarget, LastKnownTarget = z.LastKnownTarget, TimeSinceSeen = z.TimeSinceSeen, DeadTime = z.DeadTime
+                });
+            }
+            foreach (ColonistState c in Sorted(w.Colonists))
+            {
+                var cd = new ColonistDto
+                {
+                    Id = c.Id.Value, Name = c.Name, Recruited = c.Recruited, Position = c.Position, Yaw = c.Yaw, Vitals = c.Vitals, Carry = ToDto(c.Carry),
+                    CurrentJob = c.CurrentJob.Value, Activity = c.Activity.ToString(), Status = c.Status, HomeBed = c.HomeBed.Value,
+                    MoveTarget = c.MoveTarget, HasMoveTarget = c.HasMoveTarget, Morale = c.Morale, RecentFailures = new List<string>(c.RecentFailures)
+                };
+                foreach (KeyValuePair<JobType, float> kv in c.Skills) cd.Skills[kv.Key.ToString()] = kv.Value;
+                foreach (KeyValuePair<JobType, int> kv in c.Work.Priorities) cd.Work[kv.Key.ToString()] = kv.Value;
+                dto.Colonists.Add(cd);
+            }
+            foreach (Job j in Sorted(w.Jobs))
+            {
+                dto.Jobs.Add(new JobDto
+                {
+                    Id = j.Id.Value, Type = j.Type.ToString(), Priority = j.Priority, State = j.State.ToString(), Assignee = j.AssigneeId.Value,
+                    Description = j.Description, FailureReason = j.FailureReason, CreatedAt = j.CreatedAt, TargetStructure = j.TargetStructure.Value,
+                    SourceInventory = j.SourceInventory.Value, DestinationInventory = j.DestinationInventory.Value, ItemId = j.ItemId, Quantity = j.Quantity,
+                    Stage = j.Stage.ToString(), SourceToken = j.SourceToken.Id, DestinationToken = j.DestinationToken.Id, DeliverToBlueprint = j.DeliverToBlueprint
                 });
             }
             dto.UnlockedTechs.AddRange(w.Tech.Unlocked);
@@ -273,6 +296,40 @@ namespace Afterfall.Persistence
                 };
                 w.Zombies[z.Id] = z;
                 w.Ids.EnsureAbove(z.Id);
+            }
+
+            foreach (ColonistDto cd in dto.Colonists ?? new List<ColonistDto>())
+            {
+                var c = new ColonistState
+                {
+                    Id = new EntityId(cd.Id), Name = cd.Name ?? "", Recruited = cd.Recruited, Position = cd.Position, Yaw = cd.Yaw,
+                    Vitals = cd.Vitals ?? new Domain.Survival.SurvivalState(), CurrentJob = new EntityId(cd.CurrentJob),
+                    Activity = Enum.TryParse(cd.Activity, out ColonistActivity act) ? act : ColonistActivity.Idle, Status = cd.Status ?? "",
+                    HomeBed = new EntityId(cd.HomeBed), MoveTarget = cd.MoveTarget, HasMoveTarget = cd.HasMoveTarget, Morale = cd.Morale
+                };
+                c.Carry = FromDto(cd.Carry, content, null, warnings) ?? new Inventory(w.Ids.Allocate(), content.Items, ColonySystem.CarrySlots, ColonySystem.CarryKg, null, c.Name + "'s pack");
+                foreach (KeyValuePair<string, float> kv in cd.Skills ?? new Dictionary<string, float>())
+                    if (Enum.TryParse(kv.Key, out JobType jt)) c.Skills[jt] = kv.Value;
+                foreach (KeyValuePair<string, int> kv in cd.Work ?? new Dictionary<string, int>())
+                    if (Enum.TryParse(kv.Key, out JobType jt)) c.Work.Priorities[jt] = kv.Value;
+                c.RecentFailures.AddRange(cd.RecentFailures ?? new List<string>());
+                w.AddColonist(c);
+            }
+            foreach (JobDto jd in dto.Jobs ?? new List<JobDto>())
+            {
+                if (!Enum.TryParse(jd.Type, out JobType type)) continue;
+                var j = new Job
+                {
+                    Id = new EntityId(jd.Id), Type = type, Priority = jd.Priority, State = Enum.TryParse(jd.State, out JobState js) ? js : JobState.Failed,
+                    AssigneeId = new EntityId(jd.Assignee), Description = jd.Description ?? "", FailureReason = jd.FailureReason ?? "", CreatedAt = jd.CreatedAt,
+                    TargetStructure = new EntityId(jd.TargetStructure), SourceInventory = new EntityId(jd.SourceInventory), DestinationInventory = new EntityId(jd.DestinationInventory),
+                    ItemId = jd.ItemId ?? "", Quantity = jd.Quantity, Stage = Enum.TryParse(jd.Stage, out HaulStage hs) ? hs : HaulStage.ToSource,
+                    SourceToken = jd.SourceToken > 0 ? new ReservationToken(new EntityId(jd.SourceInventory), jd.SourceToken) : default,
+                    DestinationToken = jd.DestinationToken > 0 ? new ReservationToken(new EntityId(jd.DestinationInventory), jd.DestinationToken) : default,
+                    DeliverToBlueprint = jd.DeliverToBlueprint
+                };
+                w.Jobs[j.Id] = j;
+                w.Ids.EnsureAbove(j.Id);
             }
 
             foreach (string t in dto.UnlockedTechs) w.Tech.Unlocked.Add(t);
