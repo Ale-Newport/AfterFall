@@ -60,6 +60,7 @@ namespace Afterfall.Presentation
         {
             string dir = RequestedDirectory();
             if (dir == null) return;
+            Application.runInBackground = true; // an unfocused player would pause the tour
             var tour = boot.gameObject.AddComponent<AutoTour>();
             tour._boot = boot;
             tour._dir = dir;

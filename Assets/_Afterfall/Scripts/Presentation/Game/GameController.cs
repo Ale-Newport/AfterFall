@@ -70,6 +70,7 @@ namespace Afterfall.Presentation
         {
             Ui.ShowLoading("Shaping the land…");
             yield return null;
+            ProceduralTextures.PrewarmCatalogue();
             _worldRoot = new GameObject("World").transform;
             _worldRoot.SetParent(transform, false);
             Terrain = WorldBuilder.BuildTerrain(Session.World.Layout, Session.World.Seed, _worldRoot);
@@ -96,6 +97,7 @@ namespace Afterfall.Presentation
             CameraRig = CameraRig.Create(this, Player.transform, Settings);
             CameraRig.transform.SetParent(transform, true);
             gameObject.AddComponent<DayNightCycle>().Initialize(this);
+            gameObject.AddComponent<GroundCover>().Initialize(this);
             Build = gameObject.AddComponent<BuildController>();
             Build.Initialize(this);
             Tactical = new GameObject("Tactical").AddComponent<TacticalController>();

@@ -19,6 +19,20 @@ namespace Afterfall.Presentation
         private float _speed;
         private bool _dead;
 
+        /// <summary>Clothing palette of an infected; <paramref name="variant"/> is 0..2.</summary>
+        public static HumanoidRig.Palette PaletteFor(int variant)
+        {
+            Color[] shirts = { new Color(0.32f, 0.3f, 0.26f), new Color(0.28f, 0.33f, 0.38f), new Color(0.42f, 0.28f, 0.24f) };
+            return new HumanoidRig.Palette
+            {
+                Skin = new Color(0.47f, 0.53f, 0.4f),
+                Shirt = shirts[((variant % 3) + 3) % 3],
+                Pants = new Color(0.22f, 0.22f, 0.24f),
+                Shoes = new Color(0.15f, 0.13f, 0.11f),
+                Accent = new Color(0.35f, 0.18f, 0.15f)
+            };
+        }
+
         public static ZombieView Create(Transform parent, ZombieState z, GameController gc)
         {
             // Built inactive so the NavMeshAgent is not placed before we know a NavMesh exists.
@@ -34,16 +48,7 @@ namespace Afterfall.Presentation
             col.center = new Vector3(0, 0.9f, 0);
             col.height = 1.8f;
             col.radius = 0.35f;
-            int v = (int)(z.Id.Value % 3);
-            Color[] shirts = { new Color(0.32f, 0.3f, 0.26f), new Color(0.28f, 0.33f, 0.38f), new Color(0.42f, 0.28f, 0.24f) };
-            view.Rig = HumanoidRig.Create(go.transform, new HumanoidRig.Palette
-            {
-                Skin = new Color(0.47f, 0.53f, 0.4f),
-                Shirt = shirts[v],
-                Pants = new Color(0.22f, 0.22f, 0.24f),
-                Shoes = new Color(0.15f, 0.13f, 0.11f),
-                Accent = new Color(0.35f, 0.18f, 0.15f)
-            }, true);
+            view.Rig = HumanoidRig.Create(go.transform, PaletteFor((int)(z.Id.Value % 3)), true);
             Shapes.SetLayerRecursive(view.Rig.gameObject, Layers.Zombie);
 
             var agent = go.AddComponent<NavMeshAgent>();

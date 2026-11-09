@@ -136,14 +136,17 @@ namespace Afterfall.Presentation.UI
             if (stack.IsEmpty || !catalog.TryGet(stack.ItemId, out ItemDefinition def))
             {
                 _icon.text = "";
+                _icon.style.backgroundImage = new StyleBackground(StyleKeyword.None);
                 _icon.style.backgroundColor = new Color(0, 0, 0, 0);
                 _qty.text = "";
                 _dur.style.display = DisplayStyle.None;
                 HoverText = "";
                 return;
             }
-            _icon.text = def.Icon;
-            _icon.style.backgroundColor = Conversions.ParseColor(def.Color, Color.gray);
+            Texture2D icon = ItemIcons.Get(def);
+            _icon.text = icon != null ? "" : def.Icon;
+            _icon.style.backgroundImage = icon != null ? new StyleBackground(icon) : new StyleBackground(StyleKeyword.None);
+            _icon.style.backgroundColor = icon != null ? new Color(0, 0, 0, 0) : Conversions.ParseColor(def.Color, Color.gray);
             _qty.text = stack.Quantity > 1 ? stack.Quantity.ToString() : "";
             if (def.HasDurability)
             {

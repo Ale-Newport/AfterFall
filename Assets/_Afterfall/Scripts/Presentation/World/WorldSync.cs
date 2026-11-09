@@ -123,11 +123,7 @@ namespace Afterfall.Presentation
                 var go = new GameObject($"Drop{d.Id}");
                 go.transform.SetParent(_dropsRoot, false);
                 go.transform.position = d.Position.ToUnity();
-                Color c = d.IsBelongings ? new Color(0.25f, 0.45f, 0.75f) : new Color(0.45f, 0.36f, 0.24f);
-                Shapes.Part(go.transform, "Sack", MeshFactory.Blob(3), MaterialLibrary.Lit(c), new Vector3(0, 0.2f, 0), new Vector3(0.7f, 0.5f, 0.6f));
-                if (d.IsBelongings)
-                    Shapes.Part(go.transform, "Beacon", MeshFactory.Cylinder(6), MaterialLibrary.Emissive(new Color(0.4f, 0.7f, 1f), new Color(0.3f, 0.6f, 1f) * 2f), Vector3.zero, new Vector3(0.12f, 30f, 0.12f), null, false);
-                NodeVisuals.Collider(go.transform, new Vector3(0, 0.4f, 0), new Vector3(1f, 0.8f, 1f), true);
+                NodeVisuals.BuildDrop(go.transform, d.IsBelongings);
                 Shapes.SetLayerRecursive(go, Layers.Interactable);
                 Transform beacon = go.transform.Find("Beacon");
                 if (beacon != null) beacon.gameObject.layer = 0; // Default: not distance-culled, visible from the strategic view

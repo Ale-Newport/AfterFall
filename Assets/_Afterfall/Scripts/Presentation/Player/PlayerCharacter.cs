@@ -34,6 +34,16 @@ namespace Afterfall.Presentation
         public bool IsSprinting { get; private set; }
         public float HorizontalSpeed { get; private set; }
 
+        /// <summary>The survivor's clothing.</summary>
+        public static HumanoidRig.Palette SurvivorPalette => new HumanoidRig.Palette
+        {
+            Skin = new Color(0.78f, 0.62f, 0.48f),
+            Shirt = new Color(0.33f, 0.4f, 0.27f),
+            Pants = new Color(0.25f, 0.27f, 0.3f),
+            Shoes = new Color(0.2f, 0.15f, 0.1f),
+            Accent = new Color(0.42f, 0.32f, 0.22f)
+        };
+
         public static PlayerCharacter Create(GameController gc, Vector3 position, float yaw)
         {
             var go = new GameObject("Player") { tag = "Player" };
@@ -50,14 +60,7 @@ namespace Afterfall.Presentation
             p._gc = gc;
             p._cc = cc;
             p._yaw = yaw;
-            p.Rig = HumanoidRig.Create(go.transform, new HumanoidRig.Palette
-            {
-                Skin = new Color(0.78f, 0.62f, 0.48f),
-                Shirt = new Color(0.33f, 0.4f, 0.27f),
-                Pants = new Color(0.25f, 0.27f, 0.3f),
-                Shoes = new Color(0.2f, 0.15f, 0.1f),
-                Accent = new Color(0.42f, 0.32f, 0.22f)
-            }, false);
+            p.Rig = HumanoidRig.Create(go.transform, SurvivorPalette, false);
             Shapes.SetLayerRecursive(p.Rig.gameObject, Layers.Character);
             return p;
         }

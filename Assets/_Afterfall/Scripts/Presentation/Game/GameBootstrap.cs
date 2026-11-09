@@ -33,8 +33,8 @@ namespace Afterfall.Presentation
             Settings = AppSettings.Load();
             AudioListener.volume = Settings.MasterVolume;
             Input = new GameInput();
-            // A scripted tour saves and autosaves into its own folder, never next to the player's saves.
-            string tourDir = AutoTour.RequestedDirectory();
+            // A scripted tour or the gallery saves and autosaves into its own folder, never next to the player's saves.
+            string tourDir = AutoTour.RequestedDirectory() ?? ModelGallery.RequestedDirectory();
             Saves = new SaveService(new SaveFileStore(tourDir != null ? Path.Combine(tourDir, "Saves") : SaveDirectory));
             Content = LoadContent(out string error);
             ContentError = error;
@@ -42,6 +42,7 @@ namespace Afterfall.Presentation
             Ui.ShowMainMenu();
             if (!string.IsNullOrEmpty(error)) Ui.Toast("Content failed to load: " + error, Severity.Danger);
             AutoTour.TryAttach(this);
+            ModelGallery.TryAttach(this);
         }
 
         public static ContentDatabase LoadContent(out string error)

@@ -25,6 +25,20 @@ namespace Afterfall.Presentation
         public Vector3 FocusPoint => transform.position + Vector3.up * 1.4f;
         public bool OnNavMesh => Agent != null && Agent.enabled && Agent.isOnNavMesh;
 
+        /// <summary>Clothing palette of a colonist; <paramref name="variant"/> is 0..2.</summary>
+        public static HumanoidRig.Palette PaletteFor(int variant)
+        {
+            Color[] shirts = { new Color(0.55f, 0.35f, 0.22f), new Color(0.25f, 0.38f, 0.5f), new Color(0.45f, 0.42f, 0.25f) };
+            return new HumanoidRig.Palette
+            {
+                Skin = new Color(0.72f, 0.55f, 0.42f),
+                Shirt = shirts[((variant % 3) + 3) % 3],
+                Pants = new Color(0.3f, 0.28f, 0.25f),
+                Shoes = new Color(0.18f, 0.14f, 0.1f),
+                Accent = new Color(0.5f, 0.4f, 0.3f)
+            };
+        }
+
         public static ColonistView Create(Transform parent, ColonistState c, GameController gc)
         {
             var go = new GameObject($"Colonist_{c.Name}");
@@ -39,16 +53,7 @@ namespace Afterfall.Presentation
             col.center = new Vector3(0, 0.9f, 0);
             col.height = 1.8f;
             col.radius = 0.3f;
-            int v = (int)(c.Id.Value % 3);
-            Color[] shirts = { new Color(0.55f, 0.35f, 0.22f), new Color(0.25f, 0.38f, 0.5f), new Color(0.45f, 0.42f, 0.25f) };
-            view.Rig = HumanoidRig.Create(go.transform, new HumanoidRig.Palette
-            {
-                Skin = new Color(0.72f, 0.55f, 0.42f),
-                Shirt = shirts[v],
-                Pants = new Color(0.3f, 0.28f, 0.25f),
-                Shoes = new Color(0.18f, 0.14f, 0.1f),
-                Accent = new Color(0.5f, 0.4f, 0.3f)
-            }, false);
+            view.Rig = HumanoidRig.Create(go.transform, PaletteFor((int)(c.Id.Value % 3)), false);
             Shapes.SetLayerRecursive(view.Rig.gameObject, Layers.Character);
             // Interaction hitbox (trigger) so the survivor can be aimed at.
             var hit = new GameObject("Hitbox");
