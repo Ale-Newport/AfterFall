@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Text;
 using Afterfall.Domain.Construction;
 using Afterfall.Domain.Crafting;
 using Afterfall.Domain.Items;
@@ -16,10 +15,12 @@ namespace Afterfall.Presentation.UI
         private readonly UiManager _ui;
         private readonly GameController _gc;
         private readonly Bar _health, _stamina, _hunger, _thirst;
-        private readonly Label _carry, _equipped, _clock, _prompt, _mode, _warnings, _craftLabel, _placeTitle, _placeCost, _placeReasons, _caption;
+        private readonly Label _carry, _equipped, _clock, _prompt, _mode, _warnings, _craftLabel, _placeTitle, _placeReasons, _caption;
         private readonly Bar _craftBar;
-        private readonly VisualElement _crosshair, _craftPanel, _placePanel, _vitals, _hotbarRow;
+        private readonly VisualElement _crosshair, _craftPanel, _placePanel, _vitals, _hotbarRow, _equippedIcon, _craftIcon, _placeCost;
         private readonly ItemSlot[] _hotbar = new ItemSlot[PlayerState.HotbarSize];
+        private readonly List<ItemChip> _costChips = new List<ItemChip>();
+        private string _equippedShown = "", _craftShown, _costShown;
 
         public VisualElement Root { get; }
 
@@ -36,7 +37,9 @@ namespace Afterfall.Presentation.UI
             _hunger = _vitals.Put(new Bar(new Color(0.78f, 0.5f, 0.22f)));
             _thirst = _vitals.Put(new Bar(new Color(0.25f, 0.52f, 0.85f)));
             _carry = _vitals.Put(UiKit.Text("", "hud-equipped"));
-            _equipped = _vitals.Put(UiKit.Text("", "hud-equipped"));
+            var hand = _vitals.Put(UiKit.Div("row", "hud-hand"));
+            _equippedIcon = hand.Put(UiKit.GlyphIcon("hand", "icon-32"));
+            _equipped = hand.Put(UiKit.Text("", "hud-equipped"));
 
             _clock = Root.Put(UiKit.Text("", "hud-clock"));
             _mode = Root.Put(UiKit.Text("", "hud-mode"));
@@ -55,12 +58,16 @@ namespace Afterfall.Presentation.UI
             }
 
             _craftPanel = Root.Put(UiKit.Div("panel", "hud-craft"));
-            _craftLabel = _craftPanel.Put(UiKit.Text("", "muted"));
-            _craftBar = _craftPanel.Put(new Bar(new Color(0.75f, 0.6f, 0.3f), 10f));
+            var craftRow = _craftPanel.Put(UiKit.Div("row"));
+            _craftIcon = craftRow.Put(UiKit.ItemIcon(null, "icon-32"));
+            var craftCol = craftRow.Put(UiKit.Div("col", "grow"));
+            craftCol.style.marginLeft = 6;
+            _craftLabel = craftCol.Put(UiKit.Text("", "muted"));
+            _craftBar = craftCol.Put(new Bar(new Color(0.75f, 0.6f, 0.3f), 10f));
 
             _placePanel = Root.Put(UiKit.Div("panel", "hud-placement"));
             _placeTitle = _placePanel.Put(UiKit.Text("", "subtitle"));
-            _placeCost = _placePanel.Put(UiKit.Text("", "wrap"));
+            _placeCost = _placePanel.Put(UiKit.Div("formula", "cost-row"));
             _placeReasons = _placePanel.Put(UiKit.Text("", "wrap"));
             _placePanel.Add(UiKit.Text("LMB place · R / wheel rotate · RMB cancel · B change", "muted"));
             foreach (VisualElement e in new VisualElement[] { _vitals, _craftPanel, _placePanel }) e.pickingMode = PickingMode.Ignore;
@@ -80,6 +87,13 @@ namespace Afterfall.Presentation.UI
             UiKit.SetClass(_carry, "warn", carried > PlayerState.CarryComfortKg);
             ItemDefinition eq = _gc.Session.EquippedItem;
             _equipped.text = eq == null ? "Bare hands" : $"In hand: {eq.Name}";
+            if ((eq?.Id ?? "") != _equippedShown)
+            {
+                _equippedShown = eq?.Id ?? "";
+                _equippedIcon.style.backgroundImage = new StyleBackground(eq != null ? ItemIcons.Get(eq) : ItemIcons.Glyph("hand"));
+            }
+            // Icons are drawn on a worker thread at the start of a game; upload the finished ones a few per frame.
+            ItemIcons.WarmUp(items, 4);
 
             var clock = _gc.Session.World.Clock;
             _clock.text = $"{clock.FormatTime()}  {(clock.IsNight ? "(night)" : "(day)")}";
@@ -116,6 +130,11 @@ namespace Afterfall.Presentation.UI
             if (job != null)
             {
                 RecipeDefinition r = _gc.Session.Content.Recipe(job.RecipeId);
+                if (job.RecipeId != _craftShown)
+                {
+                    _craftShown = job.RecipeId;
+                    UiKit.SetIcon(_craftIcon, r != null ? WindowBase.OutputOf(r, items) : null);
+                }
                 _craftLabel.text = $"Crafting {r?.Name}{(job.AwaitingSpace ? " — inventory full!" : "")}{(p.Crafting.Jobs.Count > 1 ? $"  (+{p.Crafting.Jobs.Count - 1} queued)" : "")}";
                 _craftBar.Set(job.Duration > 0 ? job.Progress / job.Duration : 1f, "");
             }
@@ -127,17 +146,23 @@ namespace Afterfall.Presentation.UI
         private void RefreshPlacement()
         {
             BuildingDefinition def = _gc.Build.Current;
+            ItemCatalog items = _gc.Session.Content.Items;
             _placeTitle.text = def.Name;
-            var sb = new StringBuilder("Cost: ");
-            bool first = true;
-            foreach (ItemAmount a in def.Cost)
+            if (def.Id != _costShown)
             {
-                int have = _gc.Session.Player.Inventory.Count(a.ItemId);
-                if (!first) sb.Append(", ");
-                sb.Append($"{_gc.Session.Content.Items.NameOf(a.ItemId)} {Mathf.Min(have, a.Quantity)}/{a.Quantity}");
-                first = false;
+                // One chip per material, built when the blueprint changes and updated every frame.
+                _costShown = def.Id;
+                _placeCost.Clear();
+                _costChips.Clear();
+                _placeCost.Add(UiKit.Text(def.Cost.Count > 0 ? "Cost" : "Free", "muted", "cost-label"));
+                foreach (ItemAmount a in def.Cost) _costChips.Add(_placeCost.Put(new ItemChip("icon-28")));
             }
-            _placeCost.text = sb.ToString();
+            for (int i = 0; i < def.Cost.Count && i < _costChips.Count; i++)
+            {
+                ItemAmount a = def.Cost[i];
+                int have = _gc.Session.Player.Inventory.Count(a.ItemId);
+                _costChips[i].Set(items.TryGet(a.ItemId, out ItemDefinition d) ? d : null, $"{d?.Name ?? a.ItemId} {Mathf.Min(have, a.Quantity)}/{a.Quantity}", have >= a.Quantity ? "good" : "warn");
+            }
             PlacementResult r = _gc.Build.LastResult;
             if (r == null)
             {
@@ -156,11 +181,7 @@ namespace Afterfall.Presentation.UI
             }
         }
 
-        private static void SetTone(VisualElement e, string tone)
-        {
-            foreach (string c in new[] { "good", "bad", "warn" }) e.RemoveFromClassList(c);
-            e.AddToClassList(tone);
-        }
+        private static void SetTone(VisualElement e, string tone) => UiKit.SetTone(e, tone);
 
         private string Warnings(SurvivalState v, float carried)
         {

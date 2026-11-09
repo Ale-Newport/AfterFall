@@ -60,6 +60,57 @@ namespace Afterfall.Presentation.UI
         }
 
         protected string Name(string itemId) => Gc.Session.Content.Items.NameOf(itemId);
+
+        protected ItemDefinition Def(string itemId) => Gc.Session.Content.Items.TryGet(itemId, out ItemDefinition d) ? d : null;
+
+        /// <summary>
+        /// A recipe as icon chips: inputs joined by "+", an arrow, then outputs, each chip showing its quantity.
+        /// </summary>
+        protected static VisualElement Formula(RecipeDefinition r, ItemCatalog items)
+        {
+            var row = UiKit.Div("formula");
+            row.pickingMode = PickingMode.Ignore;
+            for (int i = 0; i < r.Inputs.Count; i++)
+            {
+                if (i > 0) row.Add(UiKit.Text("+", "formula-op"));
+                row.Put(new ItemChip("icon-28")).Set(items.TryGet(r.Inputs[i].ItemId, out ItemDefinition d) ? d : null, "×" + r.Inputs[i].Quantity);
+            }
+            row.Add(UiKit.GlyphIcon("arrow", "icon-20"));
+            foreach (ItemAmount o in r.Outputs)
+                row.Put(new ItemChip("icon-28")).Set(items.TryGet(o.ItemId, out ItemDefinition d) ? d : null, "×" + o.Quantity);
+            foreach (VisualElement e in row.Children()) e.pickingMode = PickingMode.Ignore;
+            return row;
+        }
+
+        /// <summary>The output item of a recipe (its first output), for the recipe's icon.</summary>
+        internal static ItemDefinition OutputOf(RecipeDefinition r, ItemCatalog items) =>
+            r.Outputs.Count > 0 && items.TryGet(r.Outputs[0].ItemId, out ItemDefinition d) ? d : null;
+    }
+
+    /// <summary>A recipe in a list: output icon, name and a short status tag; the whole row is a button.</summary>
+    internal sealed class RecipeRow
+    {
+        public readonly Button Button;
+        private readonly Label _tag;
+
+        public RecipeRow(RecipeDefinition r, ItemCatalog items, System.Action onClick)
+        {
+            Button = UiKit.Btn("", onClick, "btn--small", "recipe-row");
+            Button.Add(UiKit.ItemIcon(WindowBase.OutputOf(r, items), "icon-36"));
+            int qty = r.Outputs.Count > 0 ? r.Outputs[0].Quantity : 1;
+            Label name = Button.Put(UiKit.Text(qty > 1 ? $"{r.Name}  ×{qty}" : r.Name, "recipe-name"));
+            name.pickingMode = PickingMode.Ignore;
+            _tag = Button.Put(UiKit.Text("", "recipe-tag"));
+            _tag.pickingMode = PickingMode.Ignore;
+        }
+
+        public void Set(string tag, string tone, bool selected, bool available)
+        {
+            _tag.text = tag;
+            UiKit.SetTone(_tag, tone);
+            UiKit.SetClass(Button, "btn--selected", selected);
+            UiKit.SetClass(Button, "btn--disabled", !available);
+        }
     }
 
     /// <summary>Backpack, item details and crafting.</summary>
@@ -67,16 +118,19 @@ namespace Afterfall.Presentation.UI
     {
         private readonly ItemSlot[] _slots;
         private readonly Label _weight, _detailTitle, _detailText;
-        private readonly VisualElement _detailActions, _recipeList, _queue;
-        private readonly Label _recipeInfo;
+        private readonly VisualElement _detailIcon, _detailActions, _recipeList, _queue;
+        private readonly VisualElement _recipeIcon, _ingredients;
+        private readonly Label _recipeName, _recipeMeta, _recipeStatus;
+        private readonly List<ItemChip> _ingredientChips = new List<ItemChip>();
         private readonly Button _craftButton;
         private int _selected = -1;
-        private string _recipe;
-        private readonly Dictionary<string, Button> _recipeButtons = new Dictionary<string, Button>();
+        private string _recipe, _recipeShown, _detailShown;
+        private readonly Dictionary<string, RecipeRow> _recipeRows = new Dictionary<string, RecipeRow>();
         private int _queueCount = -1;
 
         public InventoryWindow(UiManager ui, GameController gc, bool craftingFocus) : base(ui, gc, "Backpack & Crafting")
         {
+            ItemCatalog items = gc.Session.Content.Items;
             var body = Root.Put(UiKit.Div("row", "grow"));
             body.style.alignItems = Align.FlexStart;
 
@@ -85,29 +139,44 @@ namespace Afterfall.Presentation.UI
             left.Add(UiKit.Text("Click to select · click another slot to move · right-click to use/equip · shift-click to split · first row = hotbar", "muted"));
             _slots = Grid(left, PlayerState.BackpackSlots, PlayerState.HotbarSize, OnSlot);
             _weight = left.Put(UiKit.Text("", "muted"));
-            _detailTitle = left.Put(UiKit.Text("", "subtitle"));
-            _detailText = left.Put(UiKit.Text("", "wrap"));
-            _detailActions = left.Put(UiKit.Div("row"));
+            var detail = left.Put(UiKit.Div("row", "item-detail"));
+            detail.style.alignItems = Align.FlexStart;
+            _detailIcon = detail.Put(UiKit.ItemIcon(null, "icon-64"));
+            var detailText = detail.Put(UiKit.Div("col", "grow"));
+            _detailTitle = detailText.Put(UiKit.Text("", "subtitle"));
+            _detailText = detailText.Put(UiKit.Text("", "wrap"));
+            _detailActions = detailText.Put(UiKit.Div("row"));
 
             var right = body.Put(UiKit.Div("col", "grow"));
             right.style.marginLeft = 16;
             right.Add(UiKit.Text("Crafting", "subtitle"));
             right.Add(UiKit.Text(craftingFocus ? "You are at a crafting station: its recipes are available here." : "Hand recipes work anywhere; station recipes need the station nearby.", "muted"));
             var scroll = right.Put(new ScrollView());
-            scroll.style.height = 300;
+            scroll.style.height = 260;
             _recipeList = scroll;
             foreach (RecipeDefinition r in gc.Session.PlayerRecipes())
             {
                 RecipeDefinition rr = r;
-                Button b = UiKit.Btn("", () => { _recipe = rr.Id; Refresh(); }, "btn--small");
-                b.style.unityTextAlign = TextAnchor.MiddleLeft;
-                _recipeButtons[r.Id] = _recipeList.Put(b);
+                var row = new RecipeRow(rr, items, () => { _recipe = rr.Id; Refresh(); });
+                _recipeRows[r.Id] = row;
+                _recipeList.Add(row.Button);
+                // Open on something useful: the first recipe that can be crafted right now, else the first one.
+                if (_recipe == null || (!gc.Session.CheckRecipe(_recipe).CanCraft && gc.Session.CheckRecipe(r.Id).CanCraft)) _recipe = r.Id;
             }
-            _recipeInfo = right.Put(UiKit.Text("Select a recipe.", "wrap"));
+
+            var panel = right.Put(UiKit.Div("recipe-panel"));
+            var head = panel.Put(UiKit.Div("row"));
+            _recipeIcon = head.Put(UiKit.ItemIcon(null, "icon-64"));
+            var headText = head.Put(UiKit.Div("col", "grow"));
+            headText.style.marginLeft = 8;
+            _recipeName = headText.Put(UiKit.Text("Select a recipe.", "subtitle"));
+            _recipeMeta = headText.Put(UiKit.Text("", "muted"));
+            _ingredients = panel.Put(UiKit.Div("formula"));
+            _recipeStatus = panel.Put(UiKit.Text("", "wrap"));
             _craftButton = right.Put(UiKit.Btn("Craft", () =>
             {
                 if (_recipe != null) Report(Gc.Session.Craft(_recipe));
-            }, "btn--primary"));
+            }, "btn--primary", "btn--disabled"));
             right.Add(UiKit.Text("Queue", "subtitle"));
             _queue = right.Put(UiKit.Div("col"));
         }
@@ -158,9 +227,21 @@ namespace Afterfall.Presentation.UI
                 _detailTitle.text = "";
                 _detailText.text = "Select an item to see details.";
                 _detailActions.Clear();
+                if (_detailShown != null)
+                {
+                    _detailShown = null;
+                    UiKit.SetIcon(_detailIcon, null);
+                }
+                UiKit.Show(_detailIcon, false);
                 return;
             }
             ItemDefinition d = items.Get(st.ItemId);
+            if (_detailShown != d.Id)
+            {
+                _detailShown = d.Id;
+                UiKit.SetIcon(_detailIcon, d);
+            }
+            UiKit.Show(_detailIcon, true);
             _detailTitle.text = $"{d.Name} ×{st.Quantity}";
             var lines = new List<string> { d.Description, $"Category: {d.Category} · {d.Weight:0.##} kg each" };
             if (d.HasDurability) lines.Add($"Durability {st.Durability}/{d.MaxDurability}");
@@ -189,23 +270,42 @@ namespace Afterfall.Presentation.UI
 
         private void RefreshRecipes(Inventory inv)
         {
-            foreach (KeyValuePair<string, Button> kv in _recipeButtons)
+            ItemCatalog items = Gc.Session.Content.Items;
+            foreach (KeyValuePair<string, RecipeRow> kv in _recipeRows)
             {
                 RecipeDefinition r = Gc.Session.Content.Recipe(kv.Key);
                 CraftCheck c = Gc.Session.CheckRecipe(kv.Key);
-                string where = r.IsHandRecipe ? "hand" : CraftingRules.StationName(r.Station);
-                kv.Value.text = $"{(c.CanCraft ? "+ " : c.Locked ? "[locked] " : "- ")}{r.Name}  ({where})";
-                UiKit.SetClass(kv.Value, "btn--selected", kv.Key == _recipe);
-                UiKit.SetClass(kv.Value, "btn--disabled", !c.CanCraft);
+                string where = r.IsHandRecipe ? "By hand" : CraftingRules.StationName(r.Station);
+                bool selected = kv.Key == _recipe;
+                if (c.Locked) kv.Value.Set("Locked", "bad", selected, false);
+                else if (c.CanCraft) kv.Value.Set(where, "good", selected, true);
+                else if (c.StationMissing) kv.Value.Set("Needs " + where, "warn", selected, false);
+                else kv.Value.Set(where, null, selected, false);
             }
             if (_recipe != null)
             {
                 RecipeDefinition r = Gc.Session.Content.Recipe(_recipe);
                 CraftCheck c = Gc.Session.CheckRecipe(_recipe);
-                string ins = string.Join(", ", r.Inputs.Select(a => $"{Name(a.ItemId)} {Mathf.Min(inv.Available(a.ItemId), a.Quantity)}/{a.Quantity}"));
-                string outs = string.Join(", ", r.Outputs.Select(a => $"{a.Quantity} {Name(a.ItemId)}"));
-                _recipeInfo.text = $"{r.Name}: {ins}  ->  {outs}  ({r.Duration:0.#}s)\n{(c.CanCraft ? "Ready to craft." : c.Reason)}";
-                UiKit.SetClass(_recipeInfo, "bad", !c.CanCraft);
+                if (_recipeShown != _recipe)
+                {
+                    // Rebuild the ingredient chips only when another recipe is picked; counts update below.
+                    _recipeShown = _recipe;
+                    UiKit.SetIcon(_recipeIcon, OutputOf(r, items));
+                    _recipeName.text = r.Name;
+                    string outs = string.Join(", ", r.Outputs.Select(a => $"{a.Quantity} × {Name(a.ItemId)}"));
+                    _recipeMeta.text = $"Makes {outs} · {r.Duration:0.#} s · {(r.IsHandRecipe ? "by hand" : "at a " + CraftingRules.StationName(r.Station))}";
+                    _ingredients.Clear();
+                    _ingredientChips.Clear();
+                    foreach (ItemAmount a in r.Inputs) _ingredientChips.Add(_ingredients.Put(new ItemChip("icon-32")));
+                }
+                for (int i = 0; i < r.Inputs.Count && i < _ingredientChips.Count; i++)
+                {
+                    ItemAmount a = r.Inputs[i];
+                    int have = inv.Available(a.ItemId);
+                    _ingredientChips[i].Set(Def(a.ItemId), $"{Name(a.ItemId)} {Mathf.Min(have, a.Quantity)}/{a.Quantity}", have >= a.Quantity ? "good" : "bad");
+                }
+                _recipeStatus.text = c.CanCraft ? "Ready to craft." : c.Reason;
+                UiKit.SetTone(_recipeStatus, c.CanCraft ? "good" : "bad");
                 UiKit.SetClass(_craftButton, "btn--disabled", !c.CanCraft);
             }
             List<CraftJob> jobs = Gc.Session.Player.Crafting.Jobs;
@@ -216,8 +316,10 @@ namespace Afterfall.Presentation.UI
                 for (int i = 0; i < jobs.Count; i++)
                 {
                     int idx = i;
-                    var row = _queue.Put(UiKit.Div("row"));
-                    row.Add(UiKit.Text(Gc.Session.Content.Recipe(jobs[i].RecipeId)?.Name ?? jobs[i].RecipeId, "grow"));
+                    RecipeDefinition r = Gc.Session.Content.Recipe(jobs[i].RecipeId);
+                    var row = _queue.Put(UiKit.Div("row", "queue-row"));
+                    if (r != null) row.Add(UiKit.ItemIcon(OutputOf(r, items), "icon-28"));
+                    row.Add(UiKit.Text(r?.Name ?? jobs[i].RecipeId, "grow", "queue-name"));
                     row.Add(UiKit.Btn("Cancel", () => { Report(Gc.Session.CancelCraft(idx)); _queueCount = -1; }, "btn--small"));
                 }
                 if (jobs.Count == 0) _queue.Add(UiKit.Text("Nothing queued.", "muted"));
@@ -317,7 +419,8 @@ namespace Afterfall.Presentation.UI
                 _input = Grid(left, s.Machine.Input.SlotCount, 0, (sl, e) => Take(s.Machine.Input, sl.Index));
                 if (s.Machine.Fuel != null)
                 {
-                    left.Add(UiKit.Text("Fuel (wood, planks, charcoal)", "subtitle"));
+                    ItemCatalog items = gc.Session.Content.Items;
+                    left.Add(FuelHeader(items.All.Where(i => i.BurnSeconds > 0).OrderByDescending(i => i.BurnSeconds).Take(3), i => $"{i.BurnSeconds:0} s"));
                     _fuel = Grid(left, s.Machine.Fuel.SlotCount, 0, (sl, e) => Take(s.Machine.Fuel, sl.Index));
                 }
                 var outHead = left.Put(UiKit.Div("row"));
@@ -327,7 +430,8 @@ namespace Afterfall.Presentation.UI
             }
             else if (s.Generator != null)
             {
-                left.Add(UiKit.Text("Fuel (fuel cans or charcoal)", "subtitle"));
+                ItemCatalog items = gc.Session.Content.Items;
+                left.Add(FuelHeader(items.All.Where(i => i.EnergyKJ > 0).OrderByDescending(i => i.EnergyKJ).Take(3), i => $"{i.EnergyKJ:0} kJ"));
                 _fuel = Grid(left, s.Generator.Fuel.SlotCount, 0, (sl, e) => Take(s.Generator.Fuel, sl.Index));
             }
             var right = body.Put(UiKit.Div("col"));
@@ -340,6 +444,15 @@ namespace Afterfall.Presentation.UI
         private static string Title(GameController gc, EntityId id)
         {
             return gc.Session.World.Structures.TryGetValue(id, out Structure s) ? gc.Session.Content.Building(s.DefId).Name : "Machine";
+        }
+
+        /// <summary>"Fuel" with the accepted fuels as icon chips and how long or how much each one gives.</summary>
+        private static VisualElement FuelHeader(IEnumerable<ItemDefinition> fuels, System.Func<ItemDefinition, string> value)
+        {
+            var row = UiKit.Div("row", "fuel-head");
+            row.Add(UiKit.Text("Fuel", "subtitle"));
+            foreach (ItemDefinition f in fuels) row.Put(new ItemChip("icon-28")).Set(f, $"{f.Name} {value(f)}");
+            return row;
         }
 
         private void Take(Inventory from, int slot)
@@ -415,9 +528,16 @@ namespace Afterfall.Presentation.UI
                     {
                         RecipeDefinition rec = rr;
                         bool unlocked = Gc.Session.World.Tech.IsUnlocked(rr.RequiredTech);
-                        string label = $"{rr.Name}: {string.Join(" + ", rr.Inputs.Select(a => $"{a.Quantity} {items.NameOf(a.ItemId)}"))} -> {string.Join(", ", rr.Outputs.Select(a => $"{a.Quantity} {items.NameOf(a.ItemId)}"))} ({rr.Duration:0.#}s)";
-                        Button b = UiKit.Btn(unlocked ? label : "Locked — " + Gc.Session.Tech.DescribeRequirements(rr.RequiredTech), () => { Report(Gc.Session.SetMachineRecipe(_id, rec.Id)); _recipeShown = null; }, "btn--small", "btn--list");
-                        b.style.unityTextAlign = TextAnchor.MiddleLeft;
+                        Button b = UiKit.Btn("", () => { Report(Gc.Session.SetMachineRecipe(_id, rec.Id)); _recipeShown = null; }, "btn--small", "btn--list", "recipe-row");
+                        b.Add(UiKit.ItemIcon(OutputOf(rr, items), "icon-32"));
+                        var col = b.Put(UiKit.Div("col", "grow"));
+                        col.pickingMode = PickingMode.Ignore;
+                        col.style.marginLeft = 6;
+                        col.Add(UiKit.Text(rr.Name, "recipe-title"));
+                        if (unlocked) col.Add(Formula(rr, items));
+                        else col.Add(UiKit.Text("Locked — " + Gc.Session.Tech.DescribeRequirements(rr.RequiredTech), "recipe-tag", "bad"));
+                        b.Add(UiKit.Text($"{rr.Duration:0.#} s", "recipe-tag"));
+                        foreach (VisualElement e in col.Children()) e.pickingMode = PickingMode.Ignore;
                         if (m.RecipeId == rr.Id) b.AddToClassList("btn--selected");
                         if (!unlocked) b.AddToClassList("btn--disabled");
                         _recipes.Add(b);
@@ -495,9 +615,23 @@ namespace Afterfall.Presentation.UI
                 var col = row.Put(UiKit.Div("col", "grow"));
                 col.Add(UiKit.Text($"{d.Name}  [{d.Category}]", "subtitle"));
                 col.Add(UiKit.Text(d.Description, "muted"));
-                string cost = string.Join(", ", d.Cost.Select(a => $"{Name(a.ItemId)} {Mathf.Min(bag.Count(a.ItemId), a.Quantity)}/{a.Quantity}"));
-                bool affordable = bag.HasAll(d.Cost);
-                col.Add(UiKit.Text(unlocked ? "Cost: " + cost : Gc.Session.Tech.DescribeRequirements(d.RequiredTech), unlocked ? (affordable ? "good" : "warn") : "bad"));
+                if (unlocked)
+                {
+                    // Cost as icon chips; each one green when the backpack already holds enough.
+                    var cost = col.Put(UiKit.Div("formula", "cost-row"));
+                    cost.Add(UiKit.Text(d.Cost.Count > 0 ? "Cost" : "Free", "muted", "cost-label"));
+                    foreach (ItemAmount a in d.Cost)
+                    {
+                        int have = bag.Count(a.ItemId);
+                        cost.Put(new ItemChip("icon-28")).Set(Def(a.ItemId), $"{Name(a.ItemId)} {Mathf.Min(have, a.Quantity)}/{a.Quantity}", have >= a.Quantity ? "good" : "warn");
+                    }
+                }
+                else
+                {
+                    var locked = col.Put(UiKit.Div("row"));
+                    locked.Add(UiKit.GlyphIcon("lock", "icon-20"));
+                    locked.Add(UiKit.Text(Gc.Session.Tech.DescribeRequirements(d.RequiredTech), "bad", "grow"));
+                }
                 Button b = row.Put(UiKit.Btn(unlocked ? "Place" : "Locked", () =>
                 {
                     if (!Gc.Session.World.Tech.IsUnlocked(def.RequiredTech))

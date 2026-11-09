@@ -68,30 +68,83 @@
 .btn--selected { border-color: rgb(250, 210, 110); background-color: rgb(92, 80, 48); }
 .menu-btn { width: 340px; height: 52px; font-size: 22px; }
 
-/* Item slots */
+/* Item slots: a recessed well (dark top-left edge, lit bottom-right edge) under a shading overlay
+   texture set from code (ItemIcons.SlotShade); the item icon sits on top without any colour square. */
 .slot {
     width: 64px; height: 64px;
     margin: 3px;
-    background-color: rgba(40, 42, 38, 0.95);
-    border-color: rgba(110, 104, 86, 0.8);
+    background-color: rgba(42, 43, 38, 0.96);
+    -unity-background-scale-mode: stretch-to-fill;
     border-width: 1px;
-    border-radius: 5px;
-    padding: 4px;
+    border-top-color: rgba(6, 6, 5, 0.95);
+    border-left-color: rgba(6, 6, 5, 0.95);
+    border-bottom-color: rgba(132, 122, 96, 0.55);
+    border-right-color: rgba(132, 122, 96, 0.55);
+    border-radius: 6px;
 }
-.slot:hover { border-color: rgb(240, 205, 120); }
-.slot--selected { border-color: rgb(255, 215, 110); border-width: 2px; background-color: rgba(80, 70, 42, 0.95); }
-.slot--hotbar { border-color: rgba(150, 140, 100, 0.9); }
-.slot--active { border-color: rgb(255, 225, 120); border-width: 3px; }
+.slot--hotbar { background-color: rgba(50, 48, 40, 0.96); }
+.slot--filled { background-color: rgba(54, 55, 48, 0.97); }
+.slot:hover { border-color: rgb(236, 200, 118); background-color: rgba(66, 64, 52, 0.97); }
+.slot--selected { border-color: rgb(255, 215, 110); border-width: 2px; background-color: rgba(98, 80, 42, 0.97); }
+.slot--active { border-color: rgb(255, 222, 120); border-width: 3px; background-color: rgba(84, 72, 42, 0.97); }
 .slot--locked { opacity: 0.5; }
 .slot-icon {
-    flex-grow: 1; border-radius: 4px;
-    -unity-text-align: middle-center; font-size: 17px; -unity-font-style: bold;
-    color: rgba(255, 255, 255, 0.92);
+    position: absolute; left: 3px; top: 3px; right: 3px; bottom: 3px;
+    -unity-background-scale-mode: scale-to-fit;
 }
-.slot-qty { position: absolute; right: 4px; bottom: 2px; font-size: 14px; -unity-font-style: bold; color: rgb(255, 255, 255); text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9); }
-.slot-key { position: absolute; left: 4px; top: 1px; font-size: 12px; color: rgb(220, 210, 180); }
-.slot-dur { position: absolute; left: 5px; right: 5px; bottom: 3px; height: 3px; background-color: rgb(110, 200, 90); }
+.slot-qty {
+    position: absolute; right: 4px; bottom: 1px;
+    font-size: 15px; -unity-font-style: bold; color: rgb(255, 252, 240);
+    -unity-text-outline-width: 1px; -unity-text-outline-color: rgba(0, 0, 0, 0.85);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95);
+}
+.slot-key {
+    position: absolute; left: 5px; top: 2px;
+    font-size: 12px; -unity-font-style: bold; color: rgb(232, 220, 182);
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.95);
+}
+.slot-dur-track { position: absolute; left: 7px; right: 7px; bottom: 4px; height: 4px; background-color: rgba(0, 0, 0, 0.7); border-radius: 2px; }
+.slot-dur { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background-color: rgb(110, 200, 90); }
 .grid { flex-direction: row; flex-wrap: wrap; }
+
+/* Item icons outside slots (recipes, costs, fuel, HUD) */
+.item-icon { flex-shrink: 0; -unity-background-scale-mode: scale-to-fit; }
+.icon-16 { width: 16px; height: 16px; }
+.icon-20 { width: 20px; height: 20px; }
+.icon-24 { width: 24px; height: 24px; }
+.icon-28 { width: 28px; height: 28px; }
+.icon-32 { width: 32px; height: 32px; }
+.icon-36 { width: 36px; height: 36px; }
+.icon-48 { width: 48px; height: 48px; }
+.icon-64 { width: 64px; height: 64px; }
+.chip { flex-direction: row; align-items: center; margin-right: 10px; margin-top: 1px; margin-bottom: 1px; }
+.chip-label { font-size: 15px; margin-left: 3px; }
+.formula { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.formula-op { font-size: 14px; color: rgb(170, 164, 148); margin-right: 8px; margin-left: -4px; }
+.formula > .item-icon { margin-right: 10px; }
+.cost-row { margin-top: 2px; }
+.cost-label { margin-right: 8px; }
+.fuel-head { margin-top: 6px; }
+.fuel-head > .subtitle { margin-right: 12px; }
+
+/* Recipe rows: output icon, name, status tag */
+.recipe-row { flex-direction: row; align-items: center; padding: 2px 8px 2px 4px; min-height: 38px; }
+.recipe-name { flex-grow: 1; margin-left: 8px; font-size: 15px; -unity-text-align: middle-left; }
+.recipe-title { font-size: 15px; -unity-font-style: bold; -unity-text-align: middle-left; }
+.recipe-tag { font-size: 12px; color: rgb(170, 164, 148); -unity-text-align: middle-right; margin-left: 6px; }
+.recipe-tag.good { color: rgb(130, 210, 120); }
+.recipe-tag.warn { color: rgb(240, 170, 80); }
+.recipe-tag.bad { color: rgb(235, 95, 80); }
+.recipe-panel {
+    margin-top: 6px; padding: 8px;
+    background-color: rgba(0, 0, 0, 0.28);
+    border-width: 1px; border-color: rgba(120, 110, 84, 0.45); border-radius: 6px;
+}
+.recipe-panel > .formula { margin-top: 6px; margin-bottom: 4px; }
+.item-detail { margin-top: 6px; }
+.item-detail > .item-icon { margin-right: 10px; margin-top: 6px; }
+.queue-row { margin-bottom: 2px; }
+.queue-name { margin-left: 6px; }
 
 /* Bars */
 .bar { height: 20px; background-color: rgba(0, 0, 0, 0.55); border-radius: 3px; margin: 2px 0; overflow: hidden; }
@@ -115,7 +168,9 @@
 .hud-crosshair { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin-left: -3px; margin-top: -3px; border-radius: 3px; background-color: rgba(255, 255, 255, 0.8); }
 .hud-mode { position: absolute; left: 25%; right: 25%; top: 10px; -unity-text-align: upper-center; font-size: 17px; background-color: rgba(0, 0, 0, 0.5); border-radius: 6px; padding: 4px 10px; color: rgb(240, 210, 130); text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9); }
 .hud-equipped { font-size: 14px; color: rgb(220, 214, 196); margin-top: 4px; }
-.hud-craft { position: absolute; right: 18px; bottom: 100px; width: 260px; }
+.hud-hand { margin-top: 2px; }
+.hud-hand > .hud-equipped { margin-top: 0; margin-left: 6px; }
+.hud-craft { position: absolute; right: 18px; bottom: 100px; width: 280px; }
 .hud-placement { position: absolute; left: 50%; bottom: 100px; width: 520px; margin-left: -260px; }
 .hud-warning { position: absolute; left: 18px; top: 14px; width: 420px; }
 

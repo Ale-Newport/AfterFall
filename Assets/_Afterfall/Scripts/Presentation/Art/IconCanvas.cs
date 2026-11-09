@@ -43,11 +43,13 @@ namespace Afterfall.Presentation.Art
     /// <summary>How a shape is filled: a solid colour or a linear/radial gradient (logical coordinates).</summary>
     public struct Paint
     {
-        private enum Kind { Solid, Linear, Radial }
+        private enum Kind { Solid, Linear, Radial, Stops }
 
         private Kind _kind;
         private Rgba _a, _b;
         private float _x0, _y0, _x1, _y1;
+        private float[] _pos;
+        private Rgba[] _cols;
 
         public static Paint Solid(Rgba c) => new Paint { _kind = Kind.Solid, _a = c, _b = c };
 
@@ -62,6 +64,25 @@ namespace Afterfall.Presentation.Art
         /// <summary>The house style for volumes: lit from the top left, darker toward the bottom right of the given box.</summary>
         public static Paint Shaded(Rgba c, float left, float top, float right, float bottom, float strength = 0.28f) =>
             Linear(c.Lighter(strength), c.Darker(strength), left, top, right, bottom);
+
+        /// <summary>
+        /// A linear gradient from (x0, y0) to (x1, y1) through several colours; <paramref name="positions"/>
+        /// (0..1, ascending) say where each of <paramref name="colors"/> sits.
+        /// </summary>
+        public static Paint Stops(float x0, float y0, float x1, float y1, float[] positions, params Rgba[] colors) =>
+            new Paint
+            {
+                _kind = Kind.Stops, _a = colors[0], _b = colors[colors.Length - 1],
+                _x0 = x0, _y0 = y0, _x1 = x1, _y1 = y1, _pos = positions, _cols = colors
+            };
+
+        /// <summary>
+        /// Shading across a round body (rod, can, pipe) from its lit side (x0, y0) to its shadow side (x1, y1):
+        /// a bright band near the light, a dark core and a faint reflected rim. <paramref name="gloss"/> scales the band.
+        /// </summary>
+        public static Paint Cylinder(Rgba c, float x0, float y0, float x1, float y1, float gloss = 0.5f) =>
+            Stops(x0, y0, x1, y1, new[] { 0f, 0.24f, 0.52f, 0.84f, 1f },
+                c.Darker(0.06f), c.Lighter(0.12f + 0.5f * gloss), c, c.Darker(0.42f), c.Darker(0.22f));
 
         public static implicit operator Paint(Rgba c) => Solid(c);
 
@@ -80,6 +101,20 @@ namespace Afterfall.Presentation.Art
                 {
                     float d = MathF.Sqrt((x - _x0) * (x - _x0) + (y - _y0) * (y - _y0));
                     return Rgba.Lerp(_a, _b, Math.Max(0f, Math.Min(1f, d / Math.Max(1e-4f, _x1))));
+                }
+                case Kind.Stops:
+                {
+                    float dx = _x1 - _x0, dy = _y1 - _y0;
+                    float len2 = dx * dx + dy * dy;
+                    float t = len2 > 1e-6f ? ((x - _x0) * dx + (y - _y0) * dy) / len2 : 0f;
+                    if (t <= _pos[0]) return _cols[0];
+                    for (int i = 1; i < _pos.Length; i++)
+                    {
+                        if (t > _pos[i]) continue;
+                        float span = _pos[i] - _pos[i - 1];
+                        return Rgba.Lerp(_cols[i - 1], _cols[i], span > 1e-6f ? (t - _pos[i - 1]) / span : 1f);
+                    }
+                    return _cols[_cols.Length - 1];
                 }
                 default:
                     return _a;
@@ -121,14 +156,53 @@ namespace Afterfall.Presentation.Art
         {
             float c = MathF.Cos(rotDeg * Deg), s = MathF.Sin(rotDeg * Deg);
             float ext = Math.Max(rx, ry);
+            Fill(cx - ext, cy - ext, cx + ext, cy + ext, (x, y) => EllipseDistance(x - cx, y - cy, c, s, rx, ry), p);
+        }
+
+        /// <summary>The outline of an ellipse, <paramref name="width"/> units thick (coils, rims, loops).</summary>
+        public void EllipseRing(float cx, float cy, float rx, float ry, float rotDeg, float width, Paint p) =>
+            EllipseArc(cx, cy, rx, ry, rotDeg, width, 0f, 360f, p);
+
+        /// <summary>
+        /// Part of an ellipse outline with flat ends. Angles are measured on the unrotated ellipse in degrees,
+        /// 0 = +x, increasing clockwise (y down), so 0..180 is the near (lower) half of a ring seen from above.
+        /// </summary>
+        public void EllipseArc(float cx, float cy, float rx, float ry, float rotDeg, float width, float startDeg, float sweepDeg, Paint p)
+        {
+            float c = MathF.Cos(rotDeg * Deg), s = MathF.Sin(rotDeg * Deg);
+            float ext = Math.Max(rx, ry) + width;
+            bool full = Math.Abs(sweepDeg) >= 360f;
+            float a0 = startDeg * Deg, sweep = Math.Abs(sweepDeg) * Deg;
             Fill(cx - ext, cy - ext, cx + ext, cy + ext, (x, y) =>
             {
                 float dx = x - cx, dy = y - cy;
-                float lx = dx * c + dy * s, ly = -dx * s + dy * c;
-                float k0 = Len(lx / rx, ly / ry);
-                float k1 = Len(lx / (rx * rx), ly / (ry * ry));
-                return k1 > 1e-6f ? k0 * (k0 - 1f) / k1 : -Math.Min(rx, ry);
+                if (!full)
+                {
+                    float lx = dx * c + dy * s, ly = -dx * s + dy * c;
+                    float rel = (MathF.Atan2(ly / ry, lx / rx) - a0) % (MathF.PI * 2f);
+                    if (rel < 0) rel += MathF.PI * 2f;
+                    if (sweepDeg < 0) rel = MathF.PI * 2f - rel;
+                    if (rel > sweep) return 1e3f;
+                }
+                return Math.Abs(EllipseDistance(dx, dy, c, s, rx, ry)) - width * 0.5f;
             }, p);
+        }
+
+        /// <summary>A round-capped stroke along a quadratic Bezier curve from (x0, y0) to (x1, y1), bent toward (cx, cy).</summary>
+        public void Curve(float x0, float y0, float cx, float cy, float x1, float y1, float width, Paint p, int steps = 14) =>
+            Polyline(p, width, CurvePoints(x0, y0, cx, cy, x1, y1, steps));
+
+        /// <summary>Points along a quadratic Bezier curve (x, y pairs), for strokes and polygon outlines.</summary>
+        public static float[] CurvePoints(float x0, float y0, float cx, float cy, float x1, float y1, int steps)
+        {
+            var pts = new float[(steps + 1) * 2];
+            for (int i = 0; i <= steps; i++)
+            {
+                float t = i / (float)steps, u = 1f - t;
+                pts[i * 2] = u * u * x0 + 2f * u * t * cx + t * t * x1;
+                pts[i * 2 + 1] = u * u * y0 + 2f * u * t * cy + t * t * y1;
+            }
+            return pts;
         }
 
         /// <summary>A rectangle centred on (cx, cy), rotated clockwise by <paramref name="rotDeg"/>, with corner radius <paramref name="r"/>.</summary>
@@ -311,6 +385,100 @@ namespace Afterfall.Presentation.Art
             }
         }
 
+        /// <summary>
+        /// Embosses the artwork on this canvas: edges that face the top-left light get a highlight and
+        /// edges that face away a shade, about <paramref name="width"/> logical units deep. Apply it to a
+        /// part's own layer before compositing so each part reads as a separate volume.
+        /// </summary>
+        public void Bevel(float width, float light = 0.35f, float shade = 0.4f)
+        {
+            float d = width * _scale;
+            int steps = Math.Max(1, (int)MathF.Ceiling(d));
+            var alpha = new float[Size * Size];
+            for (int i = 0; i < alpha.Length; i++) alpha[i] = Px[i * 4 + 3];
+            const float lx = -0.7071f, ly = -0.7071f;
+            for (int y = 0; y < Size; y++)
+            {
+                for (int x = 0; x < Size; x++)
+                {
+                    int i = y * Size + x;
+                    float a = alpha[i];
+                    if (a < 0.002f) continue;
+                    float hi = 0f, lo = 0f, wsum = 0f;
+                    for (int k = 1; k <= steps; k++)
+                    {
+                        float t = k * d / steps;
+                        float w = 1f - (k - 1f) / steps * 0.7f;
+                        hi += w * Math.Max(0f, a - AlphaAt(alpha, x + lx * t, y + ly * t));
+                        lo += w * Math.Max(0f, a - AlphaAt(alpha, x - lx * t, y - ly * t));
+                        wsum += w;
+                    }
+                    hi = hi / (wsum * a) * light;
+                    lo = lo / (wsum * a) * shade;
+                    int o = i * 4;
+                    for (int ch = 0; ch < 3; ch++)
+                    {
+                        float v = Px[o + ch];
+                        v += (a - v) * hi;
+                        Px[o + ch] = v * (1f - lo);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Varies the brightness of existing paint with smooth value noise: material texture such as wood
+        /// grain (cells long along <paramref name="rotDeg"/>), stone or rust. <paramref name="amount"/> is the
+        /// +- brightness change; the same seed always gives the same pattern.
+        /// </summary>
+        public void Grain(int seed, float cellX, float cellY, float amount, float rotDeg = 0f)
+        {
+            float c = MathF.Cos(rotDeg * Deg), s = MathF.Sin(rotDeg * Deg);
+            for (int py = 0; py < Size; py++)
+            {
+                for (int px = 0; px < Size; px++)
+                {
+                    int o = (py * Size + px) * 4;
+                    float a = Px[o + 3];
+                    if (a <= 0f) continue;
+                    float x = (px + 0.5f) / _scale, y = (py + 0.5f) / _scale;
+                    float u = (x * c + y * s) / cellX, v = (-x * s + y * c) / cellY;
+                    float n = ValueNoise(seed, u, v) * 0.7f + ValueNoise(seed + 17, u * 2.3f, v * 2.3f) * 0.3f;
+                    float f = 1f + amount * (n * 2f - 1f);
+                    for (int ch = 0; ch < 3; ch++) Px[o + ch] = Math.Min(a, Px[o + ch] * f);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Darkens the paint already on this canvas where <paramref name="layer"/>, offset and blurred, would
+        /// cast a contact shadow. Call it just before compositing the layer so overlapping parts sit on each other.
+        /// </summary>
+        public void ShadeUnder(IconCanvas layer, float dx, float dy, float blur, float opacity)
+        {
+            var a = new float[Size * Size];
+            int ox = (int)MathF.Round(dx * _scale), oy = (int)MathF.Round(dy * _scale);
+            for (int y = 0; y < Size; y++)
+            {
+                for (int x = 0; x < Size; x++)
+                {
+                    int sx = x - ox, sy = y - oy;
+                    if (sx < 0 || sy < 0 || sx >= Size || sy >= Size) continue;
+                    a[y * Size + x] = layer.Px[(sy * Size + sx) * 4 + 3];
+                }
+            }
+            int r = Math.Max(1, (int)MathF.Round(blur * _scale * 0.5f));
+            a = BoxBlur(BoxBlur(a, r), r);
+            for (int i = 0; i < a.Length; i++)
+            {
+                float k = 1f - a[i] * opacity;
+                int o = i * 4;
+                Px[o] *= k;
+                Px[o + 1] *= k;
+                Px[o + 2] *= k;
+            }
+        }
+
         /// <summary>Adds an outline of <paramref name="width"/> logical units behind the current artwork.</summary>
         public void Outline(float width, Rgba color)
         {
@@ -432,6 +600,51 @@ namespace Afterfall.Presentation.Art
         private const float Deg = MathF.PI / 180f;
 
         private static float Len(float x, float y) => MathF.Sqrt(x * x + y * y);
+
+        private static float EllipseDistance(float dx, float dy, float c, float s, float rx, float ry)
+        {
+            float lx = dx * c + dy * s, ly = -dx * s + dy * c;
+            float k0 = Len(lx / rx, ly / ry);
+            float k1 = Len(lx / (rx * rx), ly / (ry * ry));
+            return k1 > 1e-6f ? k0 * (k0 - 1f) / k1 : -Math.Min(rx, ry);
+        }
+
+        /// <summary>Bilinear alpha lookup in pixel coordinates (0 outside the canvas).</summary>
+        private float AlphaAt(float[] alpha, float x, float y)
+        {
+            int x0 = (int)MathF.Floor(x), y0 = (int)MathF.Floor(y);
+            float fx = x - x0, fy = y - y0;
+            float a00 = AlphaPx(alpha, x0, y0), a10 = AlphaPx(alpha, x0 + 1, y0);
+            float a01 = AlphaPx(alpha, x0, y0 + 1), a11 = AlphaPx(alpha, x0 + 1, y0 + 1);
+            return (a00 * (1f - fx) + a10 * fx) * (1f - fy) + (a01 * (1f - fx) + a11 * fx) * fy;
+        }
+
+        private float AlphaPx(float[] alpha, int x, int y) =>
+            x < 0 || y < 0 || x >= Size || y >= Size ? 0f : alpha[y * Size + x];
+
+        /// <summary>Smooth value noise in 0..1 on an integer lattice (deterministic per seed).</summary>
+        public static float ValueNoise(int seed, float x, float y)
+        {
+            int ix = (int)MathF.Floor(x), iy = (int)MathF.Floor(y);
+            float fx = x - ix, fy = y - iy;
+            fx = fx * fx * (3f - 2f * fx);
+            fy = fy * fy * (3f - 2f * fy);
+            float a = Hash01(seed, ix, iy), b = Hash01(seed, ix + 1, iy);
+            float c = Hash01(seed, ix, iy + 1), d = Hash01(seed, ix + 1, iy + 1);
+            return (a + (b - a) * fx) * (1f - fy) + (c + (d - c) * fx) * fy;
+        }
+
+        /// <summary>A stable pseudo-random value in 0..1 for an integer pair.</summary>
+        public static float Hash01(int seed, int x, int y)
+        {
+            unchecked
+            {
+                uint h = (uint)(x * 374761393 + y * 668265263 + seed * 982451653);
+                h = (h ^ (h >> 13)) * 1274126177u;
+                h ^= h >> 16;
+                return (h & 0xFFFFFF) / 16777216f;
+            }
+        }
 
         public static float SegmentDistance(float x, float y, float ax, float ay, float bx, float by)
         {
