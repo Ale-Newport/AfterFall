@@ -3,9 +3,21 @@ using UnityEngine;
 
 namespace Afterfall.Presentation
 {
-    /// <summary>Procedural visuals for harvestable resource nodes.</summary>
+    /// <summary>
+    /// Procedural visuals for harvestable resource nodes and items lying in the world. The models
+    /// come from MeshFactory.Nature (one cached mesh per material and variant, variant = id % 4);
+    /// this class picks the materials and adds the colliders gameplay and pathing rely on:
+    /// solid boxes or a trunk capsule on the node, trigger "Hitbox" children for foliage.
+    /// </summary>
     public static class NodeVisuals
     {
+        // Trees sway as a whole from the ground: trunk and crown share the pivot and the strength,
+        // so the crown never slides off its trunk.
+        private const float PineWind = 0.22f, BirchWind = 0.32f;
+
+        private static readonly Color BarkTint = new Color(0.36f, 0.29f, 0.23f);
+        private static readonly Color BirchTint = new Color(0.86f, 0.85f, 0.8f);
+
         public static void Build(Transform root, ResourceNodeDefinition def, ResourceNodeState state)
         {
             int v = (int)(state.Id.Value % 4);
@@ -13,59 +25,66 @@ namespace Afterfall.Presentation
             switch (def.Visual)
             {
                 case "tree_pine":
-                    Trunk(root, depleted, 0.38f, new Color(0.32f, 0.22f, 0.15f));
-                    if (!depleted) Shapes.Part(root, "Crown", MeshFactory.PineCrown(v), MaterialLibrary.Lit(new Color(0.16f, 0.29f, 0.17f) * (0.9f + v * 0.05f)), new Vector3(0, 2.0f, 0), new Vector3(3.2f, 6.5f, 3.2f));
+                    Tree(root, v, depleted, false);
                     break;
                 case "tree_birch":
-                    Trunk(root, depleted, 0.3f, new Color(0.82f, 0.8f, 0.74f));
-                    if (!depleted) Shapes.Part(root, "Crown", MeshFactory.Blob(v), MaterialLibrary.Lit(new Color(0.42f, 0.5f, 0.24f) * (0.9f + v * 0.05f)), new Vector3(0, 4.8f, 0), new Vector3(3.4f, 3.6f, 3.4f));
+                    Tree(root, v, depleted, true);
                     break;
                 case "branches":
-                    for (int i = 0; i < 4; i++)
-                        Shapes.Part(root, "Branch", MeshFactory.Cylinder(5), MaterialLibrary.Lit(new Color(0.38f, 0.27f, 0.18f)), new Vector3(0, 0.12f + i * 0.08f, 0), new Vector3(0.12f, 1.6f - i * 0.2f, 0.12f), Quaternion.Euler(0, i * 47f, 88f));
+                    Shapes.Mesh(root, "Branches", MeshFactory.NatureBranches(v, depleted), MaterialLibrary.Surface(Art.Surface.Bark, BarkTint), Vector3.zero);
                     Collider(root, new Vector3(0, 0.3f, 0), new Vector3(1.6f, 0.6f, 1.6f), true);
                     break;
                 case "rock":
-                    Shapes.Part(root, "Rock", MeshFactory.Rock(v), MaterialLibrary.Lit(new Color(0.47f, 0.46f, 0.44f)), new Vector3(0, 0.25f, 0), new Vector3(1.4f, 1.1f, 1.3f));
-                    Collider(root, new Vector3(0, 0.35f, 0), new Vector3(1.2f, 0.8f, 1.1f), false);
+                    Shapes.Mesh(root, "Rock", MeshFactory.NatureBoulder(v, depleted), MaterialLibrary.Surface(Art.Surface.Rock, new Color(0.55f, 0.54f, 0.51f)), Vector3.zero);
+                    // A mined-out rock keeps its footprint but only its broken stub stands.
+                    if (depleted) Collider(root, new Vector3(0, 0.22f, 0), new Vector3(1.2f, 0.5f, 1.1f), false);
+                    else Collider(root, new Vector3(0, 0.35f, 0), new Vector3(1.2f, 0.8f, 1.1f), false);
                     break;
                 case "ore":
-                    Shapes.Part(root, "Rock", MeshFactory.Rock(v + 4), MaterialLibrary.Lit(new Color(0.38f, 0.33f, 0.31f)), new Vector3(0, 0.4f, 0), new Vector3(2.0f, 1.6f, 1.8f));
-                    for (int i = 0; i < 4; i++)
-                        Shapes.Part(root, "Vein", MeshFactory.Rock(i + 20), MaterialLibrary.Lit(new Color(0.62f, 0.3f, 0.16f), 0.4f, 0.3f), new Vector3((i - 1.5f) * 0.35f, 0.55f + (i % 2) * 0.25f, 0.55f), Vector3.one * 0.35f);
-                    Collider(root, new Vector3(0, 0.6f, 0), new Vector3(1.8f, 1.2f, 1.6f), false);
+                    Mesh[] ore = MeshFactory.NatureOre(v, depleted);
+                    Shapes.Mesh(root, "Rock", ore[0], MaterialLibrary.Surface(Art.NatureSurfaces.IronOre, new Color(0.48f, 0.46f, 0.45f), 0.16f, 0f), Vector3.zero);
+                    if (ore[1] != null) Shapes.Mesh(root, "Vein", ore[1], MaterialLibrary.Surface(Art.NatureSurfaces.IronOre, new Color(0.56f, 0.36f, 0.24f), 0.35f, 0.35f), Vector3.zero);
+                    if (depleted) Collider(root, new Vector3(0, 0.36f, 0), new Vector3(1.8f, 0.72f, 1.6f), false);
+                    else Collider(root, new Vector3(0, 0.6f, 0), new Vector3(1.8f, 1.2f, 1.6f), false);
                     break;
                 case "fiber":
-                    for (int i = 0; i < 6; i++)
-                        Shapes.Part(root, "Blade", MeshFactory.Cone(4), MaterialLibrary.Lit(new Color(0.48f, 0.58f, 0.27f)), new Vector3(Mathf.Cos(i) * 0.25f, 0, Mathf.Sin(i * 1.7f) * 0.25f), new Vector3(0.18f, 0.9f + (i % 3) * 0.2f, 0.18f), Quaternion.Euler(i * 6f - 15f, i * 60f, 0), false);
+                    Shapes.Mesh(root, "Fiber", MeshFactory.NatureFiber(v, depleted), MaterialLibrary.Surface(Art.Surface.Grass, new Color(0.44f, 0.5f, 0.27f), wind: 1.6f, doubleSided: true), Vector3.zero);
                     Collider(root, new Vector3(0, 0.4f, 0), new Vector3(0.9f, 0.8f, 0.9f), true);
                     break;
                 case "bush":
-                    Shapes.Part(root, "Bush", MeshFactory.Blob(v + 8), MaterialLibrary.Lit(new Color(0.24f, 0.36f, 0.19f)), new Vector3(0, 0.1f, 0), new Vector3(1.5f, 1.2f, 1.5f));
+                    Mesh[] bush = MeshFactory.NatureBush(v);
+                    Shapes.Mesh(root, "Bush", bush[0], MaterialLibrary.Surface(Art.Surface.Foliage, new Color(0.27f, 0.39f, 0.2f), tileScale: 0.35f, wind: 0.8f), Vector3.zero);
                     if (!depleted)
-                        for (int i = 0; i < 7; i++)
-                            Shapes.Part(root, "Berry", MeshFactory.Rock(i + 40, 0.05f, 1f), MaterialLibrary.Lit(new Color(0.55f, 0.1f, 0.3f), 0.5f), new Vector3(Mathf.Cos(i * 0.9f) * 0.6f, 0.5f + (i % 3) * 0.15f, Mathf.Sin(i * 0.9f) * 0.6f), Vector3.one * 0.12f, null, false);
+                        Shapes.Mesh(root, "Berries", bush[1], MaterialLibrary.Surface(Art.Surface.Plain, new Color(0.62f, 0.06f, 0.1f), 0.65f, wind: 0.8f), Vector3.zero, null, false);
                     Collider(root, new Vector3(0, 0.5f, 0), new Vector3(1.4f, 1f, 1.4f), true);
                     break;
                 case "scrap":
-                    Material rust = MaterialLibrary.Lit(new Color(0.42f, 0.3f, 0.22f), 0.3f, 0.4f);
-                    Material steel = MaterialLibrary.Lit(new Color(0.5f, 0.52f, 0.55f), 0.35f, 0.6f);
-                    for (int i = 0; i < 6; i++)
-                        Shapes.Part(root, "Junk", MeshFactory.Cube, i % 2 == 0 ? rust : steel, new Vector3((i % 3 - 1) * 0.45f, 0.18f + (i / 3) * 0.3f, ((i * 7) % 3 - 1) * 0.35f), new Vector3(0.7f, 0.3f, 0.45f), Quaternion.Euler(i * 11f, i * 53f, i * 7f));
-                    Collider(root, new Vector3(0, 0.4f, 0), new Vector3(1.6f, 0.8f, 1.3f), false);
+                    Mesh[] scrap = MeshFactory.NatureScrap(v, depleted);
+                    Shapes.Mesh(root, "Junk", scrap[0], MaterialLibrary.Surface(Art.NatureSurfaces.Corrosion, new Color(0.5f, 0.4f, 0.32f), doubleSided: true), Vector3.zero);
+                    Shapes.Mesh(root, "Tyre", scrap[1], Rubber, Vector3.zero);
+                    Shapes.Mesh(root, "Dirt", scrap[2], MaterialLibrary.Surface(Art.Surface.Soil, new Color(0.38f, 0.32f, 0.26f)), Vector3.zero);
+                    // Picked clean, only flat remnants are left to step over.
+                    if (depleted) Collider(root, new Vector3(0, 0.1f, 0), new Vector3(1.6f, 0.2f, 1.3f), false);
+                    else Collider(root, new Vector3(0, 0.4f, 0), new Vector3(1.6f, 0.8f, 1.3f), false);
                     break;
                 case "car":
                     Car(root, v, depleted);
                     break;
                 case "pump_gas":
-                    Material red = MaterialLibrary.Lit(new Color(0.72f, 0.18f, 0.14f));
-                    Shapes.Box(root, "Pump", red, new Vector3(0, 0.85f, 0), new Vector3(0.7f, 1.7f, 0.5f));
-                    Shapes.Box(root, "Display", MaterialLibrary.Lit(new Color(0.15f, 0.18f, 0.2f)), new Vector3(0, 1.4f, 0.26f), new Vector3(0.5f, 0.3f, 0.02f), false);
-                    Shapes.Box(root, "Hose", MaterialLibrary.Lit(new Color(0.1f, 0.1f, 0.1f)), new Vector3(0.38f, 0.9f, 0), new Vector3(0.06f, 0.9f, 0.06f), false);
+                    Mesh[] pump = MeshFactory.NaturePump(v, depleted);
+                    Shapes.Mesh(root, "Pump", pump[0], Paint, Vector3.zero);
+                    Shapes.Mesh(root, "Trim", pump[1], Trim, Vector3.zero);
+                    Shapes.Mesh(root, "Hose", pump[2], Rubber, Vector3.zero);
+                    Shapes.Mesh(root, "Island", pump[3], Concrete, Vector3.zero);
+                    Collider(root, new Vector3(0, 0.85f, 0), new Vector3(0.7f, 1.7f, 0.5f), false);
                     break;
                 case "transformer":
-                    Shapes.Box(root, "Body", MaterialLibrary.Lit(new Color(0.25f, 0.27f, 0.25f)), new Vector3(0, 0.7f, 0), new Vector3(1.6f, 1.4f, 1.2f));
-                    Shapes.Box(root, "Burn", MaterialLibrary.Lit(new Color(0.08f, 0.07f, 0.06f)), new Vector3(0, 1.0f, 0.61f), new Vector3(1.0f, 0.6f, 0.02f), false);
+                    Mesh[] tr = MeshFactory.NatureTransformer(v, depleted);
+                    Shapes.Mesh(root, "Body", tr[0], MaterialLibrary.Surface(Art.Surface.PaintedMetal, new Color(0.42f, 0.47f, 0.43f), 0.3f), Vector3.zero);
+                    Shapes.Mesh(root, "Insulators", tr[1], MaterialLibrary.Surface(Art.Surface.Plain, new Color(0.45f, 0.26f, 0.15f), 0.75f), Vector3.zero);
+                    Shapes.Mesh(root, "Cables", tr[2], Rubber, Vector3.zero);
+                    Shapes.Mesh(root, "Pad", tr[3], Concrete, Vector3.zero);
+                    Collider(root, new Vector3(0, 0.7f, 0), new Vector3(1.6f, 1.4f, 1.2f), false);
                     break;
                 default:
                     Shapes.Box(root, "Node", MaterialLibrary.Lit(Color.magenta), new Vector3(0, 0.5f, 0), Vector3.one);
@@ -74,37 +93,71 @@ namespace Afterfall.Presentation
         }
 
         /// <summary>
-        /// Items lying in the world: a sack, plus a tall light beacon (child "Beacon") for the
-        /// player's lost belongings. Includes the interaction hitbox.
+        /// Items lying in the world: a sack, or the player's backpack plus a tall light beacon (child
+        /// "Beacon") marking the lost belongings. Includes the interaction hitbox.
         /// </summary>
         public static void BuildDrop(Transform root, bool belongings)
         {
-            Color c = belongings ? new Color(0.25f, 0.45f, 0.75f) : new Color(0.45f, 0.36f, 0.24f);
-            Shapes.Part(root, "Sack", MeshFactory.Blob(3), MaterialLibrary.Lit(c), new Vector3(0, 0.2f, 0), new Vector3(0.7f, 0.5f, 0.6f));
+            Shapes.Mesh(root, belongings ? "Backpack" : "Sack", MeshFactory.NatureDrop(belongings), MaterialLibrary.Surface(Art.Surface.Fabric, new Color(0.78f, 0.74f, 0.66f)), Vector3.zero);
             if (belongings)
                 Shapes.Part(root, "Beacon", MeshFactory.Cylinder(6), MaterialLibrary.Emissive(new Color(0.4f, 0.7f, 1f), new Color(0.3f, 0.6f, 1f) * 2f), Vector3.zero, new Vector3(0.12f, 30f, 0.12f), null, false);
             Collider(root, new Vector3(0, 0.4f, 0), new Vector3(1f, 0.8f, 1f), true);
         }
 
-        private static void Trunk(Transform root, bool depleted, float radius, Color c)
+        // Old, oxidised paint: low gloss and no metallic sheen, so faded colours keep their hue.
+        private static Material Paint => MaterialLibrary.Surface(Art.Surface.PaintedMetal, new Color(0.8f, 0.8f, 0.8f), 0.3f, 0.05f);
+        private static Material Trim => MaterialLibrary.Surface(Art.NatureSurfaces.Corrosion, new Color(0.55f, 0.5f, 0.46f), 0.35f, 0.5f);
+        private static Material Rubber => MaterialLibrary.Surface(Art.Surface.Rubber, new Color(0.13f, 0.12f, 0.12f));
+        private static Material Concrete => MaterialLibrary.Surface(Art.Surface.Concrete, new Color(0.56f, 0.55f, 0.52f));
+
+        /// <summary>A standing tree (trunk capsule + foliage hitbox) or its stump with a fresh cut face.</summary>
+        private static void Tree(Transform root, int v, bool depleted, bool birch)
         {
-            float h = depleted ? 0.6f : 2.6f;
-            GameObject trunk = Shapes.Part(root, "Trunk", MeshFactory.Cylinder(7), MaterialLibrary.Lit(c), Vector3.zero, new Vector3(radius * 2f, h, radius * 2f));
-            trunk.AddCylinderCollider();
-            if (!depleted) Collider(root, new Vector3(0, 2.5f, 0), new Vector3(1.2f, 4f, 1.2f), true);
+            float radius = birch ? 0.26f : 0.38f;
+            GameObject trunk;
+            if (depleted)
+            {
+                Mesh[] stump = MeshFactory.NatureStump(v, birch);
+                trunk = Shapes.Mesh(root, "Trunk", stump[0], birch ? MaterialLibrary.Surface(Art.NatureSurfaces.BirchBark, BirchTint) : MaterialLibrary.Surface(Art.Surface.Bark, BarkTint), Vector3.zero);
+                Color wood = birch ? new Color(0.8f, 0.7f, 0.56f) : new Color(0.74f, 0.58f, 0.42f);
+                Shapes.Mesh(root, "Cut", stump[1], MaterialLibrary.Surface(Art.NatureSurfaces.EndGrain, wood, objectSpace: true), Vector3.zero);
+                TrunkCollider(trunk, radius, 0.6f);
+                return;
+            }
+            Mesh[] tree = birch ? MeshFactory.NatureBirch(v) : MeshFactory.NaturePine(v);
+            Material bark = birch
+                ? MaterialLibrary.Surface(Art.NatureSurfaces.BirchBark, BirchTint, wind: BirchWind)
+                : MaterialLibrary.Surface(Art.Surface.Bark, BarkTint, wind: PineWind);
+            Material crown = birch
+                ? MaterialLibrary.Surface(Art.Surface.Foliage, new Color(0.44f, 0.52f, 0.26f), tileScale: 0.4f, wind: BirchWind)
+                : MaterialLibrary.Surface(Art.Surface.Needles, new Color(0.25f, 0.34f, 0.21f), tileScale: 0.5f, wind: PineWind);
+            trunk = Shapes.Mesh(root, "Trunk", tree[0], bark, Vector3.zero);
+            Shapes.Mesh(root, "Crown", tree[1], crown, Vector3.zero);
+            TrunkCollider(trunk, radius, 2.6f);
+            Collider(root, new Vector3(0, 2.5f, 0), new Vector3(1.2f, 4f, 1.2f), true);
+        }
+
+        private static void TrunkCollider(GameObject trunk, float radius, float height)
+        {
+            var c = trunk.AddComponent<CapsuleCollider>();
+            c.direction = 1;
+            c.radius = radius;
+            c.height = height;
+            c.center = new Vector3(0f, height * 0.5f, 0f);
         }
 
         private static void Car(Transform root, int v, bool stripped)
         {
-            Color[] paint = { new Color(0.45f, 0.18f, 0.15f), new Color(0.2f, 0.3f, 0.42f), new Color(0.55f, 0.53f, 0.45f), new Color(0.25f, 0.33f, 0.26f) };
-            Material body = MaterialLibrary.Lit(stripped ? new Color(0.36f, 0.27f, 0.2f) : paint[v], 0.25f, 0.3f);
-            Material glass = MaterialLibrary.Lit(new Color(0.12f, 0.15f, 0.17f), 0.6f);
-            Material tire = MaterialLibrary.Lit(new Color(0.08f, 0.08f, 0.08f));
-            Shapes.Box(root, "Body", body, new Vector3(0, 0.65f, 0), new Vector3(1.8f, 0.7f, 4.2f));
-            Shapes.Box(root, "Cabin", body, new Vector3(0, 1.25f, -0.2f), new Vector3(1.6f, 0.55f, 2.2f));
-            Shapes.Box(root, "Windows", glass, new Vector3(0, 1.27f, -0.2f), new Vector3(1.62f, 0.4f, 2.0f), false);
-            foreach (Vector3 w in new[] { new Vector3(-0.85f, 0.32f, 1.3f), new Vector3(0.85f, 0.32f, 1.3f), new Vector3(-0.85f, 0.32f, -1.3f), new Vector3(0.85f, 0.32f, -1.3f) })
-                Shapes.Part(root, "Tire", MeshFactory.Cylinder(8), tire, w, new Vector3(0.62f, 0.25f, 0.62f), Quaternion.Euler(0, 0, 90));
+            Mesh[] car = MeshFactory.NatureCar(v, stripped);
+            Material body = stripped ? MaterialLibrary.Surface(Art.NatureSurfaces.Corrosion, new Color(0.52f, 0.4f, 0.31f), doubleSided: true) : Paint;
+            Shapes.Mesh(root, "Body", car[0], body, Vector3.zero);
+            Shapes.Mesh(root, "Trim", car[1], Trim, Vector3.zero);
+            if (car[2] != null) Shapes.Mesh(root, "Windows", car[2], MaterialLibrary.Surface(Art.Surface.Glass, new Color(0.16f, 0.18f, 0.19f)), Vector3.zero);
+            Shapes.Mesh(root, "Rubber", car[3], Rubber, Vector3.zero);
+            // Body and cabin blockers as before (odd variants are pickups with a shorter cab).
+            Collider(root, new Vector3(0, 0.65f, 0), new Vector3(1.8f, 0.7f, 4.2f), false);
+            if ((v & 1) == 1) Collider(root, new Vector3(0, 1.25f, 0.15f), new Vector3(1.6f, 0.55f, 1.5f), false);
+            else Collider(root, new Vector3(0, 1.25f, -0.2f), new Vector3(1.6f, 0.55f, 2.2f), false);
         }
 
         /// <summary>
