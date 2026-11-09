@@ -99,8 +99,9 @@ namespace Afterfall.Presentation
         public bool BuiltComplete;
         private Transform _engine, _fire, _lampHead, _indicator, _crops, _soil;
         private Material _soilMat;
-        private Light _light;
+        private Light _light, _fireLight;
         private Material _fireMat, _lampMat;
+        private Vector3 _indicatorScale = Vector3.one;
         private float _vibe;
 
         public bool HoldToInteract => !BuiltComplete;
@@ -120,10 +121,21 @@ namespace Afterfall.Presentation
                 _soilMat = new Material(_soil.GetComponent<Renderer>().sharedMaterial);
                 _soil.GetComponent<Renderer>().sharedMaterial = _soilMat;
             }
-            if (_fire != null)
+            if (_indicator != null) _indicatorScale = _indicator.localScale;
+            if (_fire != null && BuiltComplete)
             {
                 _fireMat = MaterialLibrary.EmissiveInstance(new Color(0.1f, 0.08f, 0.07f), Color.black);
                 _fire.GetComponent<Renderer>().sharedMaterial = _fireMat;
+                // Firelight spilling out of the mouth onto the ground in front.
+                var fgo = new GameObject("FireLight");
+                fgo.transform.SetParent(_fire, false);
+                fgo.transform.localPosition = new Vector3(0f, 0.25f, 0.8f);
+                _fireLight = fgo.AddComponent<Light>();
+                _fireLight.type = LightType.Point;
+                _fireLight.range = 4.5f;
+                _fireLight.intensity = 0f;
+                _fireLight.color = new Color(1f, 0.55f, 0.22f);
+                _fireLight.shadows = LightShadows.None;
             }
             if (_lampHead != null && BuiltComplete)
             {
@@ -167,10 +179,12 @@ namespace Afterfall.Presentation
                 bool burning = s.Machine.FuelBurnRemaining > 0f && s.Machine.Status == MachineStatus.Working;
                 float flicker = burning ? 2.2f + Mathf.PerlinNoise(Time.time * 6f, Id.Value) * 1.4f : 0f;
                 MaterialLibrary.SetEmission(_fireMat, new Color(1f, 0.45f, 0.1f) * flicker);
+                if (_fireLight != null) _fireLight.intensity = burning ? flicker * 0.55f : Mathf.MoveTowards(_fireLight.intensity, 0f, dt * 2f);
             }
             if (_indicator != null && s.Machine != null)
             {
-                _indicator.localScale = s.Machine.Status == MachineStatus.Working ? new Vector3(0.2f, 0.1f + Mathf.PingPong(Time.time, 0.05f), 0.2f) : new Vector3(0.2f, 0.1f, 0.2f);
+                // The beacon pulses while the machine works.
+                _indicator.localScale = s.Machine.Status == MachineStatus.Working ? _indicatorScale * (1f + Mathf.PingPong(Time.time * 1.6f, 0.35f)) : _indicatorScale;
             }
             if (_crops != null && s.Crop != null)
             {
