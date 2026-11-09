@@ -19,18 +19,49 @@ namespace Afterfall.Presentation
         private float _speed;
         private bool _dead;
 
-        /// <summary>Clothing palette of an infected; <paramref name="variant"/> is 0..2.</summary>
+        /// <summary>Look of an infected; <paramref name="variant"/> is 0..2 (office worker, hoodie, labourer).</summary>
         public static HumanoidRig.Palette PaletteFor(int variant)
         {
-            Color[] shirts = { new Color(0.32f, 0.3f, 0.26f), new Color(0.28f, 0.33f, 0.38f), new Color(0.42f, 0.28f, 0.24f) };
-            return new HumanoidRig.Palette
+            var p = new HumanoidRig.Palette
             {
-                Skin = new Color(0.47f, 0.53f, 0.4f),
-                Shirt = shirts[((variant % 3) + 3) % 3],
-                Pants = new Color(0.22f, 0.22f, 0.24f),
-                Shoes = new Color(0.15f, 0.13f, 0.11f),
-                Accent = new Color(0.35f, 0.18f, 0.15f)
+                Skin = new Color(0.55f, 0.6f, 0.49f),
+                Accent = new Color(0.22f, 0.17f, 0.13f),
+                Variant = ((variant % 3) + 3) % 3
             };
+            switch (p.Variant)
+            {
+                case 0:
+                    p.Shirt = new Color(0.62f, 0.6f, 0.52f);
+                    p.Pants = new Color(0.2f, 0.2f, 0.22f);
+                    p.Shoes = new Color(0.09f, 0.08f, 0.08f);
+                    p.Hair = new Color(0.26f, 0.23f, 0.19f);
+                    p.Outfit = HumanoidRig.Outfit.DressShirt;
+                    p.Legwear = HumanoidRig.Legwear.Work;
+                    p.Footwear = HumanoidRig.Footwear.Shoes;
+                    p.HairStyle = HumanoidRig.HairStyle.Balding;
+                    break;
+                case 1:
+                    p.Shirt = new Color(0.27f, 0.31f, 0.37f);
+                    p.Pants = new Color(0.26f, 0.31f, 0.4f);
+                    p.Shoes = new Color(0.34f, 0.33f, 0.32f);
+                    p.Hair = new Color(0.2f, 0.16f, 0.12f);
+                    p.Outfit = HumanoidRig.Outfit.Hoodie;
+                    p.Legwear = HumanoidRig.Legwear.Jeans;
+                    p.Footwear = HumanoidRig.Footwear.Shoes;
+                    p.HairStyle = HumanoidRig.HairStyle.Long;
+                    p.Female = true;
+                    break;
+                default:
+                    p.Shirt = new Color(0.42f, 0.31f, 0.22f);
+                    p.Pants = new Color(0.29f, 0.28f, 0.23f);
+                    p.Shoes = new Color(0.2f, 0.15f, 0.1f);
+                    p.Hair = new Color(0.15f, 0.13f, 0.1f);
+                    p.Outfit = HumanoidRig.Outfit.WorkJacket;
+                    p.Legwear = HumanoidRig.Legwear.Cargo;
+                    p.HairStyle = HumanoidRig.HairStyle.Crop;
+                    break;
+            }
+            return p;
         }
 
         public static ZombieView Create(Transform parent, ZombieState z, GameController gc)

@@ -25,18 +25,68 @@ namespace Afterfall.Presentation
         public Vector3 FocusPoint => transform.position + Vector3.up * 1.4f;
         public bool OnNavMesh => Agent != null && Agent.enabled && Agent.isOnNavMesh;
 
-        /// <summary>Clothing palette of a colonist; <paramref name="variant"/> is 0..2.</summary>
+        /// <summary>Look of a colonist; <paramref name="variant"/> is 0..2 (different face, hair and clothes each).</summary>
         public static HumanoidRig.Palette PaletteFor(int variant)
         {
-            Color[] shirts = { new Color(0.55f, 0.35f, 0.22f), new Color(0.25f, 0.38f, 0.5f), new Color(0.45f, 0.42f, 0.25f) };
-            return new HumanoidRig.Palette
+            switch (((variant % 3) + 3) % 3)
             {
-                Skin = new Color(0.72f, 0.55f, 0.42f),
-                Shirt = shirts[((variant % 3) + 3) % 3],
-                Pants = new Color(0.3f, 0.28f, 0.25f),
-                Shoes = new Color(0.18f, 0.14f, 0.1f),
-                Accent = new Color(0.5f, 0.4f, 0.3f)
-            };
+                case 0:
+                    // Canvas chore coat, ponytail, shoulder satchel.
+                    return new HumanoidRig.Palette
+                    {
+                        Skin = new Color(0.82f, 0.65f, 0.53f),
+                        Shirt = new Color(0.53f, 0.33f, 0.2f),
+                        Pants = new Color(0.27f, 0.27f, 0.28f),
+                        Shoes = new Color(0.26f, 0.18f, 0.12f),
+                        Accent = new Color(0.4f, 0.33f, 0.24f),
+                        Hair = new Color(0.42f, 0.2f, 0.1f),
+                        Under = new Color(0.6f, 0.58f, 0.52f),
+                        Eyes = new Color(0.3f, 0.38f, 0.22f),
+                        HairStyle = HumanoidRig.HairStyle.Ponytail,
+                        Outfit = HumanoidRig.Outfit.WorkJacket,
+                        Legwear = HumanoidRig.Legwear.Work,
+                        Female = true,
+                        Satchel = true,
+                        Variant = 0
+                    };
+                case 1:
+                    // Denim jacket, beard and a cap.
+                    return new HumanoidRig.Palette
+                    {
+                        Skin = new Color(0.5f, 0.35f, 0.25f),
+                        Shirt = new Color(0.27f, 0.38f, 0.5f),
+                        Pants = new Color(0.45f, 0.4f, 0.3f),
+                        Shoes = new Color(0.2f, 0.15f, 0.11f),
+                        Accent = new Color(0.5f, 0.2f, 0.15f),
+                        Hair = new Color(0.1f, 0.08f, 0.07f),
+                        Under = new Color(0.74f, 0.7f, 0.62f),
+                        HairStyle = HumanoidRig.HairStyle.Crop,
+                        Outfit = HumanoidRig.Outfit.Trucker,
+                        Legwear = HumanoidRig.Legwear.Work,
+                        Headwear = HumanoidRig.Headwear.Cap,
+                        Beard = true,
+                        Variant = 1
+                    };
+                default:
+                    // Utility vest over a shirt, bob haircut, neck bandana.
+                    return new HumanoidRig.Palette
+                    {
+                        Skin = new Color(0.68f, 0.5f, 0.38f),
+                        Shirt = new Color(0.45f, 0.42f, 0.26f),
+                        Pants = new Color(0.24f, 0.29f, 0.4f),
+                        Shoes = new Color(0.22f, 0.17f, 0.13f),
+                        Accent = new Color(0.38f, 0.31f, 0.23f),
+                        Hair = new Color(0.11f, 0.08f, 0.07f),
+                        Under = new Color(0.44f, 0.47f, 0.52f),
+                        Eyes = new Color(0.22f, 0.15f, 0.1f),
+                        HairStyle = HumanoidRig.HairStyle.Bob,
+                        Outfit = HumanoidRig.Outfit.Vest,
+                        Legwear = HumanoidRig.Legwear.Jeans,
+                        Female = true,
+                        Bandana = true,
+                        Variant = 2
+                    };
+            }
         }
 
         public static ColonistView Create(Transform parent, ColonistState c, GameController gc)

@@ -34,14 +34,22 @@ namespace Afterfall.Presentation
         public bool IsSprinting { get; private set; }
         public float HorizontalSpeed { get; private set; }
 
-        /// <summary>The survivor's clothing.</summary>
+        /// <summary>The survivor: olive field jacket, cargo trousers, boots, and a rucksack with a bedroll.</summary>
         public static HumanoidRig.Palette SurvivorPalette => new HumanoidRig.Palette
         {
-            Skin = new Color(0.78f, 0.62f, 0.48f),
-            Shirt = new Color(0.33f, 0.4f, 0.27f),
-            Pants = new Color(0.25f, 0.27f, 0.3f),
-            Shoes = new Color(0.2f, 0.15f, 0.1f),
-            Accent = new Color(0.42f, 0.32f, 0.22f)
+            Skin = new Color(0.76f, 0.6f, 0.47f),
+            Shirt = new Color(0.36f, 0.4f, 0.26f),
+            Pants = new Color(0.31f, 0.3f, 0.26f),
+            Shoes = new Color(0.33f, 0.22f, 0.14f),
+            Accent = new Color(0.46f, 0.37f, 0.25f),
+            Hair = new Color(0.25f, 0.17f, 0.1f),
+            Under = new Color(0.52f, 0.51f, 0.47f),
+            Eyes = new Color(0.27f, 0.36f, 0.4f),
+            HairStyle = HumanoidRig.HairStyle.Messy,
+            Outfit = HumanoidRig.Outfit.FieldJacket,
+            Legwear = HumanoidRig.Legwear.Cargo,
+            Footwear = HumanoidRig.Footwear.Boots,
+            Backpack = true
         };
 
         public static PlayerCharacter Create(GameController gc, Vector3 position, float yaw)
