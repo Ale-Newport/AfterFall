@@ -25,6 +25,8 @@ namespace Afterfall.Presentation
                 Set(data, "antialiasingQuality", "High");
             }
             Set(data, "dithering", true);
+            // A single NaN pixel (degenerate normal, zero-length vector) would otherwise bloom into a black square.
+            Set(data, "stopNaN", true);
         }
 
         /// <summary>Sets a property by name; enum values may be given as their names.</summary>

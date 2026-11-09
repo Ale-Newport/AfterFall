@@ -1,9 +1,14 @@
 using Afterfall.Core;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Afterfall.Presentation
 {
-    /// <summary>Drives the sun, moon, ambient light and fog from the simulation clock.</summary>
+    /// <summary>
+    /// Drives the atmosphere from the simulation clock: sun and moon (direction, colour, intensity,
+    /// shadows), the sky (<see cref="SkyRig"/>), ambient light, fog and the time-of-day colour grade,
+    /// all from one keyed palette (<see cref="SkyPalette"/>) so they always agree.
+    /// </summary>
     public sealed class DayNightCycle : MonoBehaviour
     {
         private GameController _gc;
@@ -15,7 +20,7 @@ namespace Afterfall.Presentation
             CreateLights(transform, out _sun, out _moon);
         }
 
-        /// <summary>Creates the sun and moon lights and the static render settings (shared with the model gallery).</summary>
+        /// <summary>Creates the sun and moon lights, the sky rig and the static render settings (shared with the model gallery).</summary>
         public static void CreateLights(Transform parent, out Light sun, out Light moon)
         {
             var sunGo = new GameObject("Sun");
@@ -23,17 +28,21 @@ namespace Afterfall.Presentation
             sun = sunGo.AddComponent<Light>();
             sun.type = LightType.Directional;
             sun.shadows = LightShadows.Soft;
-            sun.shadowStrength = 0.85f;
+            sun.shadowStrength = 0.88f;
             var moonGo = new GameObject("Moon");
             moonGo.transform.SetParent(parent, false);
             moon = moonGo.AddComponent<Light>();
             moon.type = LightType.Directional;
-            moon.shadows = LightShadows.None;
-            moon.color = new Color(0.55f, 0.65f, 0.9f);
+            // The sun and moon never shine together, so whichever is up is URP's main light and casts shadows.
+            moon.shadows = LightShadows.Soft;
+            moon.shadowStrength = 0.6f;
+            moon.color = new Color(0.62f, 0.72f, 0.98f);
             RenderSettings.sun = sun;
             RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.fogMode = FogMode.ExponentialSquared;
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientIntensity = 1f;
+            SkyRig.Create(parent, sun);
         }
 
         private void Update()
@@ -45,36 +54,52 @@ namespace Afterfall.Presentation
         }
 
         /// <summary>
-        /// Sets sun, moon, ambient light, fog and the camera background for a time of day (0..1,
-        /// 0.5 = noon) and a daylight factor (0 night .. 1 day). Shared with the model gallery.
+        /// Sets sun, moon, sky, ambient light, fog and the colour grade for a time of day (0..1,
+        /// 0.5 = noon), and makes <paramref name="cam"/> clear to the sky. Everything visual follows
+        /// the sun's elevation at that time so sky, light and shadows agree; <paramref name="daylight"/>
+        /// (the clock's gameplay daylight) is accepted for compatibility. Shared with the model gallery.
         /// </summary>
         public static void Apply(float timeOfDay01, float daylight, Light sun, Light moon, Camera cam)
         {
-            // Sun rises at ~06:00 in the east (+X) and sets at ~18:00.
-            float sunAngle = (timeOfDay01 - 0.25f) * 360f;
-            sun.transform.rotation = Quaternion.Euler(sunAngle, -35f, 0f);
-            float elevation = Mathf.Sin((timeOfDay01 - 0.25f) * Mathf.PI * 2f);
-            sun.intensity = Mathf.Clamp01(elevation * 2.2f) * 1.25f;
-            sun.enabled = sun.intensity > 0.01f;
-            Color warm = new Color(1f, 0.62f, 0.38f);
-            Color noon = new Color(1f, 0.96f, 0.88f);
-            sun.color = Color.Lerp(warm, noon, Mathf.Clamp01(elevation * 2.5f));
-            moon.transform.rotation = Quaternion.Euler(sunAngle + 180f, -35f, 0f);
-            moon.intensity = Mathf.Clamp01(-elevation * 2f) * 0.22f;
-            moon.enabled = moon.intensity > 0.01f;
+            Vector3 toSun = SkyPalette.SunDirection(timeOfDay01);
+            Vector3 toMoon = SkyPalette.MoonDirection(timeOfDay01);
+            float elevation = Mathf.Asin(Mathf.Clamp(toSun.y, -1f, 1f)) * Mathf.Rad2Deg;
+            SkyLook look = SkyPalette.Evaluate(elevation);
 
-            Color skyDay = new Color(0.55f, 0.62f, 0.68f), skyNight = new Color(0.06f, 0.08f, 0.13f);
-            RenderSettings.ambientSkyColor = Color.Lerp(skyNight, skyDay, daylight);
-            RenderSettings.ambientEquatorColor = Color.Lerp(new Color(0.05f, 0.06f, 0.08f), new Color(0.42f, 0.44f, 0.4f), daylight);
-            RenderSettings.ambientGroundColor = Color.Lerp(new Color(0.03f, 0.03f, 0.04f), new Color(0.2f, 0.18f, 0.14f), daylight);
-            RenderSettings.fogColor = Color.Lerp(new Color(0.05f, 0.06f, 0.09f), new Color(0.62f, 0.66f, 0.66f), daylight);
-            RenderSettings.fogStartDistance = Mathf.Lerp(15f, 70f, daylight);
-            RenderSettings.fogEndDistance = Mathf.Lerp(120f, 420f, daylight);
+            sun.transform.rotation = Quaternion.LookRotation(-AboveHorizon(toSun));
+            sun.color = look.SunLight;
+            sun.intensity = look.SunIntensity;
+            sun.shadowStrength = look.ShadowStrength;
+            sun.enabled = sun.intensity > 0.005f;
+
+            // Moonlight fades in after the sun has set and out as the moon nears the horizon.
+            moon.transform.rotation = Quaternion.LookRotation(-AboveHorizon(toMoon));
+            moon.intensity = look.MoonIntensity * Mathf.Clamp01(toMoon.y * 6f);
+            moon.shadowStrength = look.ShadowStrength;
+            moon.enabled = !sun.enabled && moon.intensity > 0.005f;
+
+            RenderSettings.ambientSkyColor = look.AmbientSky;
+            RenderSettings.ambientEquatorColor = look.AmbientEquator;
+            RenderSettings.ambientGroundColor = look.AmbientGround;
+            Color fog = SkyRig.FogColor(look);
+            RenderSettings.fogColor = fog;
+            RenderSettings.fogDensity = look.FogDensity;
+
+            SkyRig rig = sun.GetComponent<SkyRig>();
+            if (rig != null) rig.Apply(look, toSun, toMoon, elevation);
             if (cam != null)
             {
-                cam.clearFlags = CameraClearFlags.SolidColor;
-                cam.backgroundColor = RenderSettings.fogColor;
+                bool sky = SkyRig.SkyMaterial != null;
+                cam.clearFlags = sky ? CameraClearFlags.Skybox : CameraClearFlags.SolidColor;
+                cam.backgroundColor = fog;
             }
+        }
+
+        /// <summary>Light never comes from under the ground: a body near the horizon shines at least 1.5° from above.</summary>
+        private static Vector3 AboveHorizon(Vector3 dir)
+        {
+            dir.y = Mathf.Max(dir.y, 0.026f);
+            return dir.normalized;
         }
     }
 }

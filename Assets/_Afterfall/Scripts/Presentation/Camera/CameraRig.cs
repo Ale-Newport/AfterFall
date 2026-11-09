@@ -42,6 +42,8 @@ namespace Afterfall.Presentation
             cull[Layers.Interactable] = 120f;
             cull[Layers.Zombie] = 160f;
             rig._camera.layerCullDistances = cull;
+            // Cameras made in code start with post-processing off: turn on the grade, bloom and SMAA.
+            CameraSetup.EnablePostProcessing(rig._camera);
             camGo.AddComponent<AudioListener>();
             rig._brain = camGo.AddComponent<CinemachineBrain>();
             rig._brain.DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Styles.EaseInOut, 0.9f);
