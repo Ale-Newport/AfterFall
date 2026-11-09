@@ -6,7 +6,8 @@ namespace Afterfall.Presentation
     /// <summary>
     /// Procedural meshes for the stylised art direction. Meshes are cached and shared between
     /// renderers. Every mesh carries vertex colours (rgb multiplies the material, alpha is baked
-    /// ambient occlusion) and needs no UVs: the Afterfall/Surface shader maps its textures
+    /// ambient occlusion; the shader uses them as linear values, unlike material tints, which are
+    /// sRGB colours that Unity converts) and needs no UVs: the Afterfall/Surface shader maps its textures
     /// triplanarly. Feature areas add their own shapes in partial files (MeshFactory.&lt;Area&gt;.cs)
     /// built with <see cref="MeshBuilder"/> and cached with <see cref="Cached"/>.
     /// </summary>
@@ -177,9 +178,19 @@ namespace Afterfall.Presentation
         public int Vertex(Vector3 p, Vector3 n, Color c)
         {
             _v.Add(Matrix.MultiplyPoint3x4(p));
-            _n.Add(Matrix.MultiplyVector(n).normalized);
+            _n.Add(Unit(Matrix.MultiplyVector(n), Vector3.up));
             _c.Add(c);
             return _v.Count - 1;
+        }
+
+        /// <summary>
+        /// Normalises without Unity's cut-off: Vector3.normalized returns zero below a length of 1e-5,
+        /// which millimetre faces (bevel corners) reach, and a zero normal becomes NaN in the shader.
+        /// </summary>
+        public static Vector3 Unit(Vector3 v, Vector3 fallback)
+        {
+            float m = Mathf.Sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+            return m > 1e-20f ? v / m : fallback;
         }
 
         public void Triangle(int a, int b, int c)
@@ -193,8 +204,8 @@ namespace Afterfall.Presentation
         public void Tri(Vector3 a, Vector3 b, Vector3 c)
         {
             Vector3 n = Vector3.Cross(b - a, c - a);
-            if (n.sqrMagnitude < 1e-12f) return;
-            n.Normalize();
+            if (n.sqrMagnitude < 1e-24f) return;
+            n = Unit(n, Vector3.up);
             int i = Vertex(a, n);
             Vertex(b, n);
             Vertex(c, n);
@@ -381,7 +392,7 @@ namespace Afterfall.Presentation
                     normals[tris[t + 2]] += fn;
                 }
                 int start = VertexCount;
-                for (int k = 0; k < pts.Length; k++) Vertex(pts[k], normals[k].sqrMagnitude > 0f ? normals[k].normalized : dirs[k]);
+                for (int k = 0; k < pts.Length; k++) Vertex(pts[k], Unit(normals[k], dirs[k]));
                 for (int t = 0; t < tris.Count; t += 3) Triangle(start + tris[t], start + tris[t + 1], start + tris[t + 2]);
             }
             else
@@ -429,7 +440,9 @@ namespace Afterfall.Presentation
                 {
                     // Profile normal from neighbouring segments (outward in the radius/height plane).
                     Vector2 prev = profile[Mathf.Max(0, p - 1)], next = profile[Mathf.Min(n - 1, p + 1)];
-                    Vector2 tangent = (next - prev).normalized;
+                    Vector2 d = next - prev;
+                    float dl = Mathf.Sqrt(d.x * d.x + d.y * d.y);
+                    Vector2 tangent = dl > 1e-20f ? d / dl : Vector2.up;
                     Vector2 pn = new Vector2(tangent.y, -tangent.x);
                     for (int s = 0; s <= sides; s++)
                     {

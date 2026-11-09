@@ -48,7 +48,8 @@ namespace Afterfall.Presentation
             Surface(Art.Surface.Plain, color, smoothness, metallic);
 
         /// <summary>
-        /// A textured surface: <paramref name="tint"/> is its average colour, the procedural detail maps
+        /// A textured surface: <paramref name="tint"/> is its average colour (an sRGB colour, as authored;
+        /// Unity converts it to linear), the procedural detail maps
         /// add relief and variation. Smoothness and metallic default to the surface's own values.
         /// Use <paramref name="objectSpace"/> for anything that moves or is rotated where the pattern
         /// direction matters (characters, held items, roof slopes, tilted boards): the pattern then

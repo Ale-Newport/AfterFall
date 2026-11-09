@@ -98,6 +98,29 @@ It writes a PNG for each step and `tour-report.txt`, then quits. The report has 
 open -W -n Builds/macOS/AFTERFALL.app --args -afterfall-tour "$PWD/Logs/tour" -screen-fullscreen 0 -screen-width 1600 -screen-height 900
 ```
 
+### Visual review: model gallery and art previews
+Art changes are judged by looking at them. Two tools make that quick:
+
+- **Model gallery** (`Presentation/Game/ModelGallery.cs`, flag `-afterfall-gallery <dir>`). It photographs every model in a lit studio that uses the game's own lighting and post-processing:
+  - `structures/`: every building and world container, with machines running and lamps lit, plus placement ghosts and a blueprint;
+  - `nodes/`: every resource node, intact and depleted, and side-by-side variants;
+  - `props/`: every point-of-interest building and prop;
+  - `characters/`: the survivor, colonists and infected (front, back, walking) and every tool in hand;
+  - `icons/sheet.png`: the in-engine item icons;
+  - `world/`: a new game (camp, backpack, hotbar, midday, dusk, night, dawn, eye level) and every point of interest from a raised view.
+
+  `tools/gallery.sh [sections] [outdir]` builds the macOS player and runs it (default: all sections into `Logs/gallery`). It prints `gallery-report.txt` and fails if any error was logged. It also works in a git worktree: the first run clones the main checkout's `Library`. At most `AFTERFALL_UNITY_SLOTS` (default 3) runs build at once.
+
+  ```bash
+  tools/gallery.sh structures,characters
+  ```
+
+- **ArtPreview** (`tools/dotnet/ArtPreview`) renders the procedural textures and item icons from `Presentation/Art` to PNG without Unity. For each surface it writes a lit 2×2 tile preview (seams, relief), the albedo and the normal map. It writes every item icon at 128 px and a sheet at 128 and 56 px.
+
+  ```bash
+  dotnet run -c Release --project tools/dotnet/ArtPreview -- all Logs/art
+  ```
+
 ## Manual playtest script (acceptance scenario)
 1. Launch → **New Game** (Survival). You spawn at a camp beside a crate.
 2. Move (WASD) and rotate the camera (mouse). Explore the forest edge and walk to Millbrook (north-east).

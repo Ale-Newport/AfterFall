@@ -1,17 +1,18 @@
 # Progress log
 
-_Last updated: 2026-11-07 (session 2: first runs in Unity; the tour covers every system)._
+_Last updated: 2026-11-09 (session 3: visual overhaul — textured procedural models, item icons, sky and grading)._
 
 ## Snapshot
 | | |
 |---|---|
 | Branch | `main` (every commit pushed to `origin`) |
 | Unity version | 6000.3.28f1 (arm64), installed through Unity Hub 3.22.6 with a Personal license |
-| Last headless tests | 2026-11-07: **124/124 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on each push. |
-| Last Unity EditMode run | 2026-11-07: **122/122 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
-| Last Unity PlayMode run | 2026-11-07: **5/5 smoke tests passed** (plus 2 Input System integration tests) |
-| Last player build | 2026-11-07: macOS (Apple Silicon), 118 MB, no errors |
-| Last scripted tour of the build | 2026-11-07: **0 failed checks, 0 errors logged**. New game in 1.1 s, NavMesh in 1.4 s. Frames average 8.3–8.8 ms (holding the 120 Hz vsync cap); p95 9.3–16 ms between runs. It builds a powered settlement with a recruited colonist and crops, which survives save and reload. |
+| Last headless tests | 2026-11-09: **124/124 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on each push. |
+| Last Unity EditMode run | 2026-11-09: **124/124 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
+| Last Unity PlayMode run | 2026-11-09: **7/7 passed** (5 smoke tests plus 2 Input System integration tests) |
+| Last player build | 2026-11-09: macOS (Apple Silicon), 120 MB, no errors |
+| Last scripted tour of the build | 2026-11-09: **0 failed checks, 0 errors logged**. New game in 2.4 s (was 1.1 s before the visual overhaul). Frames average 8.3–8.4 ms (holding the 120 Hz vsync cap); p95 8.4–9.3 ms. It builds a powered settlement with a recruited colonist and crops, which survives save and reload. |
+| Last model gallery | 2026-11-09: **151 screenshots, 0 errors logged** (`tools/gallery.sh`, all sections), reviewed by eye. |
 | Human playtest of the acceptance loop | **not yet** |
 | Windows build | **not yet built** |
 
@@ -112,7 +113,60 @@ All twelve are fixed (commit `fix(game): runtime issues found in presentation re
 - **Survival:** health, stamina, hunger, thirst and carry weight are done. Fatigue, temperature, injuries and infection are not.
 
 ## Not started
-Conveyors and pipes, weather and disasters, factions, wildlife, the armoured infected, firearms, vehicles, multiple regions and streaming, authored models and animation, recorded audio, localisation.
+Conveyors and pipes, weather and disasters, factions, wildlife, the armoured infected, firearms, vehicles, multiple regions and streaming, skinned character animation, recorded audio, localisation.
+
+## Visual overhaul (session 3, 2026-11-09)
+The game used to look like a grey-box prototype: flat-coloured cubes and cones, voxel-like people, two-letter item codes and no post-processing. Everything is still generated in code. No assets were imported.
+
+- **Rendering foundation:**
+  - `Afterfall/Surface`, a URP PBR shader with triplanar procedural detail maps, so meshes need no UVs. It has vertex-colour tint and baked AO, wind sway and object-space mapping.
+  - 42 `TextureSynth` surfaces (plus the terrain layers), generated on worker threads from launch.
+  - `MeshBuilder` primitives with bevels.
+  - The model gallery and ArtPreview review tools (docs/TESTING.md).
+- **Item icons:** an illustrated icon for each of the 36 items, drawn by an anti-aliased vector rasteriser. They appear in:
+  - slots;
+  - the recipe list, the recipe detail and the craft queue;
+  - machine recipes and fuel;
+  - build and placement costs;
+  - the HUD.
+- **Resource nodes:**
+  - four variants each of tiered pines and birches, with wind;
+  - stumps with growth rings;
+  - faceted rocks with moss;
+  - ore seams;
+  - berry bushes;
+  - scrap heaps;
+  - an old sedan, plus a stripped shell;
+  - a 1970s fuel pump and a burnt transformer;
+  - sacks, and a backpack for lost belongings.
+- **Ground:**
+  - 512 px terrain layers with normal maps;
+  - instanced grass, flowers, ferns, reeds and pebbles around the camera;
+  - a lake shader with depth tint, fresnel and waves.
+- **Characters:** sculpted low-poly survivor, colonists and infected (faces, hair, clothes, backpack; gaunt infected with glowing eyes). Limbs bend at elbows and knees. The rig has swing, crouch, jump and death poses, and a model for every tool and weapon.
+- **Structures and machines:**
+  - plank walls with posts and shutters, a log foundation on stone footings, corrugated roofs;
+  - a brick furnace with a glowing mouth, a diesel generator, a workshop with a lathe and drill press, a pressure-tank pump;
+  - a battery rack, a street lamp, a raised planter with crops;
+  - recognisable loot furniture.
+- **Points of interest:**
+  - sided houses with porches, chimneys and AC units;
+  - a gambrel barn with a cupola, a corrugated garage and warehouse with roll-up doors;
+  - a plaster clinic, a brick fuel-station shop under its canopy;
+  - lattice pylons, a ribbed silo, a ridge tent with guy ropes, layered quarry cliffs.
+- **Atmosphere:**
+  - a sky shader with sun, moon, stars and clouds driven by one time-of-day palette, plus exponential fog matched to the horizon;
+  - post-processing turned on in game (filmic grade, bloom, vignette, SMAA, NaN guard);
+  - tuned shadows and SSAO.
+
+Seven areas were built in parallel and merged without conflicts. They were verified with:
+- EditMode 124/124 and PlayMode 7/7;
+- the full tour, with 0 failures and 0 errors;
+- a 151-shot gallery with 0 errors.
+
+Fixed during the merge:
+- **Zero normals on millimetre faces.** Unity's `Vector3.normalized` returns zero below a length of 1e-5. On tiny bevel corners this gave NaN lighting, which bloomed into white blobs. `MeshBuilder.Unit` replaces it.
+- **Slow new games.** Texture generation now starts in the background at launch, which brought a new game from 3.3 s back down to 2.4 s.
 
 ## First runs in Unity (session 2)
 Bugs that only showed up in the engine, all fixed:
@@ -141,7 +195,18 @@ Bugs that only showed up in the engine, all fixed:
 ## Known issues and risks (severity)
 - **High — no human playtest yet.** The tour grants building materials and drives commands directly, so gathering pace, mouse-and-keyboard building, and the overall feel still need someone at the keyboard. Follow the manual script in docs/TESTING.md.
 - **Low.** Tree canopies can poke through structures built right next to them, and the camera can end up inside one.
-- **Medium.** UI windows are still slightly see-through, and some visual tuning remains: ground colours, morning light levels.
+- **Medium.** UI windows are still slightly see-through.
+- **Medium — visuals judged on stills.** The gallery and tour take stills, so motion (wind sway, procedural animation, ground-cover pop-in) has not been seen by a person. Check them in the playtest.
+- **Medium.** A new game takes 2.4 s instead of 1.1 s: procedural textures and terrain layers are generated on load. This is shorter when the player spends a few seconds in the menu first.
+- **Low — draw calls.**
+  - Characters use about 20 renderers each, and a POI house about 25 (one per material and part). The SRP batcher keeps this at 8.3 ms per frame, but crowds of infected may need merging.
+  - Car wrecks, fuel pumps and transformers use 4 renderers, above the target of 3.
+- **Low — close-up flaws.**
+  - Rigid limb parts show seams at knees and elbows.
+  - Terrain rock patches stretch on steep slopes (URP terrain has no triplanar mapping).
+  - Grass can poke through decoration that has no collider, such as porches.
+- **Low.** Low-sun shadows are deliberately dark (ACES). Raise the low-sun ambient if the playtest finds it too dark. The charcoal icon reads somewhat like dark stone.
+- **Low.** At 1600×900 the HUD vitals panel overlaps the bottom-left corner of centred windows.
 - **Medium.** The fog of war is only partly opaque, and trees taller than its 9 m layer show through.
 - **Medium.** The threat director treats distance as "out of sight" and does not check the camera frustum.
 - **Medium.** Irrigation does not add electrical load; a pump irrigates whenever its grid has supply.
@@ -151,7 +216,7 @@ Bugs that only showed up in the engine, all fixed:
 ## Metrics (headless)
 - Simulation cost: **0.007 ms per 60 Hz frame** with 76 structures, 40 machines and 26 infected (Apple M2 Max, .NET 10), down from 0.030 ms before caching the structure order. Machines average 0.06 ms per 4 Hz tick.
 - Inventory conservation errors in automated tests: **0** (randomised operations, save round trips, colonist hauls interrupted mid-carry).
-- In-engine (macOS build, 1600×900, Apple M2 Max): average frame 8.4 ms, vsync-capped at 120 Hz, at the start camp and in the strategic view; new game ready in 1.1 s; NavMesh bake 0.3 s after the world.
+- In-engine (macOS build, 1600×900, Apple M2 Max, after the visual overhaul): average frame 8.3–8.4 ms, vsync-capped at 120 Hz, at the start camp, in the strategic view and at the settlement at night; new game ready in 2.4 s. Generating the full surface catalogue takes 1.8 s across worker threads; it starts at launch.
 - Not yet measured (needs playtests): time to first construction, time to first machine output, playtime without critical bugs.
 
 ## Next development tasks
@@ -159,7 +224,8 @@ Bugs that only showed up in the engine, all fixed:
 2. Work zones and storage designation in the strategic view; the Guard profession.
 3. Conveyors (automation level 3) between storage and machines.
 4. Weather (storm or cold snap) with warnings and consequences for power and needs.
-5. Recorded audio and authored character animation where licensed assets are available.
+5. Recorded audio where licensed assets are available; skinned characters to hide joint seams.
+6. Visual follow-ups: power lines between poles and pylons, interior furnishing of POI buildings, a closable door leaf, construction-stage visuals for blueprints, a performance pass on renderer counts.
 
 ## How to run (current)
 - Headless tests: `dotnet test tools/dotnet/AfterfallSim.Tests/AfterfallSim.Tests.csproj`

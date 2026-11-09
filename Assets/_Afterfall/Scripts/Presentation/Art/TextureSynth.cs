@@ -609,9 +609,11 @@ namespace Afterfall.Presentation.Art
             c.Each((i, u, v) =>
             {
                 float peel = Fbm(u, v, 40, 2, 141);
-                float chipN = Fbm(u, v, 5, 5, 142);
-                float chip = SmoothStep(0.38f, 0.44f, chipN);
-                float rim = SmoothStep(0.33f, 0.38f, chipN) * (1f - chip);
+                // Domain-warped, rough noise gives jagged flakes instead of round blobs.
+                float wu = u + Fbm(u, v, 7, 3, 146) * 0.035f, wv = v + Fbm(u, v, 7, 3, 147) * 0.035f;
+                float chipN = Fbm(wu, wv, 8, 5, 142, 0.62f);
+                float chip = SmoothStep(0.3f, 0.33f, chipN);
+                float rim = SmoothStep(0.25f, 0.3f, chipN) * (1f - chip);
                 float grime = MathF.Max(0f, Fbm(u, v, 16, 1, 3, 143)) * SmoothStep(-0.2f, 0.4f, Fbm(u, v, 2, 2, 144));
                 float scratch = Scratches(u, v, 145, 10);
                 float lum = (0.97f + peel * 0.03f - grime * 0.22f) * (1f - chip * 0.6f) * (1f + rim * 0.08f) * (1f - scratch * 0.25f);

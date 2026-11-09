@@ -112,8 +112,6 @@ namespace Afterfall.Presentation
         {
             float elevation = Mathf.Sin((timeOfDay - 0.25f) * Mathf.PI * 2f);
             DayNightCycle.Apply(timeOfDay, Mathf.Clamp01(elevation * 3f + 0.2f), _sun, _moon, _cam);
-            RenderSettings.fogStartDistance = 250f;
-            RenderSettings.fogEndDistance = 900f;
         }
 
         private GameObject Subject(string name)
@@ -168,9 +166,11 @@ namespace Afterfall.Presentation
                 StructureVisuals.Build(go.transform, def, null, true);
                 Illuminate(go, def);
                 yield return Shoot("structures/" + def.Id, go);
+                yield return Shoot("structures/" + def.Id + "_back", go, 215f);
                 Destroy(go);
                 n++;
             }
+            yield return BuiltHouse();
             // Placement ghosts and a blueprint, side by side.
             BuildingDefinition[] sample = _boot.Content.Buildings.Values.Where(d => d.Buildable).OrderBy(d => d.Id).Take(3).ToArray();
             GameObject row = Subject("ghosts");
@@ -185,6 +185,33 @@ namespace Afterfall.Presentation
             yield return Shoot("structures/_ghosts", row, 0f);
             Destroy(row);
             Line($"Structures: {n} models");
+        }
+
+        /// <summary>Two foundation modules closed by walls, a doorway, window walls and roofs, as a player would build them.</summary>
+        private IEnumerator BuiltHouse()
+        {
+            var parts = new (string id, Vector3 pos, float yaw)[]
+            {
+                ("foundation", new Vector3(0f, 0f, 0f), 0f), ("foundation", new Vector3(3f, 0f, 0f), 0f),
+                ("doorway", new Vector3(0f, 0.4f, 1.5f), 0f), ("window_wall", new Vector3(3f, 0.4f, 1.5f), 0f),
+                ("wall", new Vector3(0f, 0.4f, -1.5f), 0f), ("window_wall", new Vector3(3f, 0.4f, -1.5f), 0f),
+                ("wall", new Vector3(-1.5f, 0.4f, 0f), 90f), ("window_wall", new Vector3(4.5f, 0.4f, 0f), 90f),
+                ("roof", new Vector3(0f, 3.4f, 0f), 0f), ("roof", new Vector3(3f, 3.4f, 0f), 0f),
+                ("bed", new Vector3(3f, 0.4f, -0.6f), 0f), ("storage_crate", new Vector3(-0.6f, 0.4f, -0.8f), 0f),
+            };
+            GameObject house = Subject("built_house");
+            foreach (var (id, pos, yaw) in parts)
+            {
+                if (!_boot.Content.Buildings.TryGetValue(id, out BuildingDefinition def)) continue;
+                var g = new GameObject(id);
+                g.transform.SetParent(house.transform, false);
+                g.transform.localPosition = pos;
+                g.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+                StructureVisuals.Build(g.transform, def, null, true);
+            }
+            yield return Shoot("structures/_built_house", house, 35f, 22f);
+            yield return Shoot("structures/_built_house_back", house, 215f, 22f);
+            Destroy(house);
         }
 
         /// <summary>Shows machines working and lamps lit, the way StructureView does in the game.</summary>
@@ -233,6 +260,20 @@ namespace Afterfall.Presentation
                 yield return Shoot("nodes/_" + visual + "_variants", row, 15f, 12f);
                 Destroy(row);
             }
+            GameObject drops = Subject("drops");
+            for (int i = 0; i < 2; i++)
+            {
+                var g = new GameObject(i == 0 ? "drop" : "belongings");
+                g.transform.SetParent(drops.transform, false);
+                g.transform.localPosition = new Vector3(i * 1.6f, 0f, 0f);
+                NodeVisuals.BuildDrop(g.transform, i == 1);
+            }
+            Transform beacon = drops.transform.Find("belongings/Beacon");
+            if (beacon != null) beacon.gameObject.SetActive(false); // frame the bags, not the 30 m beam
+            yield return Shoot("nodes/_drops", drops, 25f, 25f);
+            if (beacon != null) beacon.gameObject.SetActive(true);
+            yield return Shoot("nodes/_drops_beacon", drops, 25f, 10f);
+            Destroy(drops);
             Line($"Resource nodes: {n} shots");
         }
 
@@ -275,8 +316,8 @@ namespace Afterfall.Presentation
             yield return Shoot("characters/_lineup", lineup, 20f, 8f);
             foreach ((string name, HumanoidRig rig) in rigs)
             {
-                yield return Shoot("characters/" + name, rig.gameObject, 25f, 6f);
-                yield return Shoot("characters/" + name + "_back", rig.gameObject, 205f, 10f);
+                yield return Shoot("characters/" + name, rig.gameObject, 25f, 6f, 0.8f);
+                yield return Shoot("characters/" + name + "_back", rig.gameObject, 205f, 10f, 0.8f);
             }
             // Walking and running poses.
             HumanoidRig survivor = rigs[0].rig, infected = rigs[4].rig;
@@ -287,6 +328,39 @@ namespace Afterfall.Presentation
             }
             yield return Shoot("characters/_walking", lineup, 70f, 8f);
             Destroy(lineup);
+
+            // Action poses: mid swing, infected claw, crouch, airborne, dead.
+            GameObject poses = Subject("poses");
+            HumanoidRig Pose(string name, HumanoidRig.Palette palette, bool infected, float x)
+            {
+                var holder = new GameObject(name).transform;
+                holder.SetParent(poses.transform, false);
+                holder.localPosition = new Vector3(x, 0f, 0f);
+                return HumanoidRig.Create(holder, palette, infected);
+            }
+            ItemDefinition axe = _boot.Content.Items.All.FirstOrDefault(i => i.Tool != null && i.Tool.Type == ToolType.Axe);
+            HumanoidRig swing = Pose("swing", PlayerCharacter.SurvivorPalette, false, 0f);
+            swing.SetHeldItem(axe);
+            HumanoidRig claw = Pose("claw", ZombieView.PaletteFor(1), true, 1.4f);
+            HumanoidRig crouch = Pose("crouch", ColonistView.PaletteFor(1), false, 2.8f);
+            HumanoidRig jump = Pose("jump", ColonistView.PaletteFor(2), false, 4.2f);
+            HumanoidRig dead = Pose("dead", ZombieView.PaletteFor(2), true, 5.8f);
+            swing.PlaySwing();
+            claw.PlaySwing();
+            dead.SetDead(true);
+            for (int f = 0; f < 4; f++)
+            {
+                swing.Animate(0f, false, true, 0.03f);
+                claw.Animate(0f, false, true, 0.03f);
+            }
+            for (int f = 0; f < 20; f++)
+            {
+                crouch.Animate(0f, true, true, 0.05f);
+                jump.Animate(2f, false, false, 0.05f);
+                dead.Animate(0f, false, true, 0.05f);
+            }
+            yield return Shoot("characters/_action_poses", poses, 30f, 12f);
+            Destroy(poses);
 
             // Every tool and weapon in hand.
             ItemDefinition[] tools = _boot.Content.Items.All.Where(i => i.Tool != null && i.Tool.Type != ToolType.None).OrderBy(i => i.Id).ToArray();
@@ -301,6 +375,16 @@ namespace Afterfall.Presentation
                 rig.SetHeldItem(tools[i]);
             }
             yield return Shoot("characters/_held_items", held, 30f, 10f, 1.3f);
+            for (int i = 0; i < Mathf.Min(4, tools.Length); i++)
+            {
+                Transform hand = held.transform.GetChild(i).GetComponentInChildren<HumanoidRig>().Hand;
+                var closeup = new GameObject("closeup");
+                closeup.transform.SetParent(held.transform, false);
+                closeup.transform.position = hand.position;
+                Shapes.Part(closeup.transform, "Frame", MeshFactory.Cube, MaterialLibrary.Lit(Color.white), Vector3.zero, Vector3.one * 0.9f).GetComponent<Renderer>().enabled = false;
+                yield return Shoot("characters/held_" + tools[i].Id, closeup, 40f, 12f);
+                Destroy(closeup);
+            }
             Destroy(held);
             Line($"Characters: {rigs.Count} rigs, {tools.Length} held items");
         }
@@ -376,6 +460,17 @@ namespace Afterfall.Presentation
             gc.Ui.CloseWindow();
             yield return new WaitForSecondsRealtime(0.5f);
             yield return Capture("world/03_hotbar");
+            gc.Ui.ToggleBuildMenu();
+            yield return new WaitForSecondsRealtime(0.6f);
+            yield return Capture("world/03b_build_menu");
+            gc.Ui.CloseWindow();
+            if (_boot.Content.Buildings.TryGetValue("foundation", out BuildingDefinition foundation))
+            {
+                gc.Build.Begin(foundation);
+                yield return new WaitForSecondsRealtime(0.8f);
+                yield return Capture("world/03c_placement");
+                gc.Build.Cancel();
+            }
 
             foreach ((double hour, string name) in new[] { (12.5, "04_midday"), (18.4, "05_dusk"), (22.0, "06_night"), (6.4, "07_dawn") })
             {
@@ -388,6 +483,7 @@ namespace Afterfall.Presentation
             SkipTo(gc, 10.0);
             _cam.enabled = true;
             _cam.fieldOfView = 50f;
+            _cam.nearClipPlane = 0.1f;
             _cam.farClipPlane = 650f;
             WorldLayout layout = gc.Session.World.Layout;
             Vector3 home = gc.Player.transform.position;
@@ -411,6 +507,41 @@ namespace Afterfall.Presentation
             _cam.transform.rotation = Quaternion.LookRotation(forward + Vector3.down * 0.05f);
             yield return new WaitForSecondsRealtime(1.5f);
             yield return Capture("world/08_eye_level");
+
+            // The ground up close, looking down at grass and soil in front of the camp.
+            _cam.transform.position = home + Vector3.up * 1.3f - forward * 1.5f;
+            _cam.transform.rotation = Quaternion.LookRotation(forward + Vector3.down * 0.6f);
+            yield return new WaitForSecondsRealtime(1f);
+            yield return Capture("world/09_ground_close");
+
+            // The lake from its shore at eye level.
+            Vector3 lake = new Vector3(layout.LakeCenter.X, layout.WaterLevel, layout.LakeCenter.Z);
+            Vector3 shoreDir = Quaternion.Euler(0f, 200f, 0f) * Vector3.forward;
+            Vector3 shore = lake + shoreDir * (layout.LakeRadius * 1.15f + 4f);
+            shore.y = Mathf.Max(layout.HeightAt(shore.x, shore.z), layout.WaterLevel) + 1.7f;
+            // The survivor stands well behind the camera, out of the shot.
+            Vector3 behind = shore + shoreDir * 5f;
+            gc.Player.Teleport(new Vector3(behind.x, layout.HeightAt(behind.x, behind.z) + 0.2f, behind.z));
+            _cam.transform.position = shore;
+            _cam.transform.rotation = Quaternion.LookRotation(new Vector3(lake.x - shore.x, -2.5f, lake.z - shore.z));
+            yield return new WaitForSecondsRealtime(1.5f);
+            yield return Capture("world/10_lake_shore");
+
+            // Facing the sun at golden hour, after sunset, and the moon at night.
+            gc.Player.Teleport(home);
+            Light moonLight = gc.GetComponentsInChildren<Light>().FirstOrDefault(l => l.name == "Moon");
+            foreach ((double hour, string name, bool moon) in new[] { (17.9, "11_facing_sun", false), (19.6, "12_after_sunset", false), (23.5, "13_facing_moon", true) })
+            {
+                SkipTo(gc, hour);
+                yield return null;
+                Light body = moon ? moonLight : RenderSettings.sun;
+                Vector3 toward = body != null ? -body.transform.forward : Vector3.forward;
+                toward.y = Mathf.Max(0.12f, toward.y * 0.6f);
+                _cam.transform.position = home + Vector3.up * 1.8f + new Vector3(toward.x, 0f, toward.z).normalized * 1.5f;
+                _cam.transform.rotation = Quaternion.LookRotation(toward);
+                yield return new WaitForSecondsRealtime(1.2f);
+                yield return Capture("world/" + name);
+            }
             _cam.enabled = false;
             Line($"World: {layout.Pois.Count} points of interest");
         }

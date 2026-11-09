@@ -28,13 +28,60 @@ namespace Afterfall.Presentation
             return p;
         }
 
-        /// <summary>Prewarms every surface of the shared catalogue (the static fields of <see cref="Art.Surface"/>).</summary>
+        private static Task<SurfaceMaps[]> _pending;
+        private static List<Art.Surface> _pendingSurfaces;
+
+        /// <summary>Starts generating every declared surface on worker threads as soon as the game launches.</summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void BeginPrewarm()
+        {
+            if (_pending != null) return;
+            List<Art.Surface> all = DeclaredSurfaces();
+            _pendingSurfaces = all;
+            _pending = Task.Run(() =>
+            {
+                var maps = new SurfaceMaps[all.Count];
+                Parallel.For(0, all.Count, i => maps[i] = all[i].Generate(all[i].Resolution));
+                return maps;
+            });
+        }
+
+        /// <summary>
+        /// Makes sure every surface declared as a static field anywhere in the Presentation assembly
+        /// (the shared catalogue and each area's own surfaces) is uploaded, so first use never hitches.
+        /// Uses the maps generated in the background since launch when they are ready.
+        /// </summary>
         public static void PrewarmCatalogue()
         {
+            if (_pending != null)
+            {
+                try
+                {
+                    SurfaceMaps[] maps = _pending.Result;
+                    for (int i = 0; i < maps.Length; i++)
+                        if (!Cache.ContainsKey(_pendingSurfaces[i].Key)) Cache[_pendingSurfaces[i].Key] = Upload(_pendingSurfaces[i], maps[i]);
+                }
+                catch (System.AggregateException e)
+                {
+                    Debug.LogWarning("[Afterfall] Background texture generation failed, generating now: " + e.InnerException?.Message);
+                }
+                _pending = null;
+                _pendingSurfaces = null;
+            }
+            Prewarm(DeclaredSurfaces());
+        }
+
+        private static List<Art.Surface> DeclaredSurfaces()
+        {
             var all = new List<Art.Surface>();
-            foreach (System.Reflection.FieldInfo f in typeof(Art.Surface).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
-                if (f.FieldType == typeof(Art.Surface)) all.Add((Art.Surface)f.GetValue(null));
-            Prewarm(all);
+            const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+            foreach (System.Type t in typeof(Art.Surface).Assembly.GetTypes())
+            {
+                if (t.ContainsGenericParameters) continue;
+                foreach (System.Reflection.FieldInfo f in t.GetFields(flags))
+                    if (f.FieldType == typeof(Art.Surface) && !f.IsLiteral && f.GetValue(null) is Art.Surface s) all.Add(s);
+            }
+            return all;
         }
 
         /// <summary>Generates the maps of every surface not cached yet in parallel, then uploads them.</summary>

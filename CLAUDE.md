@@ -24,7 +24,8 @@ Rules:
 - Stable `EntityId`s for every persistent entity; relationships are stored by id.
 - In Presentation files, alias `using EntityId = Afterfall.Core.EntityId;`. Unity 6.3 has its own `UnityEngine.EntityId`.
 - In UI code, use the `Put<T>()` extension when you need the added element back. `VisualElement.Add` returns void.
-- Navigation: keep doorways at least 1.6 m wide and mark roofs and ceilings with `Shapes.NotWalkable` (see ARCHITECTURE.md → Navigation).
+- Navigation: keep doorways at least 1.6 m wide and mark roofs and ceilings with `Shapes.NotWalkable` (see ARCHITECTURE.md → Navigation). Decorative parts get no colliders: the NavMesh is baked from colliders.
+- Art is code: meshes from `MeshBuilder`/`MeshFactory` (area shapes in `MeshFactory.<Area>.cs`), materials from `MaterialLibrary.Surface(surface, tint, …)`. Vary instances with vertex colours, never one material per instance. Vertex colours are linear values; material tints are sRGB colours.
 
 ## Coding standards
 - C# 9 maximum: no file-scoped namespaces, records, `init`, or global usings. 4-space indentation, braces on new lines, `_camelCase` private fields.
@@ -37,6 +38,8 @@ Rules:
 - Compile-check the Unity assemblies without a license: `python3 tools/unity-compile-check/compile_check.py --unity <Unity.app/Contents> --packages <extracted package sources>` (see docs/TESTING.md)
 - Missing `.meta` files: `python3 tools/generate_meta.py` (`--check` to verify)
 - In-Unity checks (tests, macOS build, scripted tour with screenshots): `tools/run-unity-checks.sh [editmode|playmode|build|tour]`
+- Visual review of every model, the item icons and the world: `tools/gallery.sh [sections] [outdir]` (builds the player; see docs/TESTING.md)
+- Procedural textures and icons as PNG without Unity: `dotnet run -c Release --project tools/dotnet/ArtPreview -- all <outdir>`
 - Unity tests directly: `<Unity> -batchmode -projectPath . -runTests -testPlatform EditMode|PlayMode -testResults <file>`
 - Builds: `-executeMethod Afterfall.EditorTools.BuildCommands.BuildMacOS` / `BuildWindows`
 - One-time repository setup: `./tools/setup-dev.sh` (local Git LFS plus the commit-msg hook)

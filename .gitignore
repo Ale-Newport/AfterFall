@@ -93,3 +93,6 @@ Thumbs.db
 *.key
 .claude/settings.local.json
 tools/unity-compile-check/.build/
+
+# Agent worktrees (local only)
+/.claude/worktrees/

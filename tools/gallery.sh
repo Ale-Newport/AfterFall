@@ -5,6 +5,7 @@
 #   outdir    default Logs/gallery; screenshots land in <outdir>/<section>/, report in <outdir>/gallery-report.txt
 # Works in git worktrees: the first run clones the main checkout's Library (copy-on-write) to skip a
 # full import. At most AFTERFALL_UNITY_SLOTS (default 3) builds/galleries run at once across checkouts.
+# AFTERFALL_GALLERY_NO_BUILD=1 reuses an existing Builds/macOS player (e.g. right after run-unity-checks.sh build).
 # Do not run it while the project is open in the editor.
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -40,14 +41,18 @@ while [ -z "$slot" ]; do
 done
 trap 'rm -rf "$slot"' EXIT
 
-echo "gallery: building the macOS player (slot $(basename "$slot"))"
-"$UNITY" -batchmode -quit -projectPath "$PWD" -executeMethod Afterfall.EditorTools.BuildCommands.BuildMacOS -logFile Logs/gallery-build.log
-code=$?
-grep -E "Shader error|Shader warning in 'Afterfall" Logs/gallery-build.log | sort -u | head -20
-if [ $code -ne 0 ] || [ ! -d Builds/macOS/AFTERFALL.app ]; then
-  echo "gallery: BUILD FAILED (exit $code). Errors from Logs/gallery-build.log:"
-  grep -E "error CS|Shader error|Error building|Exception|BuildFailedException" Logs/gallery-build.log | sort -u | head -40
-  exit 1
+if [ "${AFTERFALL_GALLERY_NO_BUILD:-0}" = "1" ] && [ -d Builds/macOS/AFTERFALL.app ]; then
+  echo "gallery: using the existing build (AFTERFALL_GALLERY_NO_BUILD=1)"
+else
+  echo "gallery: building the macOS player (slot $(basename "$slot"))"
+  "$UNITY" -batchmode -quit -projectPath "$PWD" -executeMethod Afterfall.EditorTools.BuildCommands.BuildMacOS -logFile Logs/gallery-build.log
+  code=$?
+  grep -E "Shader error|Shader warning in 'Afterfall" Logs/gallery-build.log | sort -u | head -20
+  if [ $code -ne 0 ] || [ ! -d Builds/macOS/AFTERFALL.app ]; then
+    echo "gallery: BUILD FAILED (exit $code). Errors from Logs/gallery-build.log:"
+    grep -E "error CS|Shader error|Error building|Exception|BuildFailedException" Logs/gallery-build.log | sort -u | head -40
+    exit 1
+  fi
 fi
 
 rm -rf "$OUT"
