@@ -155,7 +155,7 @@ namespace Afterfall.Presentation.UI
                 _placeCost.Clear();
                 _costChips.Clear();
                 _placeCost.Add(UiKit.Text(def.Cost.Count > 0 ? "Cost" : "Free", "muted", "cost-label"));
-                foreach (ItemAmount a in def.Cost) _costChips.Add(_placeCost.Put(new ItemChip("icon-28")));
+                for (int k = 0; k < def.Cost.Count; k++) _costChips.Add(_placeCost.Put(new ItemChip("icon-28")));
             }
             for (int i = 0; i < def.Cost.Count && i < _costChips.Count; i++)
             {

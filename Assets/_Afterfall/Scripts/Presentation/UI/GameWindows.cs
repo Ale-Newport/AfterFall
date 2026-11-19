@@ -296,7 +296,7 @@ namespace Afterfall.Presentation.UI
                     _recipeMeta.text = $"Makes {outs} · {r.Duration:0.#} s · {(r.IsHandRecipe ? "by hand" : "at a " + CraftingRules.StationName(r.Station))}";
                     _ingredients.Clear();
                     _ingredientChips.Clear();
-                    foreach (ItemAmount a in r.Inputs) _ingredientChips.Add(_ingredients.Put(new ItemChip("icon-32")));
+                    for (int k = 0; k < r.Inputs.Count; k++) _ingredientChips.Add(_ingredients.Put(new ItemChip("icon-32")));
                 }
                 for (int i = 0; i < r.Inputs.Count && i < _ingredientChips.Count; i++)
                 {
@@ -514,7 +514,7 @@ namespace Afterfall.Presentation.UI
                 RecipeDefinition r = Gc.Session.Content.Recipe(m.RecipeId);
                 _progress.Set(r == null ? 0f : m.Progress / r.Duration, r == null ? "No recipe" : $"{r.Name} — {m.Progress:0.0}/{r.Duration:0.#}s");
                 string fuel = m.Fuel != null ? $" · fire burns {m.FuelBurnRemaining:0}s more" : "";
-                _power.text = def.Machine.PowerWatts > 0 ? $"Needs {UiKit.Watts(def.Machine.PowerWatts)} while working · {(s.Power.Powered ? "powered" : s.Power.Reason)}{fuel}" : $"Burns fuel while working{fuel}";
+                _power.text = def.Machine.PowerWatts > 0 ? $"Needs {UiKit.Watts(def.Machine.PowerWatts)} while working · {(s.Power == null ? "not connected" : s.Power.Powered ? "powered" : s.Power.Reason)}{fuel}" : $"Burns fuel while working{fuel}";
                 double perMin = r != null ? 60.0 / r.Duration : 0;
                 _stats.text = $"Cycles completed: {m.CompletedCycles}" + (r != null ? $" · max rate {perMin:0.#} cycles/min" : "") + (def.Machine.AutoTransferRange > 0 ? $" · pulls inputs from / pushes outputs to storage crates within {def.Machine.AutoTransferRange:0.#} m" : "");
                 Fill(_input, m.Input, items);

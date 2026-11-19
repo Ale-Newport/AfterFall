@@ -73,6 +73,8 @@ namespace Afterfall.Persistence
                 }
                 catch (IOException)
                 {
+                    // Locked or unreadable right now: list the slot without its header details.
+                    header = null;
                 }
                 list.Add(new SaveSlotInfo { Slot = slot, Path = file, LastWriteUtc = File.GetLastWriteTimeUtc(file), Header = header });
             }

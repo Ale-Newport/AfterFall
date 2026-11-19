@@ -144,7 +144,7 @@ namespace Afterfall.Presentation
             }
 
             // The sky changes slowly: re-capture it every degree of sun travel.
-            if (_probe != null && _probe.isActiveAndEnabled && sky != null && !(Mathf.Abs(sunElevation - _probeElevation) < 1f))
+            if (_probe != null && _probe.isActiveAndEnabled && sky != null && Mathf.Abs(sunElevation - _probeElevation) >= 1f)
             {
                 _probeElevation = sunElevation;
                 _probe.RenderProbe();

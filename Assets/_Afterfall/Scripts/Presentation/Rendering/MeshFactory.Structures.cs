@@ -1070,7 +1070,7 @@ namespace Afterfall.Presentation
             k.Span(S.Timber, new Vector3(-hx + 0.005f, 0.07f, -hz + leg), new Vector3(-hx + 0.055f, 0.2f, hz - leg), Board(k, salt++, wood), 0.008f);
             // Headboard: two boards between the tall head posts.
             k.Span(S.Timber, new Vector3(hx - 0.06f, 0.07f, -hz + leg), new Vector3(hx - 0.01f, 0.22f, hz - leg), Board(k, salt++, wood), 0.008f);
-            k.Span(S.Timber, new Vector3(hx - 0.06f, 0.24f, -hz + leg), new Vector3(hx - 0.01f, sy - 0.03f, hz - leg), Board(k, salt++, wood), 0.008f);
+            k.Span(S.Timber, new Vector3(hx - 0.06f, 0.24f, -hz + leg), new Vector3(hx - 0.01f, sy - 0.03f, hz - leg), Board(k, salt, wood), 0.008f);
 
             Color ticking = Rel(new Color(0.76f, 0.73f, 0.64f), StructurePalette.Fabric);
             k.Span(S.Fabric, new Vector3(-hx + 0.04f, 0.16f, -hz + 0.045f), new Vector3(hx - 0.07f, 0.3f, hz - 0.045f), ticking, 0.045f);

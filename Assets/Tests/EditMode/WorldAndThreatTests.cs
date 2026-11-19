@@ -179,7 +179,6 @@ namespace Afterfall.Tests
             TestSupport.Build(s.World, "storage_crate", basePos);
             s.World.Threat.Heat = 60f;
             s.World.Clock.Advance(s.World.Clock.DayLengthSeconds * 0.6);
-            int zombiesBefore = s.World.Zombies.Count;
             TestSupport.Run(s, 4, 0.1);
             Assert.IsTrue(warnings.Any(w => w.Contains("approaches")), "a warning is issued first");
             Assert.Greater(s.World.Threat.PendingRaidAt, s.Now, "the group has not arrived yet");

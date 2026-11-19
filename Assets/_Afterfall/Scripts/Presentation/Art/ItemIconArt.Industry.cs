@@ -555,7 +555,6 @@ namespace Afterfall.Presentation.Art
                     d.Ring(cx, cy, rRoot * 0.36f, 0.9f, metal.Darker(0.35f));
                     for (int i = 0; i < 3; i++)
                     {
-                        float a = (100f + i * 9f) * MathF.PI / 180f;
                         d.Arc(cx, cy, rRoot * (0.55f + i * 0.08f), 0.6f, -150f + i * 20f, 70f, White.WithAlpha(0.3f));
                     }
                 });

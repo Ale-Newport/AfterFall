@@ -110,7 +110,7 @@ namespace Afterfall.Presentation
             public readonly int Wall;
             public readonly float Center, Width, Bottom, Top;
             public readonly bool IsDoor;
-            public Fill Fill;
+            public readonly Fill Fill;
 
             public Opening(int wall, float center, float width, float bottom, float top, bool door, Fill fill)
             {

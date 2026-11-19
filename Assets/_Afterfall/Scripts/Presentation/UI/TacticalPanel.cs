@@ -215,7 +215,7 @@ namespace Afterfall.Presentation.UI
                 BuildingDefinition d = _gc.Session.Content.Building(s.DefId);
                 bool important = s.Machine != null || s.Generator != null || !s.IsComplete;
                 if (!important) continue;
-                string text = !s.IsComplete ? $"{d.Name} (blueprint)" : s.Machine != null ? $"{d.Name}: {UiKit.Describe(s.Machine.Status)}" : $"{d.Name}: {(s.Generator.Running ? UiKit.Watts(s.Generator.OutputWatts) : "off")}";
+                string text = !s.IsComplete ? $"{d.Name} (blueprint)" : s.Machine != null ? $"{d.Name}: {UiKit.Describe(s.Machine.Status)}" : $"{d.Name}: {(s.Generator != null && s.Generator.Running ? UiKit.Watts(s.Generator.OutputWatts) : "off")}";
                 bool bad = TacticalController.IsBlocked(s) || (s.Generator != null && !s.Generator.Running);
                 Place(Next(text, bad ? "overlay-label--bad" : null), s.Position.ToUnity() + Vector3.up * (d.SizeY + 1f));
             }

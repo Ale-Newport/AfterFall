@@ -103,7 +103,7 @@ namespace Afterfall.Tests
             Assert.IsTrue(d.Attack);
             d = ZombieBrain.Think(z, A, p, _rng, 0.1f);
             Assert.IsFalse(d.Attack, "cooldown prevents an immediate second hit");
-            for (int i = 0; i < 20; i++) d = ZombieBrain.Think(z, A, p, _rng, 0.1f);
+            for (int i = 0; i < 20; i++) ZombieBrain.Think(z, A, p, _rng, 0.1f);
             Assert.IsTrue(z.AttackCooldown < A.AttackCooldown);
         }
 

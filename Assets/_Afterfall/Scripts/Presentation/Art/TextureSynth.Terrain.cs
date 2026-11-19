@@ -304,7 +304,6 @@ namespace Afterfall.Presentation.Art
                 Col col = Col.Mix(humus, humusLight, Clamp01(0.45f + blot * 0.5f + fine * 0.2f));
                 float h = 0.15f + blot * 0.08f + fine * 0.04f;
                 float smooth = 0.06f;
-                float crev = 1f;
 
                 float mossMask = SmoothStep(0.28f, 0.5f, Fbm(u, v, 4, 4, 4303) + fine * 0.2f);
                 if (mossMask > 0f)
@@ -357,7 +356,7 @@ namespace Afterfall.Presentation.Art
                 }
 
                 // Shadowed gaps between litter pieces.
-                crev = Lerp(0.7f, 1f, SmoothStep(0.12f, 0.32f, h));
+                float crev = Lerp(0.7f, 1f, SmoothStep(0.12f, 0.32f, h));
                 Put(c, i, col);
                 c.H[i] = h;
                 c.Crevice[i] = crev;
@@ -513,7 +512,6 @@ namespace Afterfall.Presentation.Art
             var c = new Canvas(n);
             Col grey = Col.S(112, 110, 104), warm = Col.S(118, 108, 94), dark = Col.S(56, 55, 52);
             Col lichenY = Col.S(140, 136, 84), lichenP = Col.S(150, 154, 142), moss = Col.S(62, 76, 40), soil = Col.S(72, 60, 46);
-            float texel = 1f / n;
             c.Each((i, u, v) =>
             {
                 // Domain-warped fractures so the blocks read as broken rock, not paving.

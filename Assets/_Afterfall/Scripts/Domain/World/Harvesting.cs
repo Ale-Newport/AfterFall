@@ -32,7 +32,7 @@ namespace Afterfall.Domain.World
             if (def.RequiredTool != ToolType.None && held != def.RequiredTool)
                 return OpResult.Fail("tool_required", $"{def.Verb} {def.Name} requires a {ToolName(def.RequiredTool)} in hand.");
 
-            float mult = held == def.PreferredTool && def.PreferredTool != ToolType.None ? Math.Max(1f, tool.Tool.GatherPower) : 1f;
+            float mult = held == def.PreferredTool && def.PreferredTool != ToolType.None ? Math.Max(1f, tool?.Tool?.GatherPower ?? 1f) : 1f;
             var yield = new List<ItemAmount>();
             foreach (ResourceYield y in def.Yields)
             {

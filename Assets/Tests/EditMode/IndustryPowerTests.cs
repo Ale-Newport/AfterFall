@@ -242,7 +242,7 @@ namespace Afterfall.Tests
         [Test]
         public void Topology_RebuildsOnlyWhenChanged()
         {
-            Structure gen = TestSupport.Build(_w, "generator", new Vec3(0, 0, 0));
+            TestSupport.Build(_w, "generator", new Vec3(0, 0, 0));
             Run(5);
             int rebuilds = _power.TopologyRebuilds;
             Run(5);

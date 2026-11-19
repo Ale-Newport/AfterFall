@@ -14,11 +14,11 @@ namespace Afterfall.Domain.World
     {
         private struct ContainerSpec
         {
-            public string Def;
-            public string Table;
-            public float X;
-            public float Z;
-            public float Yaw;
+            public readonly string Def;
+            public readonly string Table;
+            public readonly float X;
+            public readonly float Z;
+            public readonly float Yaw;
 
             public ContainerSpec(string def, string table, float x, float z, float yaw)
             {
