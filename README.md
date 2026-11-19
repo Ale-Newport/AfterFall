@@ -1,16 +1,82 @@
-# AFTERFALL: From Survival to Civilization
+<p align="center">
+  <img src="docs/media/afterfall-demo.gif" alt="AFTERFALL gameplay: the start camp, placing a foundation, a settlement with a recruited colonist and crops, the strategic view, a pump outpost by the lake, infected attacking, power shedding at night and the base after dark" width="720">
+</p>
 
-AFTERFALL is a single-player 3D open-world survival, crafting, base-building and industrial-automation game built with **Unity 6.3 LTS**. You wake up alone in a quiet, ruined valley. You scavenge, build shelter, smelt metal, bring electricity back, and automate production. The long-term goal is a settlement that grows into a connected industrial civilization.
+<h1 align="center">AFTERFALL</h1>
 
-> **Status: early playable prototype (Phases 0–5 in progress).** The game runs in Unity 6000.3.28f1. In Unity, all 124 EditMode tests and the 5 PlayMode smoke tests pass. A macOS build plays a scripted tour with no failed checks or errors, holding the 120 Hz vsync cap on an Apple M2 Max. The tour plays the opening (harvesting, crafting, infected, the strategic view), then builds a settlement and checks every system: machines and a power grid with poles, a battery and priority shedding; a lake pump irrigating crops; two recruited colonists who haul, build, farm, eat, sleep and flee; a shelter the infected batter, with repair and melee; and death with recovery of your belongings. It ends with a save and reload that keeps all of it. Nobody has played it by hand yet: the tour grants building materials and drives commands directly. The Windows build is untested. See [docs/PROGRESS.md](docs/PROGRESS.md) for exactly what is verified.
+<p align="center"><b>An open-source 3D survival game where you go from scavenging alone in a ruined valley to running a powered, automated settlement with colonists, built in Unity 6 on a deterministic C# simulation.</b></p>
+
+<p align="center">
+  <a href="https://github.com/Ale-Newport/AfterFall/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Ale-Newport/AfterFall/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/Ale-Newport/AfterFall/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/Ale-Newport/AfterFall/actions/workflows/codeql.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/Ale-Newport/AfterFall/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Ale-Newport/AfterFall?include_prereleases&sort=semver"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/Ale-Newport/AfterFall"></a>
+  <img alt="Unity 6000.3 LTS" src="https://img.shields.io/badge/Unity-6000.3%20LTS-222c37?logo=unity">
+  <img alt="C# 9 / .NET Standard 2.1" src="https://img.shields.io/badge/C%23-9-512bd4?logo=dotnet">
+  <img alt="Platform: macOS | Windows" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey">
+  <a href="https://github.com/Ale-Newport/AfterFall/discussions"><img alt="Discussions" src="https://img.shields.io/github/discussions/Ale-Newport/AfterFall"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Ale-Newport/AfterFall/releases/latest"><b>Download for macOS</b></a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="docs/PROGRESS.md">Progress</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a> ·
+  <a href="https://github.com/Ale-Newport/AfterFall/discussions">Discussions</a>
+</p>
+
+You wake up alone in a quiet, ruined valley. You scavenge, build shelter, smelt metal, bring electricity back and automate production, then recruit survivors who haul, build, farm and defend with you. Everything (inventories, machines, power grids, colonist jobs, infected, saves) runs on one authoritative simulation that works with or without rendering, and 124 tests check it headlessly on Linux, Windows and macOS.
+
+> **Status: early playable prototype, `v0.1.0`.** All 124 EditMode tests and 7 PlayMode tests pass in Unity 6000.3.28f1. The macOS build passes a scripted tour of every system with 0 failed checks and 0 logged errors at about 8.4 ms per frame on an Apple M2 Max. Nobody has played it by hand yet (the tour drives commands, not the mouse and keyboard), the art is procedural, and the Windows build is untested. [docs/PROGRESS.md](docs/PROGRESS.md) lists exactly what is verified. Playtest reports are the most useful contribution right now.
 
 | | |
 |---|---|
-| ![Start camp in the morning](docs/screenshots/start-camp-morning.jpg) | ![A small settlement by Dawson Farm: generator, workshop, furnace, crates and planter beds](docs/screenshots/settlement.jpg) |
-| ![Mara, a recruited colonist, at work in the settlement](docs/screenshots/colonist-at-work.jpg) | ![Strategic view during a power outage: the workshop reports no power](docs/screenshots/power-outage-strategic.jpg) |
-| ![Infected approaching](docs/screenshots/infected.jpg) | ![The settlement at night](docs/screenshots/night-at-base.jpg) |
+| ![A small settlement by Dawson Farm: workbench, furnace, generator, crates and planter beds](docs/media/base_built.jpg) | ![Mara, a recruited colonist, tends the crops while the survivor looks on](docs/media/colonist_at_work.jpg) |
+| ![Strategic view of the settlement with its machine panel and production orders](docs/media/settlement_strategic.jpg) | ![An electric pump outpost by the lake irrigating a planter bed](docs/media/pump_outpost.jpg) |
+| ![A Wanderer and a Runner infected approaching the survivor](docs/media/infected.jpg) | ![The power grid at night: a battery bank runs three workshops while the lamp is shed first](docs/media/power_shedding.jpg) |
+| ![Backpack and crafting window](docs/media/inventory_crafting.jpg) | ![The settlement at night](docs/media/night_at_base.jpg) |
 
-_Captured by the scripted tour of the macOS build (`-afterfall-tour`); procedural placeholder art._
+_Every image is an unedited frame from the scripted tour of the macOS build (`tools/run-unity-checks.sh tour`). The GIF above is assembled from those frames._
+
+## Quick start
+
+**Play** (macOS, Apple silicon or Intel): download `AFTERFALL-<version>-macOS-universal.zip` from the [latest release](https://github.com/Ale-Newport/AfterFall/releases/latest) and unzip it. The build is not notarized, so clear the download quarantine once before opening it:
+
+```bash
+xattr -dr com.apple.quarantine ~/Downloads/AFTERFALL.app
+```
+
+Then open `AFTERFALL.app`, choose **New Game** and press **F1** in game for help.
+
+**Develop** (needs Git LFS and the .NET 10 SDK; Unity is only needed to run the game): one command clones the project, sets up LFS and the commit hook, and runs the full simulation test suite.
+
+```bash
+git clone https://github.com/Ale-Newport/AfterFall.git && cd AfterFall && ./tools/setup-dev.sh && dotnet test tools/dotnet/AfterfallSim.Tests/AfterfallSim.Tests.csproj
+```
+
+To play from source, open the folder in Unity Hub with Unity 6000.3.28f1 and press **Play** (details in [Getting started](#getting-started)).
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Input[Input System] --> Presentation
+    subgraph Unity["Unity layer"]
+        Presentation["Presentation<br/>views, player, cameras, UI Toolkit"]
+    end
+    subgraph Sim["Pure C# simulation (no UnityEngine, netstandard2.1)"]
+        Services["GameSession commands<br/>Afterfall.Services"]
+        Domain["Domain systems<br/>inventory, crafting, construction,<br/>industry, power, colony, threats"]
+        World[("WorldState")]
+        Persistence["Persistence<br/>versioned JSON saves"]
+    end
+    Presentation --> Services --> Domain --> World
+    World -- typed events --> Presentation
+    Persistence <--> World
+```
+
+The simulation is deterministic and engine-independent: a furnace keeps smelting whether or not its GameObject exists, and a save contains the world, not the scene. The same sources compile in Unity and in `tools/dotnet`, which is how CI tests them without a Unity license. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and the [architecture decision records](docs/decisions/).
 
 ## Design pillars
 
@@ -56,7 +122,7 @@ generator (+ fuel cans / charcoal) ⇢ cables ⇢ machine workshop → gears →
 - C# 9: pure .NET Standard 2.1 simulation assemblies plus a Unity presentation assembly
 - Input System 1.19.0 (actions defined in code, rebindable), Cinemachine 3.1.7, AI Navigation 2.0.14, UI Toolkit, Newtonsoft JSON 3.2.2
 - Unity Test Framework 1.6.0 (EditMode + PlayMode), NUnit
-- Git + Git LFS (binary art and audio), GitHub Actions for the headless test suite
+- Git + Git LFS (binary art and audio); GitHub Actions for tests on three operating systems, lint, CodeQL, secret scanning, dependency audits and releases
 
 ## Requirements
 
@@ -67,11 +133,7 @@ generator (+ fuel cans / charcoal) ⇢ cables ⇢ machine workshop → gears →
 ## Getting started
 
 ```bash
-git clone https://github.com/Ale-Newport/AfterFall.git
-```
-
-```bash
-cd AfterFall && ./tools/setup-dev.sh
+git clone https://github.com/Ale-Newport/AfterFall.git && cd AfterFall && ./tools/setup-dev.sh
 ```
 
 `setup-dev.sh` enables Git LFS for this repository only and installs the commit-msg hook.
@@ -110,7 +172,7 @@ Every binding can be changed in **Settings**.
 dotnet test tools/dotnet/AfterfallSim.Tests/AfterfallSim.Tests.csproj
 ```
 
-This runs the EditMode test suite (124 tests) headlessly: inventory conservation, reservations, crafting, construction, machines, power, AI, threats, world generation, saves and colonist jobs, farming and full gameplay-loop scenarios.
+This runs the EditMode test suite (124 tests) headlessly, as CI does on Linux, Windows and macOS: inventory conservation, reservations, crafting, construction, machines, power, AI, threats, world generation, saves and colonist jobs, farming and full gameplay-loop scenarios.
 
 With Unity installed and licensed, `tools/run-unity-checks.sh` runs the same suite inside Unity, the PlayMode smoke tests, a macOS build and the scripted tour (screenshots, frame times and an error count in `Logs/unity-checks/`). See [docs/TESTING.md](docs/TESTING.md).
 
@@ -124,6 +186,10 @@ With Unity installed and licensed, `tools/run-unity-checks.sh` runs the same sui
 - [docs/decisions/](docs/decisions/): architecture decision records
 - [docs/ASSET_LICENSES.md](docs/ASSET_LICENSES.md) and [CHANGELOG.md](CHANGELOG.md)
 
+## Contributing
+
+Contributions are welcome through forks and pull requests; every pull request is reviewed and approved by the maintainer before it merges. Start with [CONTRIBUTING.md](CONTRIBUTING.md), pick a [`good first issue`](https://github.com/Ale-Newport/AfterFall/labels/good%20first%20issue) or [`help wanted`](https://github.com/Ale-Newport/AfterFall/labels/help%20wanted) issue, or share a playtest in [Discussions](https://github.com/Ale-Newport/AfterFall/discussions). Please follow the [Code of Conduct](CODE_OF_CONDUCT.md), and report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+
 ## License
 
-All rights reserved by the repository owner unless a license file states otherwise. The project settings and URP pipeline assets derived from Unity's 3D (URP) template, and the URP-derived material assets, are used under the Unity Companion License. See [docs/ASSET_LICENSES.md](docs/ASSET_LICENSES.md).
+AFTERFALL is released under the [MIT License](LICENSE). Files derived from Unity's 3D (URP) template (project settings, URP pipeline assets and the URP-derived base materials) remain under the [Unity Companion License](https://unity.com/legal/licenses/unity-companion-license); see [docs/ASSET_LICENSES.md](docs/ASSET_LICENSES.md).

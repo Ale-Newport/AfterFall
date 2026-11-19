@@ -1,8 +1,45 @@
 # Changelog
 
-All notable changes, grouped by milestone. Dates are UTC.
+All notable changes, grouped by release and milestone. Dates are UTC. The project follows [Semantic Versioning](https://semver.org); until 1.0, minor versions may change save formats and gameplay.
 
-## [Unreleased] — First runs in Unity (2026-11-07)
+## [Unreleased]
+
+## [0.1.0] - 2026-11-19
+
+The first public release: an early playable prototype of the whole survival → industry → settlement loop. A universal macOS build is attached; the Windows build is untested, and nobody has played the loop by hand yet.
+
+### Highlights
+- A deterministic 512 m valley with six points of interest, harvestable forest, a lake and roads.
+- Third-person survival: hunger, thirst, stamina, carry weight, death with recoverable belongings.
+- 36 items, 20 recipes, 17 buildable structures with snapping and explained placement rules.
+- Furnace, machine workshop and electric pump; generators, poles, lamps and batteries on a power grid with priority load shedding.
+- Two recruitable colonists who haul, build, farm, eat, sleep and flee, directed from a strategic view without omniscience.
+- Wanderer and Runner infected with vision, hearing and barrier breaching, and a fair threat director.
+- Versioned, checksummed JSON saves with migrations and backup recovery.
+- Verified by 124 EditMode tests (headless on Linux, Windows and macOS, and in Unity), 7 PlayMode tests, and a scripted tour of the macOS build with 0 failed checks and 0 logged errors.
+
+### Added
+- Visual overhaul (2026-11-09): a textured surface shader with procedural textures; illustrated icons for every item; sculpted low-poly characters with procedural animation and held tool models; crafted models for every structure, machine and container; weathered architecture and world props; textured terrain, instanced ground cover and a lake shader; a dynamic sky with sun, moon, stars and clouds, time-of-day lighting and a filmic grade.
+- `tools/gallery.sh` and the `ArtPreview` tool for visual review of every model, icon and texture.
+- Open-source project files: MIT license, contributing guide, code of conduct, security policy, issue forms, pull request template, CODEOWNERS and `.editorconfig`.
+- CI on Linux, Windows and macOS with lint (warnings as errors, formatting, `.meta` files, actionlint, shellcheck) and a NuGet vulnerability audit; CodeQL for C# and workflows; a gitleaks history scan and pull-request dependency review; Dependabot for actions and NuGet; a release workflow that publishes notes from this changelog.
+- `tools/package-macos.sh` packages the macOS build with a SHA-256 checksum and attaches it to a release.
+- README demo GIF, screenshots and social preview image from the scripted tour (`docs/media`, kept out of Git LFS).
+
+### Changed
+- Test tooling: Microsoft.NET.Test.Sdk 18.12.0 and NUnit3TestAdapter 6.3.1. NUnit stays on 3.x and Newtonsoft.Json on 13.0.2 to match Unity.
+- The CI workflow is now `ci.yml` (it was `simulation-tests.yml`).
+
+### Fixed
+- Mesh normals on millimetre bevels (NaN lighting showed as white blobs); new games start in 2.4 s instead of 3.3 s thanks to background texture warm-up.
+- `tools/run-unity-checks.sh` and `tools/gallery.sh` stop if they cannot change to the repository root.
+
+### Security
+- Branch and tag rulesets: changes from anyone but the maintainer need a pull request with code-owner approval; force pushes and deletions are blocked.
+- Secret scanning with push protection, Dependabot alerts and security updates, private vulnerability reporting, read-only workflow tokens, SHA-pinned actions and approval before workflows run for outside contributors.
+- `.gitignore` excludes signing keys, certificates and provisioning profiles; `.env.example` documents the optional tool variables.
+
+## [0.1.0-dev.3] - First runs in Unity (2026-11-07)
 
 ### Added
 - The tour covers every system: menus, a shelter with a barricade the infected breach, repair, demolish, melee, fleeing, eating and sleeping colonists, a second survivor's long walk, a pump outpost with irrigation, poles and cables, batteries, priority shedding, death and recovery, pause and the F3 overlay.
@@ -33,7 +70,7 @@ All notable changes, grouped by milestone. Dates are UTC.
 ### Changed
 - Unity 6000.3.28f1 serialization upgrades of project settings and URP assets; `Packages/packages-lock.json` is committed.
 
-## [Unreleased] — Phase 6 groundwork (2026-11-07)
+## [0.1.0-dev.2] - Phase 6 groundwork (2026-11-07)
 
 ### Added
 - Colony: recruitable survivors, a job board (haul, build, farm, eat, rest), assignment by priority, preference, skill and distance, reservation-backed hauling with failure reasons, needs, fleeing, death, saves, and a strategic colony panel.
@@ -49,7 +86,7 @@ All notable changes, grouped by milestone. Dates are UTC.
 - Simulation performance: the busy-settlement frame cost dropped from 0.030 ms to 0.007 ms after caching the structure order.
 - The loading screen is shown before world generation and save loading.
 
-## [Unreleased] — Phase 0–5: prototype foundation (2026-11-07)
+## [0.1.0-dev.1] - Phase 0–5: prototype foundation (2026-11-07)
 
 ### Added
 - Unity 6000.3.28f1 project with pinned packages, URP settings from the official 3D (URP) template, Git LFS rules, a repository-local commit-msg hook that blocks AI attribution, and project Claude Code settings with attribution disabled.
@@ -68,3 +105,6 @@ All notable changes, grouped by milestone. Dates are UTC.
 
 ### Known limitations
 - Not yet run in a licensed Unity Editor; in-engine behaviour is unverified (see docs/PROGRESS.md).
+
+[Unreleased]: https://github.com/Ale-Newport/AfterFall/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Ale-Newport/AfterFall/releases/tag/v0.1.0
