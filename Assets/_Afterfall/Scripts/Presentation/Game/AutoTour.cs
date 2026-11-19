@@ -30,6 +30,17 @@ namespace Afterfall.Presentation
     public sealed class AutoTour : MonoBehaviour
     {
         public const string Flag = "-afterfall-tour";
+
+        /// <summary>
+        /// <c>-afterfall-tour-patience &lt;factor&gt;</c> stretches every real-time wait and budget of the
+        /// tour. The simulation advances at most 0.25 s per frame, so on a machine without a GPU
+        /// (software rendering at about 1 fps) the default budgets end before the simulation catches up.
+        /// </summary>
+        public const string PatienceFlag = "-afterfall-tour-patience";
+
+        private static float _patience = 1f;
+
+        private static float P(float seconds) => seconds * _patience;
         private GameBootstrap _boot;
         private string _dir;
         private readonly List<string> _errors = new List<string>();
@@ -43,7 +54,6 @@ namespace Afterfall.Presentation
             public EntityId Colonist, Plot, Workshop, Generator;
             public Structure Gen, Shop, Lamp, Crate;
             public ColonistState Mara;
-            public readonly List<EntityId> Expected = new List<EntityId>();
         }
 
         /// <summary>The tour's output folder when <c>-afterfall-tour</c> is on the command line, otherwise null.</summary>
@@ -59,6 +69,10 @@ namespace Afterfall.Presentation
         public static void TryAttach(GameBootstrap boot)
         {
             string dir = RequestedDirectory();
+            string[] args = Environment.GetCommandLineArgs();
+            int pi = Array.IndexOf(args, PatienceFlag);
+            if (pi >= 0 && pi + 1 < args.Length && float.TryParse(args[pi + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float patience))
+                _patience = Mathf.Clamp(patience, 1f, 100f);
             if (dir == null) return;
             Application.runInBackground = true; // an unfocused player would pause the tour
             var tour = boot.gameObject.AddComponent<AutoTour>();
@@ -86,7 +100,7 @@ namespace Afterfall.Presentation
 
             float t0 = Time.realtimeSinceStartup;
             _boot.StartNewGame(DifficultyPreset.Survival, 20261107);
-            float timeout = t0 + 180f;
+            float timeout = t0 + P(180f);
             while ((_boot.Game == null || !_boot.Game.Running) && Time.realtimeSinceStartup < timeout) yield return null;
             GameController gc = _boot.Game;
             if (gc == null || !gc.Running)
@@ -96,8 +110,9 @@ namespace Afterfall.Presentation
                 yield break;
             }
             Line($"New game ready in {Time.realtimeSinceStartup - t0:0.0} s");
+            if (_patience > 1f) Line($"Tour patience: real-time budgets x{_patience:0.#}");
             gc.Session.Threats.SpawningEnabled = false;
-            float navTimeout = Time.realtimeSinceStartup + 60f;
+            float navTimeout = Time.realtimeSinceStartup + P(60f);
             while (!gc.NavReady && Time.realtimeSinceStartup < navTimeout) yield return null;
             Line($"NavMesh ready: {gc.NavReady} after {Time.realtimeSinceStartup - t0:0.0} s");
             yield return Seconds(2f);
@@ -196,7 +211,7 @@ namespace Afterfall.Presentation
             SkipTo(gc, 22.0);
             Time.timeScale = 4f;
             float sleepWait = Time.realtimeSinceStartup;
-            while (Time.realtimeSinceStartup - sleepWait < 20f && town.Mara.Activity != ColonistActivity.Resting) yield return null;
+            while (Time.realtimeSinceStartup - sleepWait < P(20f) && town.Mara.Activity != ColonistActivity.Resting) yield return null;
             Time.timeScale = 1f;
             Check(town.Mara.Activity == ColonistActivity.Resting, $"At night {town.Mara.Name} sleeps in her bed ({town.Mara.Activity}: {town.Mara.Status})");
             StandAndLook(gc, town.Site + new Vector3(-9f, 0f, -7f), town.Site);
@@ -221,7 +236,7 @@ namespace Afterfall.Presentation
             int structures = gc.Session.World.Structures.Count;
             gc.Save("tour_test");
             _boot.LoadGame("tour_test");
-            float loadTimeout = Time.realtimeSinceStartup + 120f;
+            float loadTimeout = Time.realtimeSinceStartup + P(120f);
             while ((_boot.Game == null || _boot.Game == gc || !_boot.Game.Running) && Time.realtimeSinceStartup < loadTimeout) yield return null;
             GameController loaded = _boot.Game;
             if (loaded == null || loaded == gc || !loaded.Running) Line("FAIL: reload did not complete");
@@ -278,7 +293,7 @@ namespace Afterfall.Presentation
                 yield return Deposit(gc, furnace, "wood", 3, furnace.Machine.Fuel);
                 Time.timeScale = 4f;
                 float smelt = Time.realtimeSinceStartup;
-                while (Time.realtimeSinceStartup - smelt < 20f && furnace.Machine.Output.Count("iron_ingot") < 2) yield return null;
+                while (Time.realtimeSinceStartup - smelt < P(20f) && furnace.Machine.Output.Count("iron_ingot") < 2) yield return null;
                 Time.timeScale = 1f;
                 Check(furnace.Machine.Output.Count("iron_ingot") >= 2, $"Furnace: {furnace.Machine.Status}, {furnace.Machine.Output.Count("iron_ingot")} ingots smelted ({Time.realtimeSinceStartup - smelt:0.0} s at 4x)");
                 gc.Ui.OpenMachine(furnace.Id);
@@ -374,7 +389,7 @@ namespace Afterfall.Presentation
             float start = Time.realtimeSinceStartup;
             float nextLog = start;
             bool captured = false;
-            while (Time.realtimeSinceStartup - start < 45f && !(extra != null && extra.IsComplete && plotB.Crop.Planted && plotB.Crop.Water > 0f))
+            while (Time.realtimeSinceStartup - start < P(45f) && !(extra != null && extra.IsComplete && plotB.Crop.Planted && plotB.Crop.Water > 0f))
             {
                 if (Time.realtimeSinceStartup >= nextLog)
                 {
@@ -401,7 +416,7 @@ namespace Afterfall.Presentation
             plotB.Crop.Growth = 1f; // tour shortcut: ripen the crop so the harvest happens now
             Time.timeScale = 4f;
             start = Time.realtimeSinceStartup;
-            while (Time.realtimeSinceStartup - start < 30f && crate.Storage.Count("potato") == 0) yield return Seconds(0.5f);
+            while (Time.realtimeSinceStartup - start < P(30f) && crate.Storage.Count("potato") == 0) yield return Seconds(0.5f);
             Time.timeScale = 1f;
             Check(crate.Storage.Count("potato") > 0, $"The colonist harvested the ripe bed into the crate ({crate.Storage.Count("potato")} potatoes)");
 
@@ -687,16 +702,15 @@ namespace Afterfall.Presentation
             gc.Player.Teleport(c + Vector3.up * 0.45f);
             gc.CameraRig.Look(Mathf.Atan2(outward.x, outward.z) * Mathf.Rad2Deg, 8f);
             ZombieState z = s.Zombies.Spawn((door + outward * 12f).ToSim(), "wanderer", s.Rng);
-            float maxHealth = s.Content.Building("barricade").MaxHealth;
             Time.timeScale = 2f;
             float start = Time.realtimeSinceStartup, nextNoise = 0f;
             var shelter = new List<Structure>(walls) { doorway, barricade };
             float nextLog = start;
-            while (Time.realtimeSinceStartup - start < 40f && shelter.All(x => x.Health >= s.Content.Building(x.DefId).MaxHealth) && !z.IsDead)
+            while (Time.realtimeSinceStartup - start < P(40f) && shelter.All(x => x.Health >= s.Content.Building(x.DefId).MaxHealth) && !z.IsDead)
             {
                 if (Time.realtimeSinceStartup >= nextNoise)
                 {
-                    nextNoise = Time.realtimeSinceStartup + 2f;
+                    nextNoise = Time.realtimeSinceStartup + P(2f);
                     s.EmitNoise(s.Player.Position, 30f, "tour");
                 }
                 if (Time.realtimeSinceStartup >= nextLog)
@@ -725,12 +739,12 @@ namespace Afterfall.Presentation
                 if (bag.GetSlot(i).ItemId == "stone_axe") s.SelectHotbar(i);
             int swings = 0;
             start = Time.realtimeSinceStartup;
-            while (Time.realtimeSinceStartup - start < 30f && !z.IsDead)
+            while (Time.realtimeSinceStartup - start < P(30f) && !z.IsDead)
             {
                 if (Vector3.Distance(z.Position.ToUnity(), gc.Player.transform.position) < 2.6f && s.MeleeAttack(new[] { z.Id }).Code == "ok") swings++;
                 else if (Time.realtimeSinceStartup >= nextNoise)
                 {
-                    nextNoise = Time.realtimeSinceStartup + 2f;
+                    nextNoise = Time.realtimeSinceStartup + P(2f);
                     s.EmitNoise(s.Player.Position, 30f, "tour");
                 }
                 yield return null;
@@ -753,7 +767,7 @@ namespace Afterfall.Presentation
             z.Yaw = Mathf.Atan2(at.x - spawn.x, at.z - spawn.z) * Mathf.Rad2Deg; // looking her way, so it sees her
             float start = Time.realtimeSinceStartup, nextLog = start;
             bool fled = false;
-            while (Time.realtimeSinceStartup - start < 15f && !fled && mara.Vitals.Health > 50f)
+            while (Time.realtimeSinceStartup - start < P(15f) && !fled && mara.Vitals.Health > 50f)
             {
                 fled = mara.Status.StartsWith("Fleeing");
                 if (Time.realtimeSinceStartup >= nextLog)
@@ -772,7 +786,7 @@ namespace Afterfall.Presentation
             mara.Vitals.Hunger = 20f; // tour shortcut: a hungry colonist
             Time.timeScale = 4f;
             start = Time.realtimeSinceStartup;
-            while (Time.realtimeSinceStartup - start < 20f && mara.Vitals.Hunger < 30f) yield return null;
+            while (Time.realtimeSinceStartup - start < P(20f) && mara.Vitals.Hunger < 30f) yield return null;
             Time.timeScale = 1f;
             Check(mara.Vitals.Hunger >= 30f, $"{mara.Name} ate from the crate when hungry (hunger 20 -> {mara.Vitals.Hunger:0}, potatoes {potatoes} -> {town.Crate.Storage.Count("potato")})");
 
@@ -793,7 +807,7 @@ namespace Afterfall.Presentation
             Time.timeScale = 4f;
             start = Time.realtimeSinceStartup;
             nextLog = start;
-            while (Time.realtimeSinceStartup - start < 60f && Vector3.Distance(Flat(eli.Position.ToUnity()), Flat(town.Site)) > 25f)
+            while (Time.realtimeSinceStartup - start < P(60f) && Vector3.Distance(Flat(eli.Position.ToUnity()), Flat(town.Site)) > 25f)
             {
                 if (Time.realtimeSinceStartup >= nextLog)
                 {
@@ -837,7 +851,7 @@ namespace Afterfall.Presentation
             yield return Use(gc, plot, () => s.PlantCrop(plot.Id), "plant at the pump");
             Time.timeScale = 4f;
             float start = Time.realtimeSinceStartup;
-            while (Time.realtimeSinceStartup - start < 15f && (pump.Machine.Output.Count("water_bottle") == 0 || !plot.Crop.Irrigated)) yield return null;
+            while (Time.realtimeSinceStartup - start < P(15f) && (pump.Machine.Output.Count("water_bottle") == 0 || !plot.Crop.Irrigated)) yield return null;
             Time.timeScale = 1f;
             Check(pump.Machine.Output.Count("water_bottle") > 0, $"The powered pump filled {pump.Machine.Output.Count("water_bottle")} bottles ({UiKit.StatusText(pump.Machine)})");
             Check(plot.Crop.Irrigated && plot.Crop.Water >= 99f, $"The pump irrigates the planter bed {Vector3.Distance(Flat(pump.Position.ToUnity()), Flat(plot.Position.ToUnity())):0.0} m away (water {plot.Crop.Water:0})");
@@ -1011,7 +1025,7 @@ namespace Afterfall.Presentation
 
         private static IEnumerator Seconds(float s)
         {
-            float end = Time.realtimeSinceStartup + s;
+            float end = Time.realtimeSinceStartup + P(s);
             while (Time.realtimeSinceStartup < end) yield return null;
         }
 

@@ -4,7 +4,8 @@ name: Windows player
 # Windows runner. Unity player builds need a licensed editor, so the build is made locally
 # (tools/package-windows.sh) and attached to a release or draft release; this workflow
 # downloads it from there. The runner has no GPU: Direct3D 11 runs on the WARP software
-# rasterizer, so frame times are not representative, but every gameplay check is.
+# rasterizer at about 1 fps, so frame times are not representative, but every gameplay check
+# is. -afterfall-tour-patience stretches the tour's real-time budgets to match.
 
 on:
   workflow_dispatch:
@@ -21,7 +22,7 @@ jobs:
   tour:
     name: Scripted tour (windows-latest)
     runs-on: windows-latest
-    timeout-minutes: 60
+    timeout-minutes: 340
     permissions:
       # Draft releases are only visible to tokens with write access to the repository.
       contents: write
@@ -46,9 +47,9 @@ jobs:
           $exe = Join-Path $PWD "dist/AFTERFALL-$env:TAG-windows-x64/AFTERFALL.exe"
           $out = Join-Path $PWD "tour"
           $log = Join-Path $PWD "tour-player.log"
-          $argList = @("-afterfall-tour", $out, "-screen-fullscreen", "0", "-screen-width", "1280", "-screen-height", "720", "-force-d3d11", "-logFile", $log)
+          $argList = @("-afterfall-tour", $out, "-screen-fullscreen", "0", "-screen-width", "800", "-screen-height", "450", "-force-d3d11", "-afterfall-tour-patience", "25", "-logFile", $log)
           $p = Start-Process -FilePath $exe -ArgumentList $argList -PassThru
-          if (-not $p.WaitForExit(45 * 60 * 1000)) { $p.Kill(); throw "The tour did not finish within 45 minutes." }
+          if (-not $p.WaitForExit(320 * 60 * 1000)) { $p.Kill(); throw "The tour did not finish within 320 minutes." }
           Write-Host "Player exited with code $($p.ExitCode)"
 
       - name: Check the tour report
