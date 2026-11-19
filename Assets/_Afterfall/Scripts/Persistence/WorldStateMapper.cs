@@ -32,6 +32,7 @@ namespace Afterfall.Persistence
                 ZombieRngState = w.ZombieRng.State,
                 ThreatRngState = w.ThreatRng.State,
                 FarmRngState = w.FarmRng.State,
+                TickPhases = new Dictionary<string, double>(w.TickPhases),
                 Player = ToDto(w.Player),
                 Threat = w.Threat,
                 Metrics = w.Metrics,
@@ -171,6 +172,7 @@ namespace Afterfall.Persistence
             if (dto.ZombieRngState != 0) w.ZombieRng.State = dto.ZombieRngState;
             if (dto.ThreatRngState != 0) w.ThreatRng.State = dto.ThreatRngState;
             if (dto.FarmRngState != 0) w.FarmRng.State = dto.FarmRngState;
+            foreach (KeyValuePair<string, double> kv in dto.TickPhases ?? new Dictionary<string, double>()) w.TickPhases[kv.Key] = kv.Value;
             w.Layout = WorldGenerator.Generate(dto.Seed);
 
             if (dto.Player != null)
@@ -390,8 +392,41 @@ namespace Afterfall.Persistence
                 if (qty != s.Quantity) warnings?.Add($"Inventory {dto.Id}: clamped {s.ItemId} from {s.Quantity} to {qty}.");
                 if (qty > 0) inv.SetSlotRaw(s.Index, new ItemStack(s.ItemId, qty, s.Durability));
             }
-            foreach (ReservationRecord r in dto.Reservations ?? new List<ReservationRecord>())
+            RestoreReservations(inv, dto, content, warnings);
+        }
+
+        /// <summary>
+        /// Restores reservations that still make sense for the restored contents. A content update can
+        /// remove an item or lower its stack size after a save was made; keeping those reservations
+        /// would fail validation and lock the player out of the save (and its backup). Dropped
+        /// reservations are reported; the jobs holding them fail cleanly on their next step
+        /// (they check HasReservation) and are planned again.
+        /// </summary>
+        private static void RestoreReservations(Inventory inv, InventoryDto dto, ContentDatabase content, List<string> warnings)
+        {
+            var records = new List<ReservationRecord>(dto.Reservations ?? new List<ReservationRecord>());
+            records.Sort((a, b) => (a?.Id ?? 0).CompareTo(b?.Id ?? 0));
+            var outgoing = new Dictionary<string, int>();
+            foreach (ReservationRecord r in records)
+            {
+                if (r != null) inv.SkipReservationId(r.Id);
+                if (r == null || r.Quantity <= 0 || string.IsNullOrEmpty(r.ItemId) || !content.Items.TryGet(r.ItemId, out _))
+                {
+                    warnings?.Add($"Inventory {dto.Id}: dropped a reservation for unknown or empty item '{r?.ItemId}'.");
+                    continue;
+                }
+                if (r.Kind == ReservationKind.Outgoing)
+                {
+                    outgoing.TryGetValue(r.ItemId, out int already);
+                    if (already + r.Quantity > inv.Count(r.ItemId))
+                    {
+                        warnings?.Add($"Inventory {dto.Id}: dropped a reservation of {r.Quantity} {r.ItemId}; only {inv.Count(r.ItemId) - already} unreserved remain.");
+                        continue;
+                    }
+                    outgoing[r.ItemId] = already + r.Quantity;
+                }
                 inv.RestoreReservation(new ReservationRecord { Id = r.Id, Kind = r.Kind, ItemId = r.ItemId, Quantity = r.Quantity });
+            }
         }
 
         // ================================================================== helpers

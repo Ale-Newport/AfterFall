@@ -36,6 +36,23 @@ namespace Afterfall.Core
             _entries.Add(new Entry(system, 1.0 / hz));
         }
 
+        /// <summary>
+        /// Copies each system's progress toward its next tick into <paramref name="phases"/> (keyed by
+        /// system name). Stored in the world and saved, so a loaded game ticks every system at the
+        /// same moments as the game that was saved.
+        /// </summary>
+        public void StorePhases(IDictionary<string, double> phases)
+        {
+            foreach (Entry e in _entries) phases[e.System.Name] = e.Accumulator;
+        }
+
+        /// <summary>Restores phases written by <see cref="StorePhases"/>; unknown or missing names keep zero.</summary>
+        public void RestorePhases(IReadOnlyDictionary<string, double> phases)
+        {
+            foreach (Entry e in _entries)
+                if (phases.TryGetValue(e.System.Name, out double a) && a >= 0 && a < e.Interval) e.Accumulator = a;
+        }
+
         public void Advance(double dt)
         {
             if (dt <= 0) return;

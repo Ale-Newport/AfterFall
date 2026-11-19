@@ -72,6 +72,7 @@ namespace Afterfall.Services
             Scheduler.Register(Zombies, 10);
             Scheduler.Register(Threats, 0.5);
             Scheduler.Register(new ResourceRespawnSystem(World, Content), 0.2);
+            Scheduler.RestorePhases(World.TickPhases);
         }
 
         public ContentDatabase Content { get; }
@@ -103,6 +104,7 @@ namespace Afterfall.Services
             dt = Math.Min(dt, 0.25); // a long frame hitch must not fast-forward the world
             World.Clock.Advance(dt);
             Scheduler.Advance(dt);
+            Scheduler.StorePhases(World.TickPhases);
         }
 
         // ================================================================== player state from presentation

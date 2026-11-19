@@ -498,6 +498,15 @@ namespace Afterfall.Domain.Items
             if (record.Id >= _nextReservationId) _nextReservationId = record.Id + 1;
         }
 
+        /// <summary>
+        /// Keeps reservation ids from a save unique even when a reservation is not restored, so a
+        /// job still holding the dropped token can never match a newer reservation.
+        /// </summary>
+        public void SkipReservationId(long id)
+        {
+            if (id >= _nextReservationId) _nextReservationId = id + 1;
+        }
+
         public void ClearAll()
         {
             for (int i = 0; i < _slots.Length; i++) _slots[i] = ItemStack.Empty;

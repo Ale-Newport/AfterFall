@@ -1,14 +1,17 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Afterfall.Core;
 using Afterfall.Domain.AI;
 using Afterfall.Domain.Colony;
 using Afterfall.Domain.Construction;
+using Afterfall.Domain.Content;
 using Afterfall.Domain.Items;
 using Afterfall.Domain.Threats;
 using Afterfall.Domain.World;
 using Afterfall.Persistence;
 using Afterfall.Services;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace Afterfall.Tests
@@ -151,6 +154,126 @@ namespace Afterfall.Tests
             Assert.IsTrue(t.PendingRaidAt < 0 || t.PendingRaidAt > s.World.Clock.ElapsedSeconds, "the raid is rerouted with a new warning or called off");
             if (t.PendingRaidAt >= 0)
                 Assert.IsTrue(s.Threats.IsValidSpawn(t.PendingRaidOrigin, ThreatDirector.MinSpawnDistance));
+        }
+
+        // ------------------------------------------------------------------ issue #5
+
+        /// <summary>Content loaded from the game's JSON files, with items.json changed by <paramref name="editItems"/>.</summary>
+        private static ContentDatabase ContentWithItems(System.Action<JArray> editItems)
+        {
+            string dir = TestSupport.ContentDirectory();
+            return ContentJson.Load(ContentJson.FromLookup(name =>
+            {
+                string text = File.ReadAllText(Path.Combine(dir, name + ".json"));
+                if (name != "items") return text;
+                JArray items = JArray.Parse(text);
+                editItems(items);
+                return items.ToString();
+            }));
+        }
+
+        private static string SaveWithReservedHaul(out GameSession s, out Structure crate, out ReservationToken token)
+        {
+            s = TestSupport.NewSession(90);
+            s.Threats.SpawningEnabled = false;
+            crate = TestSupport.Build(s.World, "storage_crate", new Vec3(s.Player.Position.X + 3, s.Player.Position.Y, s.Player.Position.Z));
+            Assert.IsTrue(crate.Storage.TryAdd("stone", 25));
+            Assert.IsTrue(crate.Storage.TryReserveItems("stone", 20, out token), "a colonist is on the way to collect 20 stone");
+            return SaveSerializer.Serialize(s.World, "regression", 0);
+        }
+
+        [Test]
+        public void ASaveStillLoads_WhenAReservedItemWasRemovedFromContent()
+        {
+            string save = SaveWithReservedHaul(out _, out Structure crate, out _);
+            ContentDatabase content = ContentWithItems(items => items.Where(i => (string)i["id"] == "stone").ToList().ForEach(i => i.Remove()));
+            var warnings = new List<string>();
+
+            WorldState w = SaveSerializer.Deserialize(save, content, warnings);
+
+            Inventory loaded = w.FindInventory(crate.Storage.Id);
+            Assert.AreEqual(0, loaded.Count("stone"));
+            Assert.AreEqual(0, loaded.ReservedOutgoing("stone"));
+            Assert.IsTrue(warnings.Any(m => m.Contains("reservation")), string.Join("\n", warnings));
+        }
+
+        [Test]
+        public void ASaveStillLoads_WhenAReservedItemsStackSizeWasLowered()
+        {
+            string save = SaveWithReservedHaul(out _, out Structure crate, out ReservationToken token);
+            ContentDatabase content = ContentWithItems(items => items.First(i => (string)i["id"] == "stone")["maxStack"] = 10);
+            var warnings = new List<string>();
+
+            WorldState w = SaveSerializer.Deserialize(save, content, warnings);
+
+            Inventory loaded = w.FindInventory(crate.Storage.Id);
+            Assert.LessOrEqual(loaded.ReservedOutgoing("stone"), loaded.Count("stone"));
+            Assert.IsFalse(loaded.HasReservation(token), "the over-sized reservation is dropped");
+            Assert.IsTrue(loaded.TryReserveItems("stone", 1, out ReservationToken fresh));
+            Assert.AreNotEqual(token.Id, fresh.Id, "a new reservation never reuses the dropped id");
+        }
+
+        [Test]
+        public void ValidReservations_SurviveSaveAndLoadUnchanged()
+        {
+            string save = SaveWithReservedHaul(out _, out Structure crate, out ReservationToken token);
+            var warnings = new List<string>();
+
+            WorldState w = SaveSerializer.Deserialize(save, TestSupport.Content, warnings);
+
+            Inventory loaded = w.FindInventory(crate.Storage.Id);
+            Assert.IsTrue(loaded.HasReservation(token));
+            Assert.AreEqual(20, loaded.ReservedOutgoing("stone"));
+            Assert.IsFalse(warnings.Any(m => m.Contains("reservation")));
+        }
+
+        // ------------------------------------------------------------------ issue #6
+
+        private static GameSession FurnaceBase(string recipe, out Structure furnace, out Structure crate)
+        {
+            GameSession s = TestSupport.NewSession(91);
+            s.Threats.SpawningEnabled = false;
+            foreach (EntityId id in s.World.Zombies.Keys.ToList()) s.World.Zombies.Remove(id);
+            s.World.Clock.Advance(s.World.Clock.DayLengthSeconds * 0.1);
+            s.World.Tech.Unlocked.Add("metalworking");
+            Vec3 p = s.Player.Position;
+            TestSupport.Build(s.World, "bed", new Vec3(p.X - 3, p.Y, p.Z));
+            crate = TestSupport.Build(s.World, "storage_crate", new Vec3(p.X + 3, p.Y, p.Z));
+            furnace = TestSupport.Build(s.World, "furnace", new Vec3(p.X + 12, p.Y, p.Z + 6));
+            Assert.IsTrue(s.Machines.SetRecipe(furnace, recipe).Ok);
+            ColonistState c = s.World.Colonists.Values.First();
+            c.Position = new Vec3(p.X + 1, p.Y, p.Z + 1);
+            Assert.IsTrue(s.Recruit(c.Id).Ok);
+            return s;
+        }
+
+        private static int Hauling(GameSession s, Inventory destination, string item) =>
+            s.World.Jobs.Values.Where(j => j.IsActive && j.Type == JobType.Haul && j.DestinationInventory == destination.Id && j.ItemId == item).Sum(j => j.Quantity);
+
+        [Test]
+        public void FuelIsPlanned_WhileIngredientHaulsAreOnTheWay()
+        {
+            GameSession s = FurnaceBase("smelt_iron", out Structure furnace, out Structure crate);
+            crate.Storage.TryAdd("iron_ore", 10);
+            crate.Storage.TryAdd("wood", 10);
+
+            s.Colony.Tick(0.1);
+
+            Assert.Greater(Hauling(s, furnace.Machine.Input, "iron_ore"), 0, "ore is on its way");
+            Assert.Greater(Hauling(s, furnace.Machine.Fuel, "wood"), 0, "fuel is planned in the same pass");
+        }
+
+        [Test]
+        public void WoodHauledAsFuel_DoesNotCountTowardTheCharcoalRecipe()
+        {
+            GameSession s = FurnaceBase("charcoal", out Structure furnace, out Structure crate);
+            crate.Storage.TryAdd("wood", 30);
+
+            s.Colony.Tick(0.1);
+
+            int recipeWood = s.Content.Recipe("charcoal").Inputs.First(i => i.ItemId == "wood").Quantity;
+            Assert.GreaterOrEqual(Hauling(s, furnace.Machine.Input, "wood"), recipeWood, "the recipe's wood is planned");
+            Assert.Greater(Hauling(s, furnace.Machine.Fuel, "wood"), 0, "and so is the fuel");
         }
     }
 }

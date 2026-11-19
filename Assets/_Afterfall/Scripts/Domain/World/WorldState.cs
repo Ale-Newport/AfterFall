@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Afterfall.Core;
 using Afterfall.Domain.AI;
@@ -102,6 +103,9 @@ namespace Afterfall.Domain.World
         public DeterministicRandom ThreatRng { get; }
         /// <summary>Farming: crop yields and returned seed.</summary>
         public DeterministicRandom FarmRng { get; }
+
+        /// <summary>Each simulation system's progress toward its next fixed-rate tick, by system name (saved).</summary>
+        public Dictionary<string, double> TickPhases { get; } = new Dictionary<string, double>(StringComparer.Ordinal);
 
         public PlayerState Player { get; set; }
         public Dictionary<EntityId, Structure> Structures { get; } = new Dictionary<EntityId, Structure>();

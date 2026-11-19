@@ -208,6 +208,7 @@ namespace Afterfall.Persistence
         public ulong ZombieRngState { get; set; }
         public ulong ThreatRngState { get; set; }
         public ulong FarmRngState { get; set; }
+        public Dictionary<string, double> TickPhases { get; set; }
         public PlayerDto Player { get; set; }
         public List<StructureDto> Structures { get; set; } = new List<StructureDto>();
         public List<long[]> PowerLinks { get; set; } = new List<long[]>();

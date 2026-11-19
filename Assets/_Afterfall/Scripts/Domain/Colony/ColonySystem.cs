@@ -304,7 +304,7 @@ namespace Afterfall.Domain.Colony
                 foreach (ItemAmount input in r.Inputs)
                 {
                     int target = input.Quantity * 3;
-                    int missing = target - s.Machine.Input.Count(input.ItemId) - PendingQuantity(s.Id, input.ItemId);
+                    int missing = target - s.Machine.Input.Count(input.ItemId) - PendingQuantity(s.Id, input.ItemId, s.Machine.Input.Id);
                     if (missing < input.Quantity) continue;
                     PlanSupply(s, s.Machine.Input, input.ItemId, missing, storages, now);
                 }
@@ -335,6 +335,7 @@ namespace Afterfall.Domain.Colony
             if (HasActiveJob(JobType.Farm, plot.Id, null)) return;
             BuildingDefinition def = _content.Building(plot.DefId);
             Farming.CropState crop = plot.Crop;
+            if (def?.Farm == null || crop == null) return;
             string name = def?.Name ?? "planter bed";
             if (crop.Ready)
             {
@@ -373,7 +374,7 @@ namespace Afterfall.Domain.Colony
         {
             int have = 0;
             for (int i = 0; i < fuel.SlotCount; i++) have += fuel.GetSlot(i).Quantity;
-            if (have + PendingQuantity(machineId, null) >= 2) return;
+            if (have + PendingQuantity(machineId, null, fuel.Id) >= 2) return;
             string best = null;
             float bestValue = 0f;
             foreach (Structure st in storages)
@@ -580,7 +581,7 @@ namespace Afterfall.Domain.Colony
                 Inventory src = _world.FindInventory(j.SourceInventory);
                 if (src == null || !src.HasReservation(j.SourceToken))
                 {
-                    Fail(c, j, "the source container is gone");
+                    Fail(c, j, src == null ? "the source container is gone" : "the reserved items are no longer there");
                     return;
                 }
                 if (!MoveTo(c, InventoryPosition(j.SourceInventory, c), dt, ArriveDistance)) return;
@@ -806,11 +807,17 @@ namespace Afterfall.Domain.Colony
         }
 
         /// <summary>Quantity already on its way to a structure (optionally of one item).</summary>
-        private int PendingQuantity(EntityId target, string itemId)
+        /// <summary>
+        /// Quantity that active hauls are bringing to a structure. Pass the destination inventory to
+        /// count only hauls into it: a machine's fuel and its ingredients are planned separately, and
+        /// wood hauled as fuel must not count toward a recipe that also takes wood.
+        /// </summary>
+        private int PendingQuantity(EntityId target, string itemId, EntityId destination = default)
         {
             int n = 0;
             foreach (Job j in _world.Jobs.Values)
-                if (j.IsActive && j.Type == JobType.Haul && j.TargetStructure == target && (itemId == null || j.ItemId == itemId)) n += j.Quantity;
+                if (j.IsActive && j.Type == JobType.Haul && j.TargetStructure == target && (itemId == null || j.ItemId == itemId)
+                    && (!destination.IsValid || j.DestinationInventory == destination)) n += j.Quantity;
             return n;
         }
 
