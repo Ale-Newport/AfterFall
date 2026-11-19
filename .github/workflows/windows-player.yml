@@ -1,0 +1,77 @@
+name: Windows player
+
+# Runs the scripted tour (-afterfall-tour) of a packaged Windows build on a GitHub-hosted
+# Windows runner. Unity player builds need a licensed editor, so the build is made locally
+# (tools/package-windows.sh) and attached to a release or draft release; this workflow
+# downloads it from there. The runner has no GPU: Direct3D 11 runs on the WARP software
+# rasterizer, so frame times are not representative, but every gameplay check is.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag (or draft release tag) that holds AFTERFALL-<tag>-windows-x64.zip
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  tour:
+    name: Scripted tour (windows-latest)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    permissions:
+      # Draft releases are only visible to tokens with write access to the repository.
+      contents: write
+    steps:
+      - name: Download the Windows build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          gh release download "$TAG" --pattern "AFTERFALL-$TAG-windows-x64.zip*" --dir dist
+          cd dist
+          sha256sum -c "AFTERFALL-$TAG-windows-x64.zip.sha256"
+          unzip -q "AFTERFALL-$TAG-windows-x64.zip"
+
+      - name: Run the scripted tour
+        env:
+          TAG: ${{ inputs.tag }}
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD "dist/AFTERFALL-$env:TAG-windows-x64/AFTERFALL.exe"
+          $out = Join-Path $PWD "tour"
+          $log = Join-Path $PWD "tour-player.log"
+          $argList = @("-afterfall-tour", $out, "-screen-fullscreen", "0", "-screen-width", "1280", "-screen-height", "720", "-force-d3d11", "-logFile", $log)
+          $p = Start-Process -FilePath $exe -ArgumentList $argList -PassThru
+          if (-not $p.WaitForExit(45 * 60 * 1000)) { $p.Kill(); throw "The tour did not finish within 45 minutes." }
+          Write-Host "Player exited with code $($p.ExitCode)"
+
+      - name: Check the tour report
+        shell: bash
+        run: |
+          report=tour/tour-report.txt
+          if [ ! -f "$report" ]; then
+            echo "No tour report; last lines of the player log:"
+            tail -n 80 tour-player.log || true
+            exit 1
+          fi
+          sed -n '1,/^Errors logged/p' "$report" | grep -v '^Captured'
+          fails=$(grep -c '^FAIL' "$report" || true)
+          errors=$(sed -n 's/^Errors logged: //p' "$report")
+          echo "Failed checks: $fails, errors logged: ${errors:-unknown}"
+          [ "$fails" -eq 0 ] && [ "${errors:-1}" -eq 0 ]
+
+      - name: Upload the report, screenshots and log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-tour-${{ inputs.tag }}
+          path: |
+            tour/
+            tour-player.log
+          retention-days: 30
