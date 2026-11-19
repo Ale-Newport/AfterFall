@@ -16,7 +16,7 @@ The first public release: an early playable prototype of the whole survival → 
 - Two recruitable colonists who haul, build, farm, eat, sleep and flee, directed from a strategic view without omniscience.
 - Wanderer and Runner infected with vision, hearing and barrier breaching, and a fair threat director.
 - Versioned, checksummed JSON saves with migrations and backup recovery.
-- Verified by 124 EditMode tests (headless on Linux, Windows and macOS, and in Unity), 7 PlayMode tests, and a scripted tour of the macOS build with 0 failed checks and 0 logged errors.
+- Verified by 131 EditMode tests (headless on Linux, Windows and macOS, and in Unity), 7 PlayMode tests, and a scripted tour of the macOS build with 0 failed checks and 0 logged errors.
 
 ### Added
 - Visual overhaul (2026-11-09): a textured surface shader with procedural textures; illustrated icons for every item; sculpted low-poly characters with procedural animation and held tool models; crafted models for every structure, machine and container; weathered architecture and world props; textured terrain, instanced ground cover and a lake shader; a dynamic sky with sun, moon, stars and clouds, time-of-day lighting and a filmic grade.
@@ -31,6 +31,13 @@ The first public release: an early playable prototype of the whole survival → 
 - The CI workflow is now `ci.yml` (it was `simulation-tests.yml`).
 
 ### Fixed
+- Loaded games now continue the same random sequences: the player, infected, threat and farming streams are saved (before, a load restarted harvest yields, loot, crop yields, wandering and spawns from the start of the game). Infected attack cooldowns and idle and search timers are saved too, so an attacking infected no longer strikes the instant a save loads. Older saves still load and start those streams fresh.
+- A dead colonist no longer keeps their bed, so a new survivor can be recruited into it.
+- Taking the last stack out of a ground drop one slot at a time removes the empty bag, as Take All already did.
+- Watering a crop with a full backpack destroyed the empty bottle; it now asks you to make room first.
+- Clearing a machine's recipe during a cycle locked the machine; it now waits for the cycle like changing the recipe does.
+- An announced raid spawned at its original point even if the player had walked up to it or built next to it in the meantime. The group now changes course with a fresh warning, or the raid is called off when no fair point exists.
+- Seven regression tests cover these fixes (131 EditMode tests in total).
 - Mesh normals on millimetre bevels (NaN lighting showed as white blobs); new games start in 2.4 s instead of 3.3 s thanks to background texture warm-up.
 - `tools/run-unity-checks.sh` and `tools/gallery.sh` stop if they cannot change to the repository root.
 

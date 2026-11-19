@@ -35,7 +35,7 @@ cd AfterFall && ./tools/setup-dev.sh
 dotnet test tools/dotnet/AfterfallSim.Tests/AfterfallSim.Tests.csproj
 ```
 
-`setup-dev.sh` enables Git LFS for the repository and installs the commit-msg hook. The test suite runs the 124 EditMode tests without Unity. With Unity installed and licensed, `tools/run-unity-checks.sh` adds the PlayMode tests, a macOS build and a scripted tour of the game (see [docs/TESTING.md](docs/TESTING.md)).
+`setup-dev.sh` enables Git LFS for the repository and installs the commit-msg hook. The test suite runs the 131 EditMode tests without Unity. With Unity installed and licensed, `tools/run-unity-checks.sh` adds the PlayMode tests, a macOS build and a scripted tour of the game (see [docs/TESTING.md](docs/TESTING.md)).
 
 ## Architecture rules
 

@@ -30,7 +30,7 @@ Requirements: .NET SDK 10 (`brew install dotnet`). On macOS Homebrew installs yo
 | AcceptanceLoopTests | **organic early game** (bare hands → tools → workbench → planks → foundation → drink → save/load → continue) and the **industrial chain** (workbench → metalworking → furnace smelting → electrification → generator + workshop → gears → water works → fuel outage → refuel → resume) |
 | PerformanceTests | busy-settlement simulation budget (prints per-system timings) |
 
-Last result: **124 passed, 0 failed** (see docs/PROGRESS.md for the date and environment).
+Last result: **131 passed, 0 failed** (see docs/PROGRESS.md for the date and environment).
 
 ## 2. Unity compile check — no Unity license required
 `tools/unity-compile-check/compile_check.py` compiles every asmdef assembly (runtime, editor, EditMode and PlayMode tests) with the .NET SDK against **Unity's own reference assemblies** and the **source** of the pinned packages, using Unity-like scripting defines. It runs in two passes: `player` (no `UNITY_EDITOR`) and `editor`.

@@ -1,17 +1,17 @@
 # Progress log
 
-_Last updated: 2026-11-09 (session 3: visual overhaul — textured procedural models, item icons, sky and grading)._
+_Last updated: 2026-11-19 (session 4: v0.1.0 release, repository security and CI, seven simulation fixes from a code review)._
 
 ## Snapshot
 | | |
 |---|---|
-| Branch | `main` (every commit pushed to `origin`) |
+| Branch | `main` (every commit pushed to `origin`). Latest release: `v0.1.0` |
 | Unity version | 6000.3.28f1 (arm64), installed through Unity Hub 3.22.6 with a Personal license |
-| Last headless tests | 2026-11-09: **124/124 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on each push. |
-| Last Unity EditMode run | 2026-11-09: **124/124 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
-| Last Unity PlayMode run | 2026-11-09: **7/7 passed** (5 smoke tests plus 2 Input System integration tests) |
-| Last player build | 2026-11-09: macOS (Apple Silicon), 120 MB, no errors |
-| Last scripted tour of the build | 2026-11-09: **0 failed checks, 0 errors logged**. New game in 2.4 s (was 1.1 s before the visual overhaul). Frames average 8.3–8.4 ms (holding the 120 Hz vsync cap); p95 8.4–9.3 ms. It builds a powered settlement with a recruited colonist and crops, which survives save and reload. |
+| Last headless tests | 2026-11-19: **131/131 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on Linux, Windows and macOS on each push. |
+| Last Unity EditMode run | 2026-11-19: **131/131 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
+| Last Unity PlayMode run | 2026-11-19: **7/7 passed** (5 smoke tests plus 2 Input System integration tests) |
+| Last player build | 2026-11-19: macOS (universal: Apple silicon and Intel), 120 MB, no errors; attached to the v0.1.0 release |
+| Last scripted tour of the build | 2026-11-19 (v0.1.0 build): **0 failed checks, 0 errors logged**. New game in 2.8 s. Frames average 8.4–8.5 ms (holding the 120 Hz vsync cap); p95 9.2–9.3 ms. It builds a powered settlement with two recruited colonists and crops, which survives save and reload. |
 | Last model gallery | 2026-11-09: **151 screenshots, 0 errors logged** (`tools/gallery.sh`, all sections), reviewed by eye. |
 | Human playtest of the acceptance loop | **not yet** |
 | Windows build | **not yet built** |
@@ -114,6 +114,14 @@ All twelve are fixed (commit `fix(game): runtime issues found in presentation re
 
 ## Not started
 Conveyors and pipes, weather and disasters, factions, wildlife, the armoured infected, firearms, vehicles, multiple regions and streaming, skinned character animation, recorded audio, localisation.
+
+## Release and repository hardening (session 4, 2026-11-19)
+- **Release:** `v0.1.0` on GitHub with the universal macOS build and its SHA-256 checksum (`tools/package-macos.sh`). The release workflow publishes notes from CHANGELOG.md when a `v*` tag is pushed.
+- **CI:** `ci.yml` (tests on Linux, Windows and macOS; lint with `-warnaserror`, `.editorconfig` formatting, `.meta` check, actionlint, shellcheck; NuGet vulnerability audit), `codeql.yml` (C# and workflows), `security.yml` (gitleaks over the full history; dependency review on pull requests), Dependabot for actions and NuGet. Actions are pinned to commit SHAs.
+- **Repository rules:** a ruleset on every branch requires a pull request with code-owner approval (stale approvals dismissed, last push approved by someone else) and blocks force pushes and deletions; `main` also requires the CI, CodeQL and security checks; `v*` tags can only be created or changed by the maintainer. The repository admin role (only the owner) bypasses all of them, so direct pushes keep working. Secret scanning with push protection, Dependabot alerts and security updates, private vulnerability reporting, approval before outside contributors' workflows run, read-only workflow tokens. The wiki is off (it was empty and editable by any GitHub user); Discussions are on.
+- **Open-source files:** MIT LICENSE (Unity-template files stay under the Unity Companion License), CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CODEOWNERS, issue forms, pull request template, `.env.example`, `.editorconfig`, docs/LAUNCH_KIT.md. README has a demo GIF and screenshots from the tour in `docs/media` (plain Git, not LFS, to spare the LFS bandwidth quota).
+- **Simulation fixes (code review, regression tests in `RegressionTests.cs`):** every random stream is saved (`WorldState.SessionRng`/`ZombieRng`/`ThreatRng`/`FarmRng`), as are infected attack, mode and idle timers; dead colonists free their bed; emptying a drop slot by slot removes it; watering with a full backpack no longer destroys the bottle; clearing a recipe mid-cycle no longer locks the machine; a raid whose announced origin became unfair is rerouted with a new warning or called off.
+- **Open review findings, filed as issues:** saves with reserved hauls can become unloadable after a content change ([#5](https://github.com/Ale-Newport/AfterFall/issues/5)); fuel hauls wait for ingredient hauls ([#6](https://github.com/Ale-Newport/AfterFall/issues/6)). CodeQL reports no security alerts, and about 240 code-quality notes (mostly `missed-where`, `path-combine`); the useless assignments are [#4](https://github.com/Ale-Newport/AfterFall/issues/4).
 
 ## Visual overhaul (session 3, 2026-11-09)
 The game used to look like a grey-box prototype: flat-coloured cubes and cones, voxel-like people, two-letter item codes and no post-processing. Everything is still generated in code. No assets were imported.
@@ -220,12 +228,13 @@ Bugs that only showed up in the engine, all fixed:
 - Not yet measured (needs playtests): time to first construction, time to first machine output, playtime without critical bugs.
 
 ## Next development tasks
-1. **Playtest the acceptance scenario** (docs/TESTING.md) by hand in the editor or the macOS build. Tune movement, camera, harvest and colonist pacing, and day-length balance. Record time to first construction and to first machine output.
+1. **Playtest the acceptance scenario** ([#1](https://github.com/Ale-Newport/AfterFall/issues/1), docs/TESTING.md) by hand in the editor or the macOS build. Tune movement, camera, harvest and colonist pacing, and day-length balance. Record time to first construction and to first machine output.
 2. Work zones and storage designation in the strategic view; the Guard profession.
 3. Conveyors (automation level 3) between storage and machines.
 4. Weather (storm or cold snap) with warnings and consequences for power and needs.
 5. Recorded audio where licensed assets are available; skinned characters to hide joint seams.
-6. Visual follow-ups: power lines between poles and pylons, interior furnishing of POI buildings, a closable door leaf, construction-stage visuals for blueprints, a performance pass on renderer counts.
+6. Build and test the Windows player ([#2](https://github.com/Ale-Newport/AfterFall/issues/2)).
+7. Visual follow-ups: power lines between poles and pylons ([#3](https://github.com/Ale-Newport/AfterFall/issues/3)), interior furnishing of POI buildings, a closable door leaf, construction-stage visuals for blueprints, a performance pass on renderer counts.
 
 ## How to run (current)
 - Headless tests: `dotnet test tools/dotnet/AfterfallSim.Tests/AfterfallSim.Tests.csproj`
@@ -236,4 +245,5 @@ Bugs that only showed up in the engine, all fixed:
 ## Session checkpoint notes
 - Session 1 extracted the official installer (`Unity-6000.3.28f1.pkg`) and package tarballs into a temporary scratch directory for compile checks. Since session 2 the installed editor and `Library/PackageCache` can be used instead (docs/TESTING.md §2).
 - The original GDD `.docx` was not found; docs/GDD.md is an adaptation of the master brief.
-- `gh` CLI is not authenticated; pushes use the existing HTTPS credential helper. Direct pushes to `main`, including workflow files, succeeded.
+- `gh` is authenticated as the owner (scopes: repo, workflow, gist, read:org). Direct pushes to `main` succeed through the admin bypass of the rulesets.
+- The social preview image (`docs/media/social-preview.jpg`) must be uploaded by hand in Settings → General → Social preview; GitHub has no API for it.
