@@ -93,6 +93,8 @@ namespace Afterfall.Services
         public double Now => World.Clock.ElapsedSeconds;
 
         /// <summary>Pauses simulation (menus, optional tactical pause).</summary>
+        private const string DeadReason = "You are dead. Wake up or load a save first.";
+
         public bool Paused { get; set; }
 
         /// <summary>Set when a permadeath run ends.</summary>
@@ -252,7 +254,7 @@ namespace Afterfall.Services
         /// </summary>
         public OpResult MeleeAttack(IReadOnlyList<EntityId> zombieTargets)
         {
-            if (Player.Vitals.IsDead) return OpResult.Fail("dead", "");
+            if (Player.Vitals.IsDead) return OpResult.Fail("dead", DeadReason);
             if (Now < Player.NextActionTime) return OpResult.Fail("busy", "");
             ItemDefinition weapon = EquippedItem;
             ToolStats stats = weapon?.Tool;
@@ -355,7 +357,7 @@ namespace Afterfall.Services
 
         public OpResult Craft(string recipeId)
         {
-            if (Player.Vitals.IsDead) return OpResult.Fail("dead", "");
+            if (Player.Vitals.IsDead) return OpResult.Fail("dead", DeadReason);
             RecipeDefinition r = Content.Recipe(recipeId);
             if (r == null) return OpResult.Fail("unknown", "Unknown recipe.");
             return Player.Crafting.Enqueue(r, Player.Inventory, World.Tech, StationsInRange(), Tech);
@@ -397,14 +399,14 @@ namespace Afterfall.Services
         public OpResult PlaceBlueprint(string defId, Vec3 position, float yaw, PlacementProbe probe, out Structure structure)
         {
             structure = null;
-            if (Player.Vitals.IsDead) return OpResult.Fail("dead", "");
+            if (Player.Vitals.IsDead) return OpResult.Fail("dead", DeadReason);
             return Construction.PlaceBlueprint(defId, position, yaw, probe, Player.Inventory, out structure);
         }
 
         /// <summary>Delivers carried materials and performs <paramref name="seconds"/> of construction work.</summary>
         public OpResult BuildStep(EntityId structureId, float seconds)
         {
-            if (Player.Vitals.IsDead) return OpResult.Fail("dead", "");
+            if (Player.Vitals.IsDead) return OpResult.Fail("dead", DeadReason);
             if (!World.Structures.TryGetValue(structureId, out Structure s)) return OpResult.Fail("missing", "Nothing to build.");
             if (Vec3.Distance(s.Position, Player.Position) > InteractRange + FootprintRadius(s)) return OpResult.Fail("too_far", "Move closer to build.");
             bool hammer = HasTool(ToolType.Hammer);
@@ -481,7 +483,7 @@ namespace Afterfall.Services
 
         public OpResult Transfer(EntityId fromInventory, int slot, EntityId toInventory, int quantity)
         {
-            if (Player.Vitals.IsDead) return OpResult.Fail("dead", "");
+            if (Player.Vitals.IsDead) return OpResult.Fail("dead", DeadReason);
             if (!CanAccess(fromInventory, out string r1)) return OpResult.Fail("no_access", r1);
             if (!CanAccess(toInventory, out string r2)) return OpResult.Fail("no_access", r2);
             Inventory from = World.FindInventory(fromInventory);

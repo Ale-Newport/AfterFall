@@ -175,10 +175,14 @@ namespace Afterfall.Presentation
 
             ZombieSpawnNear(gc, 9f, "wanderer");
             ZombieSpawnNear(gc, 12f, "runner");
-            yield return Seconds(2.5f);
+            // Capture as soon as the infected close in, so a slow machine (which simulates more
+            // time per real second of waiting) does not let them maul the survivor first.
+            float approach = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - approach < P(2.5f) && !InfectedWithin(gc, 6f)) yield return null;
             yield return Capture("06_infected");
             foreach (var z in gc.Session.World.Zombies.Values.ToList()) gc.Session.World.Zombies.Remove(z.Id);
             gc.Session.World.MarkChanged();
+            Check(!gc.Session.Player.Vitals.IsDead, $"The survivor lived through the infected scene (health {gc.Session.Player.Vitals.Health:0})");
 
             gc.SetTactical(true);
             yield return Seconds(2f);
@@ -534,6 +538,14 @@ namespace Afterfall.Presentation
             string agent = v == null ? "no view" : !v.OnNavMesh ? $"off NavMesh (agent enabled {v.Agent.enabled})" :
                 $"path {v.Agent.pathStatus}, pending {v.Agent.pathPending}, remaining {v.Agent.remainingDistance:0.0} m, speed {v.Agent.velocity.magnitude:0.0}, stopped {v.Agent.isStopped}";
             Line($"  {c.Name}: {c.Activity} \"{c.Status}\" at {Fmt(c.Position.ToUnity())} y {c.Position.Y:0.0} (ground {gc.GroundHeight(c.Position.ToUnity()):0.0}), target {(c.HasMoveTarget ? Fmt(c.MoveTarget.ToUnity()) : "none")}; {agent}");
+        }
+
+        private static bool InfectedWithin(GameController gc, float meters)
+        {
+            Vector3 p = gc.Player.transform.position;
+            foreach (ZombieState z in gc.Session.World.Zombies.Values)
+                if (!z.IsDead && Vector3.Distance(z.Position.ToUnity(), p) <= meters) return true;
+            return false;
         }
 
         private static Structure PlanNear(GameController gc, string defId, Vector3 near, float minRadius, out string reason, float maxRadius = 26f)
