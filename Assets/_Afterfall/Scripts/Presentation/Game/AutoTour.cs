@@ -913,7 +913,11 @@ namespace Afterfall.Presentation
             yield return Capture("20_power_shedding");
             s.ToggleEnabled(gen.Id);
             yield return Seconds(1.5f);
-            Check(town.Lamp.Power.Powered && shops.All(x => x.Power.Powered), $"Generator back on: everything powered (lamp: {town.Lamp.Power.Reason}; generator enabled {gen.Enabled}, {gen.Generator.Status}, fuel {Units(gen.Generator.Fuel)} items, buffer {gen.Generator.BufferJoules / 1000:0} kJ)");
+            // "Powered" here means nothing is denied power: a workshop that has used up its ingots
+            // goes idle and draws nothing, which is fine (slow machines simulate more time per wait).
+            string shopStates = string.Join(", ", shops.Select(x => $"{x.Machine.Status}/{x.Power.Reason}"));
+            Check(town.Lamp.Power.Powered && shops.All(x => x.Power.Powered || x.Machine.Status != MachineStatus.MissingPower),
+                $"Generator back on: everything powered (workshops: {shopStates}; lamp: {town.Lamp.Power.Reason}; generator enabled {gen.Enabled}, {gen.Generator.Status}, fuel {Units(gen.Generator.Fuel)} items, buffer {gen.Generator.BufferJoules / 1000:0} kJ)");
             gc.Tactical.Select(EntityId.None);
             gc.SetTactical(false);
         }
