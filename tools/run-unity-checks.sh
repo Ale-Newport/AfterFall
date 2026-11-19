@@ -3,7 +3,7 @@
 # Needs Unity 6000.3.28f1 with an activated license. Results go to Logs/unity-checks/.
 # Usage: tools/run-unity-checks.sh [editmode|playmode|build|tour ...]   (default: all four)
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 UNITY="${UNITY:-/Applications/Unity/Hub/Editor/6000.3.28f1/Unity.app/Contents/MacOS/Unity}"
 OUT="Logs/unity-checks"

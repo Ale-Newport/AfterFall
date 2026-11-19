@@ -1,0 +1,106 @@
+name: CI
+
+# Builds the engine-independent simulation and runs the EditMode test suite with plain .NET
+# on Linux, Windows and macOS, plus lint and dependency audits. Unity-side checks (PlayMode
+# tests, player builds, the scripted tour) need a licensed Unity Editor and run locally with
+# tools/run-unity-checks.sh; see docs/TESTING.md.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_CLI_UI_LANGUAGE: en
+
+jobs:
+  test:
+    name: Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build simulation (netstandard2.1 and C# 9, the same constraints as Unity)
+        run: dotnet build tools/dotnet/AfterfallSim/AfterfallSim.csproj -c Release
+      - name: Run EditMode tests
+        run: dotnet test tools/dotnet/AfterfallSim.Tests/AfterfallSim.Tests.csproj -c Release --logger "trx;LogFileName=results.trx"
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-results-${{ matrix.os }}
+          path: tools/dotnet/AfterfallSim.Tests/TestResults/
+          retention-days: 14
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build all .NET projects with warnings as errors
+        run: |
+          for p in AfterfallSim AfterfallSim.Tests ArtPreview; do
+            dotnet build "tools/dotnet/$p/$p.csproj" -c Release -warnaserror
+          done
+      - name: Check formatting (.editorconfig)
+        run: |
+          for p in AfterfallSim AfterfallSim.Tests ArtPreview; do
+            dotnet format whitespace "tools/dotnet/$p/$p.csproj" --verify-no-changes
+          done
+      - name: Check Unity .meta files are present
+        run: python3 tools/generate_meta.py --check
+      - name: Lint GitHub Actions workflows
+        run: |
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/914e7df21a07ef503a81201c76d2b11c789d3fca/scripts/download-actionlint.bash) 1.7.12
+          ./actionlint -color
+      - name: Lint shell scripts
+        run: shellcheck --severity=warning tools/*.sh tools/git-hooks/commit-msg
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: "10.0.x"
+      - name: Fail on known-vulnerable NuGet packages (direct and transitive)
+        run: |
+          status=0
+          for p in AfterfallSim AfterfallSim.Tests ArtPreview; do
+            out=$(dotnet list "tools/dotnet/$p/$p.csproj" package --vulnerable --include-transitive 2>&1)
+            echo "$out"
+            if echo "$out" | grep -q "has the following vulnerable packages"; then status=1; fi
+          done
+          exit $status

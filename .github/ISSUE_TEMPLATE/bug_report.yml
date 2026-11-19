@@ -1,0 +1,59 @@
+name: Bug report
+description: Something in the game, the tests or the tooling does not work as it should.
+title: "bug: "
+labels: [bug, needs triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please search existing issues first.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you see, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start a new Survival game
+        2. Build a workbench next to the start camp
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it happen?
+      options:
+        - macOS player build (release download)
+        - Unity Editor (Play mode)
+        - Headless .NET tests (dotnet test)
+        - Unity tests or tools/run-unity-checks.sh
+        - Windows build
+        - Other tooling or documentation
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Release tag (for example v0.1.0) or commit SHA.
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: OS, CPU and Unity version
+      placeholder: macOS 15.5, Apple M2, Unity 6000.3.28f1
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, saves or screenshots
+      description: |
+        Player log on macOS: ~/Library/Logs/Afterfall/AFTERFALL/Player.log. Press F3 in game for the performance overlay.
+        Attach a save file if the bug depends on a particular world state.
+      render: text

@@ -14,6 +14,15 @@
 *.md        text eol=lf
 *.sh        text eol=lf
 *.py        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.xml       text eol=lf
+*.csproj    text eol=lf
+*.editorconfig text eol=lf
+.editorconfig text eol=lf
+CODEOWNERS  text eol=lf
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
 
 # Unity YAML (force text so diffs work; use Unity's Smart Merge if configured)
 *.meta      text eol=lf
@@ -41,6 +50,8 @@
 *.exr  filter=lfs diff=lfs merge=lfs -text
 *.hdr  filter=lfs diff=lfs merge=lfs -text
 *.gif  filter=lfs diff=lfs merge=lfs -text
+*.webp filter=lfs diff=lfs merge=lfs -text
+*.psb  filter=lfs diff=lfs merge=lfs -text
 # 3D
 *.fbx   filter=lfs diff=lfs merge=lfs -text
 *.obj   filter=lfs diff=lfs merge=lfs -text
@@ -65,3 +76,10 @@
 *.so   filter=lfs diff=lfs merge=lfs -text
 *.dylib filter=lfs diff=lfs merge=lfs -text
 *.bundle filter=lfs diff=lfs merge=lfs -text
+*.dll  filter=lfs diff=lfs merge=lfs -text
+*.exe  filter=lfs diff=lfs merge=lfs -text
+*.pdf  filter=lfs diff=lfs merge=lfs -text
+
+# README and social-preview media stay in plain Git: GitHub serves them on every page view,
+# and serving them from LFS would spend the repository's LFS bandwidth quota.
+docs/media/** -filter binary

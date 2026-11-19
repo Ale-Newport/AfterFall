@@ -107,7 +107,7 @@ namespace Afterfall.Domain.Threats
             if (t.PendingRaidAt >= 0)
             {
                 if (now < t.PendingRaidAt) return;
-                Vec3 target = BaseCenter(out bool hasBase) ;
+                Vec3 target = BaseCenter(out bool hasBase);
                 int count = 3 + (int)Math.Min(3, t.Heat / 25f);
                 for (int i = 0; i < count; i++)
                 {

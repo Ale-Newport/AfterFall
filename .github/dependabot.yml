@@ -1,0 +1,38 @@
+# Automated dependency updates. Unity packages (Packages/manifest.json) are not supported
+# by Dependabot; they are upgraded by hand and verified with tools/run-unity-checks.sh.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, github-actions]
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: nuget
+    directories:
+      - /tools/dotnet/AfterfallSim
+      - /tools/dotnet/AfterfallSim.Tests
+      - /tools/dotnet/ArtPreview
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, nuget]
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      test-tooling:
+        patterns: ["Microsoft.NET.Test.Sdk", "NUnit3TestAdapter"]
+    ignore:
+      # Must match the version bundled by com.unity.nuget.newtonsoft-json in Packages/manifest.json.
+      - dependency-name: Newtonsoft.Json
+      # Unity Test Framework runs NUnit 3; the headless suite must stay on the same major version.
+      - dependency-name: NUnit
+        update-types: ["version-update:semver-major"]

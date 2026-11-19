@@ -58,6 +58,10 @@ sysinfo.txt
 *.unitypackage
 *.app
 
+# Burst debug symbols and code coverage written next to builds
+*_BurstDebugInformation_DoNotShip/
+/[Cc]ode[Cc]overage/
+
 # Crashlytics generated file
 crashlytics-build.properties
 
@@ -75,6 +79,7 @@ tools/**/bin/
 tools/**/obj/
 tools/**/TestResults/
 tools/unity-refs/cache/
+/actionlint
 
 # ---------------------------------------------------------------------------
 # OS / editor noise
@@ -89,8 +94,16 @@ Thumbs.db
 # ---------------------------------------------------------------------------
 .env
 .env.*
+!.env.example
 *.pem
 *.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+*.mobileprovision
+*.provisionprofile
+*.cer
 .claude/settings.local.json
 tools/unity-compile-check/.build/
 

@@ -1,0 +1,32 @@
+name: Improvement
+description: Make something that already exists better (performance, UX, art, docs, tests, tooling).
+title: "improve: "
+labels: [improvement, needs triage]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Gameplay balance or pacing
+        - User interface or controls
+        - Art, audio or visuals
+        - Performance
+        - Tests
+        - Documentation
+        - Build, CI or tooling
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed improvement
+      description: What should change, and how will we know it is better (a test, a measurement, a screenshot)?
+    validations:
+      required: true

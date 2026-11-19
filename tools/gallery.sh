@@ -8,7 +8,7 @@
 # AFTERFALL_GALLERY_NO_BUILD=1 reuses an existing Builds/macOS player (e.g. right after run-unity-checks.sh build).
 # Do not run it while the project is open in the editor.
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 UNITY="${UNITY:-/Applications/Unity/Hub/Editor/6000.3.28f1/Unity.app/Contents/MacOS/Unity}"
 SECTIONS="${1:-structures,nodes,props,characters,icons,world}"
 OUT="${2:-Logs/gallery}"

@@ -1,0 +1,34 @@
+name: Feature request
+description: Propose new gameplay, a new system or a new tool.
+title: "feat: "
+labels: [enhancement, needs triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        AFTERFALL follows the design in [docs/GDD.md](https://github.com/Ale-Newport/AfterFall/blob/main/docs/GDD.md) and the roadmap in [docs/DEVELOPMENT_ROADMAP.md](https://github.com/Ale-Newport/AfterFall/blob/main/docs/DEVELOPMENT_ROADMAP.md). Open-ended ideas fit better in [Discussions → Ideas](https://github.com/Ale-Newport/AfterFall/discussions/categories/ideas).
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem or player need does this address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would it work in the game? Which systems does it touch (inventory, construction, power, colony, threats, saves...)?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: pillars
+    attributes:
+      label: Design pillars
+      options:
+        - label: It keeps all saved state in the simulation (WorldState), not only in GameObjects.
+        - label: It does not give the strategic view omniscience or teleport materials.
+        - label: I am willing to open a pull request for it.
