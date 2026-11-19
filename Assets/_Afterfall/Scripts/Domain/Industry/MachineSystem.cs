@@ -54,6 +54,8 @@ namespace Afterfall.Domain.Industry
             if (s.Machine == null || def?.Machine == null) return OpResult.Fail("not_machine", "This is not a machine.");
             if (string.IsNullOrEmpty(recipeId))
             {
+                if (s.Machine.CycleActive)
+                    return OpResult.Fail("busy", "Wait for the current cycle to finish before clearing the recipe.");
                 s.Machine.RecipeId = "";
                 return OpResult.Success("Recipe cleared.");
             }

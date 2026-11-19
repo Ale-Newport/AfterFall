@@ -79,6 +79,10 @@ namespace Afterfall.Domain.World
             Clock = clock;
             Ids = ids;
             Rng = new DeterministicRandom((ulong)(uint)seed * 2654435761UL + 1);
+            SessionRng = new DeterministicRandom((ulong)(uint)seed ^ 0x5DEECE66DUL);
+            ZombieRng = new DeterministicRandom((ulong)(uint)seed ^ 0xA5A5A5A5UL);
+            ThreatRng = new DeterministicRandom((ulong)(uint)seed * 31UL + 7UL);
+            FarmRng = new DeterministicRandom((ulong)(uint)seed * 977UL + 13UL);
             Exploration = new ExplorationState(WorldLayout.WorldSize);
         }
 
@@ -87,6 +91,17 @@ namespace Afterfall.Domain.World
         public SimulationClock Clock { get; }
         public IdAllocator Ids { get; }
         public DeterministicRandom Rng { get; }
+
+        // Independent random streams for each system. They live here, not in the systems, so a
+        // save resumes every sequence exactly where it stopped.
+        /// <summary>Player actions: harvest yields and loot.</summary>
+        public DeterministicRandom SessionRng { get; }
+        /// <summary>Infected behaviour: wandering, idling and spawn variation.</summary>
+        public DeterministicRandom ZombieRng { get; }
+        /// <summary>Threat director: spawn points, archetypes and raids.</summary>
+        public DeterministicRandom ThreatRng { get; }
+        /// <summary>Farming: crop yields and returned seed.</summary>
+        public DeterministicRandom FarmRng { get; }
 
         public PlayerState Player { get; set; }
         public Dictionary<EntityId, Structure> Structures { get; } = new Dictionary<EntityId, Structure>();

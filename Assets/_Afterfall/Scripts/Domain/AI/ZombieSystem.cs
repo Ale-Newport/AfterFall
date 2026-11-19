@@ -81,7 +81,7 @@ namespace Afterfall.Domain.AI
             _world = world;
             _content = content;
             _bus = bus;
-            _rng = new DeterministicRandom((ulong)(uint)world.Seed ^ 0xA5A5A5A5UL);
+            _rng = world.ZombieRng;
         }
 
         public const float BreachReach = 2.4f;

@@ -46,7 +46,7 @@ namespace Afterfall.Domain.Farming
             _content = content;
             _bus = bus;
             _tech = tech;
-            _rng = new DeterministicRandom((ulong)(uint)world.Seed * 977UL + 13UL);
+            _rng = world.FarmRng;
         }
 
         public string Name => "Farming";
@@ -110,7 +110,12 @@ namespace Afterfall.Domain.Farming
             if (plot.Crop.Water >= 90f) return OpResult.Fail("wet", "The soil is already wet.");
             if (from.Available("water_bottle") <= 0) return OpResult.Fail("no_water", "You need a water bottle (fill bottles at a water pump).");
             if (!from.TryRemove("water_bottle", 1)) return OpResult.Fail("no_water", "Water bottle unavailable.");
-            from.AddUpTo("empty_bottle", 1);
+            if (!from.TryAdd("empty_bottle", 1))
+            {
+                // Put the water back (its space was just freed) rather than destroy the bottle.
+                from.TryAdd("water_bottle", 1);
+                return OpResult.Fail("inventory_full", "Make room for the empty bottle first.");
+            }
             plot.Crop.Water = 100f;
             return OpResult.Success("Watered the planter bed.");
         }

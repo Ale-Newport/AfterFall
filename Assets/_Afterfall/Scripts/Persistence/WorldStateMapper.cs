@@ -28,6 +28,10 @@ namespace Afterfall.Persistence
                 StartTimeOfDay = w.Clock.StartTimeOfDay,
                 NextId = w.Ids.NextValue,
                 RngState = w.Rng.State,
+                SessionRngState = w.SessionRng.State,
+                ZombieRngState = w.ZombieRng.State,
+                ThreatRngState = w.ThreatRng.State,
+                FarmRngState = w.FarmRng.State,
                 Player = ToDto(w.Player),
                 Threat = w.Threat,
                 Metrics = w.Metrics,
@@ -44,7 +48,8 @@ namespace Afterfall.Persistence
                 dto.Zombies.Add(new ZombieDto
                 {
                     Id = z.Id.Value, Archetype = z.Archetype, Position = z.Position, Yaw = z.Yaw, Health = z.Health, Mode = z.Mode,
-                    Home = z.Home, MoveTarget = z.MoveTarget, LastKnownTarget = z.LastKnownTarget, TimeSinceSeen = z.TimeSinceSeen, DeadTime = z.DeadTime
+                    Home = z.Home, MoveTarget = z.MoveTarget, LastKnownTarget = z.LastKnownTarget, TimeSinceSeen = z.TimeSinceSeen, DeadTime = z.DeadTime,
+                    AttackCooldown = z.AttackCooldown, ModeTime = z.ModeTime, IdleTimer = z.IdleTimer
                 });
             }
             foreach (ColonistState c in Sorted(w.Colonists))
@@ -162,6 +167,10 @@ namespace Afterfall.Persistence
             var clock = new SimulationClock(dto.DayLengthSeconds, dto.ElapsedSeconds, dto.StartTimeOfDay);
             var w = new WorldState(dto.Seed, dto.Settings ?? GameSettings.FromPreset(DifficultyPreset.Survival), clock, new IdAllocator(dto.NextId));
             w.Rng.State = dto.RngState;
+            if (dto.SessionRngState != 0) w.SessionRng.State = dto.SessionRngState;
+            if (dto.ZombieRngState != 0) w.ZombieRng.State = dto.ZombieRngState;
+            if (dto.ThreatRngState != 0) w.ThreatRng.State = dto.ThreatRngState;
+            if (dto.FarmRngState != 0) w.FarmRng.State = dto.FarmRngState;
             w.Layout = WorldGenerator.Generate(dto.Seed);
 
             if (dto.Player != null)
@@ -301,7 +310,8 @@ namespace Afterfall.Persistence
                 var z = new ZombieState
                 {
                     Id = new EntityId(zd.Id), Archetype = zd.Archetype, Position = zd.Position, Yaw = zd.Yaw, Health = zd.Health, Mode = zd.Mode,
-                    Home = zd.Home, MoveTarget = zd.MoveTarget, LastKnownTarget = zd.LastKnownTarget, TimeSinceSeen = zd.TimeSinceSeen, DeadTime = zd.DeadTime
+                    Home = zd.Home, MoveTarget = zd.MoveTarget, LastKnownTarget = zd.LastKnownTarget, TimeSinceSeen = zd.TimeSinceSeen, DeadTime = zd.DeadTime,
+                    AttackCooldown = zd.AttackCooldown, ModeTime = zd.ModeTime, IdleTimer = zd.IdleTimer
                 };
                 w.Zombies[z.Id] = z;
                 w.Ids.EnsureAbove(z.Id);

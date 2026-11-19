@@ -106,7 +106,7 @@ namespace Afterfall.Domain.Colony
                 if (!s.IsComplete || !s.PlayerBuilt || _content.Building(s.DefId)?.IsBed != true) continue;
                 bool taken = false;
                 foreach (ColonistState c in _world.Colonists.Values)
-                    if (c.Recruited && c.HomeBed == s.Id) taken = true;
+                    if (c.Recruited && c.Activity != ColonistActivity.Down && c.HomeBed == s.Id) taken = true;
                 if (!taken) return s;
             }
             return null;

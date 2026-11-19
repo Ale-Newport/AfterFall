@@ -39,7 +39,7 @@ namespace Afterfall.Services
             if (World.Layout == null) World.Layout = WorldGenerator.Generate(World.Seed);
             Events = new EventBus();
             Scheduler = new TickScheduler();
-            Rng = new DeterministicRandom((ulong)(uint)World.Seed ^ 0x5DEECE66DUL);
+            Rng = World.SessionRng;
 
             Tech = new TechnologyService(Content.Techs, World.Tech, Events);
             Construction = new ConstructionService(World, Content, Events, Tech);
@@ -491,6 +491,8 @@ namespace Afterfall.Services
             {
                 MarkSearched(fromInventory);
                 Events.Publish(new ItemTransferred(from.Id, to.Id, st.ItemId, Math.Min(quantity, st.Quantity)));
+                EntityId owner = World.OwnerOf(fromInventory);
+                if (World.Drops.ContainsKey(owner) && from.IsEmpty) World.RemoveDrop(owner);
             }
             return r;
         }

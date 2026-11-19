@@ -24,6 +24,7 @@ namespace Afterfall.Domain.Threats
         public const float DespawnDistance = 175f;
         public const float RaidHeatThreshold = 35f;
         public const double RaidWarningLead = 30.0;
+        public const double RaidRerouteLead = 15.0;
         public const double RaidCooldown = 900.0;
         public const double SpawnCooldown = 4.0;
 
@@ -39,7 +40,7 @@ namespace Afterfall.Domain.Threats
             _content = content;
             _bus = bus;
             _zombies = zombies;
-            _rng = new DeterministicRandom((ulong)(uint)world.Seed * 31UL + 7UL);
+            _rng = world.ThreatRng;
         }
 
         public string Name => "Threat director";
@@ -107,6 +108,11 @@ namespace Afterfall.Domain.Threats
             if (t.PendingRaidAt >= 0)
             {
                 if (now < t.PendingRaidAt) return;
+                if (!IsValidSpawn(t.PendingRaidOrigin, MinSpawnDistance))
+                {
+                    RerouteRaid(t, now);
+                    return;
+                }
                 Vec3 target = BaseCenter(out bool hasBase);
                 int count = 3 + (int)Math.Min(3, t.Heat / 25f);
                 for (int i = 0; i < count; i++)
@@ -130,6 +136,27 @@ namespace Afterfall.Domain.Threats
             t.PendingRaidOrigin = origin;
             string dir = Compass(origin - baseCenter);
             string msg = $"The noise from your base is drawing the infected. A group approaches from the {dir}.";
+            _bus?.Publish(new ThreatWarningIssued(msg));
+            _bus?.Publish(new Notification(msg, Severity.Danger));
+        }
+
+        /// <summary>
+        /// The announced origin stopped being fair before the group arrived (the player walked up to
+        /// it or built next to it): the group comes from another valid point after a fresh warning,
+        /// or the raid is called off when there is none.
+        /// </summary>
+        private void RerouteRaid(ThreatState t, double now)
+        {
+            Vec3 baseCenter = BaseCenter(out bool any);
+            if (!any || !TryPickSpawnAwayFrom(baseCenter, 70f, out Vec3 origin))
+            {
+                t.PendingRaidAt = -1;
+                t.LastRaidAt = now;
+                return;
+            }
+            t.PendingRaidAt = now + RaidRerouteLead;
+            t.PendingRaidOrigin = origin;
+            string msg = $"The approaching group has changed course. It now comes from the {Compass(origin - baseCenter)}.";
             _bus?.Publish(new ThreatWarningIssued(msg));
             _bus?.Publish(new Notification(msg, Severity.Danger));
         }

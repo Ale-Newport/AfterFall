@@ -146,6 +146,9 @@ namespace Afterfall.Persistence
         public Vec3 LastKnownTarget { get; set; }
         public float TimeSinceSeen { get; set; }
         public float DeadTime { get; set; }
+        public float AttackCooldown { get; set; }
+        public float ModeTime { get; set; }
+        public float IdleTimer { get; set; }
     }
 
     public sealed class ColonistDto
@@ -200,6 +203,11 @@ namespace Afterfall.Persistence
         public double StartTimeOfDay { get; set; }
         public long NextId { get; set; }
         public ulong RngState { get; set; }
+        // Per-system random streams; 0 (saves written before they were stored) keeps the seeded start.
+        public ulong SessionRngState { get; set; }
+        public ulong ZombieRngState { get; set; }
+        public ulong ThreatRngState { get; set; }
+        public ulong FarmRngState { get; set; }
         public PlayerDto Player { get; set; }
         public List<StructureDto> Structures { get; set; } = new List<StructureDto>();
         public List<long[]> PowerLinks { get; set; } = new List<long[]>();
