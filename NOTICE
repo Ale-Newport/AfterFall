@@ -1,0 +1,13 @@
+AFTERFALL
+Copyright (c) 2026 Alejandro Newport Diaz
+Licensed under the MIT License (see LICENSE).
+
+Third-party material
+
+Some files are derived from Unity templates and packages and remain under the
+Unity Companion License (https://unity.com/legal/licenses/unity-companion-license):
+the URP pipeline and renderer assets in Assets/_Afterfall/Settings, the base
+materials in Assets/_Afterfall/Resources/Materials, the ProjectSettings baseline
+and the template settings blocks of Assets/_Afterfall/Scenes/Main.unity.
+Unity packages resolved from Packages/manifest.json keep their own licenses.
+See docs/ASSET_LICENSES.md for the full list.

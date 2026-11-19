@@ -192,4 +192,4 @@ Contributions are welcome through forks and pull requests; every pull request is
 
 ## License
 
-AFTERFALL is released under the [MIT License](LICENSE). Files derived from Unity's 3D (URP) template (project settings, URP pipeline assets and the URP-derived base materials) remain under the [Unity Companion License](https://unity.com/legal/licenses/unity-companion-license); see [docs/ASSET_LICENSES.md](docs/ASSET_LICENSES.md).
+AFTERFALL is released under the [MIT License](LICENSE). Files derived from Unity's 3D (URP) template (project settings, URP pipeline assets and the URP-derived base materials) remain under the [Unity Companion License](https://unity.com/legal/licenses/unity-companion-license); see [NOTICE](NOTICE) and [docs/ASSET_LICENSES.md](docs/ASSET_LICENSES.md).
