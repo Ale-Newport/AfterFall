@@ -358,6 +358,7 @@ namespace Afterfall.Presentation
             gc.Tactical.Select(shop.Id);
             yield return Seconds(1.5f);
             yield return Capture("11_settlement_strategic");
+            TopUp(shop, "iron_ingot", 10);
             s.ToggleEnabled(gen.Id);
             yield return Seconds(1.5f);
             Check(shop.Machine.Status == MachineStatus.MissingPower, $"Generator switched off: workshop {shop.Machine.Status} ({shop.Machine.StatusDetail})");
@@ -597,6 +598,23 @@ namespace Afterfall.Presentation
                 quantity -= amount;
             }
             return OpResult.Success();
+        }
+
+        /// <summary>
+        /// Keeps a machine stocked before a power check, so it is still working and drawing power.
+        /// A slow machine simulates more time per wait and would otherwise have used up its input.
+        /// </summary>
+        private void TopUp(Structure machine, string itemId, int atLeast)
+        {
+            int missing = atLeast - machine.Machine.Input.Count(itemId);
+            if (missing <= 0) return;
+            if (!machine.Machine.Input.TryAdd(itemId, missing))
+            {
+                Line($"FAIL: could not top up {machine.DefId} with {missing} {itemId}");
+                return;
+            }
+            _granted.TryGetValue(itemId, out int n);
+            _granted[itemId] = n + missing;
         }
 
         private void Grant(Inventory bag, string itemId, int quantity)
@@ -913,6 +931,7 @@ namespace Afterfall.Presentation
 
             SkipTo(gc, 21.0);
             yield return Seconds(1f);
+            foreach (Structure shop in shops) TopUp(shop, "iron_ingot", 10);
             s.ToggleEnabled(gen.Id);
             yield return Seconds(1.5f);
             bool shopsRun = shops.All(x => x.Power.Powered);
