@@ -1,4 +1,4 @@
-# Editor settings matching the project conventions (see CLAUDE.md → Coding standards).
+# Editor settings matching the project conventions (see CONTRIBUTING.md → Code style).
 root = true
 
 [*]

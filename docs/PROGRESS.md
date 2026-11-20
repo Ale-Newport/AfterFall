@@ -18,7 +18,7 @@ _Last updated: 2026-11-20 (session 5: v0.1.1, Windows build, save-compatibility 
 
 ## Completed and verified headlessly
 Verified means unit and integration tests pass under .NET, and the code compiles against the Unity reference assemblies.
-- **Repository:** Unity-aware ignore rules, LFS attributes, local LFS, commit-msg hook blocking AI trailers, attribution disabled in `.claude/settings.json`, CI workflow.
+- **Repository:** Unity-aware ignore rules, LFS attributes, local LFS, commit-msg hook blocking AI trailers, CI workflows.
 - **Core:** ids, deterministic RNG, typed event bus with journal, clock, fixed-rate scheduler with per-system timings.
 - **Economy:** atomic inventories, weight and filters, durability, reservations, transfer tickets, randomised conservation test.
 - **Systems:**
@@ -127,7 +127,7 @@ Conveyors and pipes, weather and disasters, factions, wildlife, the armoured inf
 - **Release:** `v0.1.0` on GitHub with the universal macOS build and its SHA-256 checksum (`tools/package-macos.sh`). The release workflow publishes notes from CHANGELOG.md when a `v*` tag is pushed.
 - **CI:** `ci.yml` (tests on Linux, Windows and macOS; lint with `-warnaserror`, `.editorconfig` formatting, `.meta` check, actionlint, shellcheck; NuGet vulnerability audit), `codeql.yml` (C# and workflows), `security.yml` (gitleaks over the full history; dependency review on pull requests), Dependabot for actions and NuGet. Actions are pinned to commit SHAs.
 - **Repository rules:** a ruleset on every branch requires a pull request with code-owner approval (stale approvals dismissed, last push approved by someone else) and blocks force pushes and deletions; `main` also requires the CI, CodeQL and security checks; `v*` tags can only be created or changed by the maintainer. The repository admin role (only the owner) bypasses all of them, so direct pushes keep working. Secret scanning with push protection, Dependabot alerts and security updates, private vulnerability reporting, approval before outside contributors' workflows run, read-only workflow tokens. The wiki is off (it was empty and editable by any GitHub user); Discussions are on.
-- **Open-source files:** MIT LICENSE (Unity-template files stay under the Unity Companion License), CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CODEOWNERS, issue forms, pull request template, `.env.example`, `.editorconfig`, docs/LAUNCH_KIT.md. README has a demo GIF and screenshots from the tour in `docs/media` (plain Git, not LFS, to spare the LFS bandwidth quota).
+- **Open-source files:** MIT LICENSE (Unity-template files stay under the Unity Companion License), CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CODEOWNERS, issue forms, pull request template, `.env.example`, `.editorconfig`. README has a demo GIF and screenshots from the tour in `docs/media` (plain Git, not LFS, to spare the LFS bandwidth quota).
 - **Simulation fixes (code review, regression tests in `RegressionTests.cs`):** every random stream is saved (`WorldState.SessionRng`/`ZombieRng`/`ThreatRng`/`FarmRng`), as are infected attack, mode and idle timers; dead colonists free their bed; emptying a drop slot by slot removes it; watering with a full backpack no longer destroys the bottle; clearing a recipe mid-cycle no longer locks the machine; a raid whose announced origin became unfair is rerouted with a new warning or called off.
 - **Open review findings, filed as issues:** saves with reserved hauls can become unloadable after a content change ([#5](https://github.com/Ale-Newport/AfterFall/issues/5)); fuel hauls wait for ingredient hauls ([#6](https://github.com/Ale-Newport/AfterFall/issues/6)). CodeQL reports no security alerts, and about 240 code-quality notes (mostly `missed-where`, `path-combine`); the useless assignments are [#4](https://github.com/Ale-Newport/AfterFall/issues/4).
 
@@ -254,4 +254,3 @@ Bugs that only showed up in the engine, all fixed:
 - Session 1 extracted the official installer (`Unity-6000.3.28f1.pkg`) and package tarballs into a temporary scratch directory for compile checks. Since session 2 the installed editor and `Library/PackageCache` can be used instead (docs/TESTING.md §2).
 - The original GDD `.docx` was not found; docs/GDD.md is an adaptation of the master brief.
 - `gh` is authenticated as the owner (scopes: repo, workflow, gist, read:org). Direct pushes to `main` succeed through the admin bypass of the rulesets.
-- The social preview image (`docs/media/social-preview.jpg`) must be uploaded by hand in Settings → General → Social preview; GitHub has no API for it.

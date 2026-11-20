@@ -15,7 +15,7 @@ if printf '%s\n' "$body" | grep -Eiq "$pattern"; then
   echo "commit-msg: rejected — AI attribution/co-author trailers are not allowed in this repository." >&2
   echo "Offending line(s):" >&2
   printf '%s\n' "$body" | grep -Ei "$pattern" >&2
-  echo "Remove them and commit again (see CLAUDE.md > Commit rules)." >&2
+  echo "Remove them and commit again (see CONTRIBUTING.md > Commits)." >&2
   exit 1
 fi
 exit 0

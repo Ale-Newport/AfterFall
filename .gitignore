@@ -104,8 +104,16 @@ Thumbs.db
 *.mobileprovision
 *.provisionprofile
 *.cer
-.claude/settings.local.json
 tools/unity-compile-check/.build/
 
-# Agent worktrees (local only)
-/.claude/worktrees/
+# ---------------------------------------------------------------------------
+# Local AI-assistant configuration and private drafts (kept on the developer's machine)
+# ---------------------------------------------------------------------------
+/.claude/
+/CLAUDE.md
+/CLAUDE.local.md
+.cursor/
+.aider*
+**/LAUNCH*.md
+/launch/
+/docs/launch/

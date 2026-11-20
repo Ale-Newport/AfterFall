@@ -4,6 +4,12 @@ All notable changes, grouped by release and milestone. Dates are UTC. The projec
 
 ## [Unreleased]
 
+### Removed
+- Local AI-assistant configuration and promotional drafts are no longer tracked (they stay on the maintainer's machine and are git-ignored), along with the obsolete pre-overhaul screenshots in `docs/screenshots` (replaced by `docs/media`).
+
+### Changed
+- Farm planning drops an always-false check (CodeQL).
+
 ## [0.1.1] - 2026-11-20
 
 A Windows build, save-compatibility and colony fixes, and much deeper automated play testing. Saves from 0.1.0 load in 0.1.1.
