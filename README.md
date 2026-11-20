@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Ale-Newport/AfterFall/releases/latest"><b>Download for macOS</b></a> ·
+  <a href="https://github.com/Ale-Newport/AfterFall/releases/latest"><b>Download for Windows and macOS</b></a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="docs/PROGRESS.md">Progress</a> ·
@@ -26,9 +26,9 @@
   <a href="https://github.com/Ale-Newport/AfterFall/discussions">Discussions</a>
 </p>
 
-You wake up alone in a quiet, ruined valley. You scavenge, build shelter, smelt metal, bring electricity back and automate production, then recruit survivors who haul, build, farm and defend with you. Everything (inventories, machines, power grids, colonist jobs, infected, saves) runs on one authoritative simulation that works with or without rendering, and 131 tests check it headlessly on Linux, Windows and macOS.
+You wake up alone in a quiet, ruined valley. You scavenge, build shelter, smelt metal, bring electricity back and automate production, then recruit survivors who haul, build, farm and defend with you. Everything (inventories, machines, power grids, colonist jobs, infected, saves) runs on one authoritative simulation that works with or without rendering, and 155 tests check it headlessly on Linux, Windows and macOS, including progression checks on generated worlds and two-day soak runs with saves and reloads.
 
-> **Status: early playable prototype, `v0.1.0`.** All 131 EditMode tests and 7 PlayMode tests pass in Unity 6000.3.28f1. The macOS build passes a scripted tour of every system with 0 failed checks and 0 logged errors at about 8.4 ms per frame on an Apple M2 Max. Nobody has played it by hand yet (the tour drives commands, not the mouse and keyboard), the art is procedural, and the Windows build is untested. [docs/PROGRESS.md](docs/PROGRESS.md) lists exactly what is verified. Playtest reports are the most useful contribution right now.
+> **Status: early playable prototype, `v0.1.1`, for macOS and Windows.** All 155 EditMode tests and 7 PlayMode tests pass in Unity 6000.3.28f1. The macOS build passes a scripted tour of every system with 0 failed checks and 0 logged errors at about 8.4 ms per frame on an Apple M2 Max, and the Windows build runs the same tour on a GitHub-hosted Windows runner (software rendering, so its frame times say nothing about real PCs). Nobody has played it by hand yet (the tour drives commands, not the mouse and keyboard), and the art is procedural. [docs/PROGRESS.md](docs/PROGRESS.md) lists exactly what is verified. Playtest reports are the most useful contribution right now.
 
 | | |
 |---|---|
@@ -41,13 +41,15 @@ _Every image is an unedited frame from the scripted tour of the macOS build (`to
 
 ## Quick start
 
-**Play** (macOS, Apple silicon or Intel): download `AFTERFALL-<version>-macOS-universal.zip` from the [latest release](https://github.com/Ale-Newport/AfterFall/releases/latest) and unzip it. The build is not notarized, so clear the download quarantine once before opening it:
+**Play on Windows** (10 or 11, 64-bit): download `AFTERFALL-<version>-windows-x64.zip` from the [latest release](https://github.com/Ale-Newport/AfterFall/releases/latest), extract the whole folder and run `AFTERFALL.exe`. The build is not code-signed, so SmartScreen may warn the first time: choose **More info → Run anyway**.
+
+**Play on macOS** (Apple silicon or Intel): download `AFTERFALL-<version>-macOS-universal.zip` from the same release and unzip it. The build is not notarized, so clear the download quarantine once before opening it:
 
 ```bash
 xattr -dr com.apple.quarantine ~/Downloads/AFTERFALL.app
 ```
 
-Then open `AFTERFALL.app`, choose **New Game** and press **F1** in game for help.
+Then open `AFTERFALL.app`. On either system, choose **New Game** and press **F1** in game for help. Each download has a `.sha256` file to check it against.
 
 **Develop** (needs Git LFS and the .NET 10 SDK; Unity is only needed to run the game): one command clones the project, sets up LFS and the commit hook, and runs the full simulation test suite.
 
@@ -172,7 +174,7 @@ Every binding can be changed in **Settings**.
 dotnet test tools/dotnet/AfterfallSim.Tests/AfterfallSim.Tests.csproj
 ```
 
-This runs the EditMode test suite (131 tests) headlessly, as CI does on Linux, Windows and macOS: inventory conservation, reservations, crafting, construction, machines, power, AI, threats, world generation, saves and colonist jobs, farming and full gameplay-loop scenarios.
+This runs the EditMode test suite (155 tests) headlessly, as CI does on Linux, Windows and macOS: inventory conservation, reservations, crafting, construction, machines, power, AI, threats, world generation, saves and colonist jobs, farming, full gameplay-loop scenarios, progression reachability on generated worlds and long soak runs with save and reload.
 
 With Unity installed and licensed, `tools/run-unity-checks.sh` runs the same suite inside Unity, the PlayMode smoke tests, a macOS build and the scripted tour (screenshots, frame times and an error count in `Logs/unity-checks/`). See [docs/TESTING.md](docs/TESTING.md).
 

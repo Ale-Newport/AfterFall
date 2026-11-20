@@ -1,20 +1,20 @@
 # Progress log
 
-_Last updated: 2026-11-19 (session 4: v0.1.0 release, repository security and CI, seven simulation fixes from a code review)._
+_Last updated: 2026-11-20 (session 5: v0.1.1, Windows build, save-compatibility and colony fixes, progression and soak tests)._
 
 ## Snapshot
 | | |
 |---|---|
-| Branch | `main` (every commit pushed to `origin`). Latest release: `v0.1.0` |
+| Branch | `main` (every commit pushed to `origin`). Latest release: `v0.1.1` |
 | Unity version | 6000.3.28f1 (arm64), installed through Unity Hub 3.22.6 with a Personal license |
-| Last headless tests | 2026-11-19: **131/131 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on Linux, Windows and macOS on each push. |
-| Last Unity EditMode run | 2026-11-19: **131/131 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
-| Last Unity PlayMode run | 2026-11-19: **7/7 passed** (5 smoke tests plus 2 Input System integration tests) |
-| Last player build | 2026-11-19: macOS (universal: Apple silicon and Intel), 120 MB, no errors; attached to the v0.1.0 release |
-| Last scripted tour of the build | 2026-11-19 (v0.1.0 build): **0 failed checks, 0 errors logged**. New game in 2.8 s. Frames average 8.4–8.5 ms (holding the 120 Hz vsync cap); p95 9.2–9.3 ms. It builds a powered settlement with two recruited colonists and crops, which survives save and reload. |
+| Last headless tests | 2026-11-20: **155/155 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on Linux, Windows and macOS on each push. |
+| Last Unity EditMode run | 2026-11-20: **155/155 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
+| Last Unity PlayMode run | 2026-11-20: **7/7 passed** (5 smoke tests plus 2 Input System integration tests). With the Windows module installed the Input System package adds 2 Windows mouse tests that it skips itself ("Unstable due to 1252825"). |
+| Last player builds | 2026-11-20: macOS (universal), 120 MB, and Windows x64 (Mono), 100 MB, no errors; both attached to the v0.1.1 release |
+| Last scripted tour of the build | 2026-11-20 (v0.1.1): macOS **0 failed checks, 0 errors logged**, new game in 2.7 s, frames 8.4–8.5 ms average. Windows (GitHub-hosted `windows-latest`, WARP software rendering, 800×450, patience 25): **0 failed checks, 0 errors logged**, all 32 screenshots, 46 minutes. |
 | Last model gallery | 2026-11-09: **151 screenshots, 0 errors logged** (`tools/gallery.sh`, all sections), reviewed by eye. |
 | Human playtest of the acceptance loop | **not yet** |
-| Windows build | **not yet built** |
+| Windows build | built (v0.1.1); the full scripted tour passes on a GitHub-hosted runner; **never run on a real Windows PC with a GPU** |
 
 ## Completed and verified headlessly
 Verified means unit and integration tests pass under .NET, and the code compiles against the Unity reference assemblies.
@@ -114,6 +114,14 @@ All twelve are fixed (commit `fix(game): runtime issues found in presentation re
 
 ## Not started
 Conveyors and pipes, weather and disasters, factions, wildlife, the armoured infected, firearms, vehicles, multiple regions and streaming, skinned character animation, recorded audio, localisation.
+
+## v0.1.1 (session 5, 2026-11-20)
+- **Fixes:** saves with in-progress hauls survive content changes (#5); fuel hauls are planned beside ingredient hauls and counted per destination inventory (#6); each system's tick phase is saved (`WorldState.TickPhases`), so after a load farming, threats and regrowth no longer lose up to one tick and the game evolves exactly like the unsaved one; CodeQL warnings resolved (#4), with ArtPreview output byte-identical.
+- **New tests:** `ProgressionTests` (reachability fixpoint on eight generated worlds; content references), `SoakTests` (two in-game days with a save and reload every quarter-day; byte-identical continuation after a load over ten minutes), regression tests for #5 and #6. Four of the new regression tests fail on the old code.
+- **Windows:** Unity's Windows Build Support (Mono) module is installed. `tools/package-windows.sh` packages `Builds/Windows`; `.github/workflows/windows-player.yml` (manual) downloads the zip from a release or draft and runs the tour on `windows-latest`. The runner has no GPU, so Direct3D 11 falls back to WARP at about 1 fps; the first attempt failed only because the tour's real-time budgets ran out (the simulation advances at most 0.25 s per frame). `-afterfall-tour-patience <factor>` stretches them; the workflow uses 25. Two later runs exposed tour timing assumptions (the infected killed the survivor before the screenshot; workshops ran out of ingots before the power checks); the tour now captures as soon as the infected close in and tops workshops up before power checks. The fourth run passed: 0 failed checks, 0 errors, every system exercised. Screenshots match the macOS ones under Direct3D 11.
+- **Dead player:** actions taken while dead returned an empty reason; they now explain it.
+- **WebGL:** judged not realistically feasible as a straight build; the port plan is [#8](https://github.com/Ale-Newport/AfterFall/issues/8) (threaded texture, terrain and icon generation; `File.Replace` saves; URP budget; load time).
+- **Repository:** no AI co-author trailers exist anywhere in history (all commits by the owner), so no history rewrite was done. No Dependabot pull requests were open. Rulesets and security settings unchanged and verified.
 
 ## Release and repository hardening (session 4, 2026-11-19)
 - **Release:** `v0.1.0` on GitHub with the universal macOS build and its SHA-256 checksum (`tools/package-macos.sh`). The release workflow publishes notes from CHANGELOG.md when a `v*` tag is pushed.
@@ -233,7 +241,7 @@ Bugs that only showed up in the engine, all fixed:
 3. Conveyors (automation level 3) between storage and machines.
 4. Weather (storm or cold snap) with warnings and consequences for power and needs.
 5. Recorded audio where licensed assets are available; skinned characters to hide joint seams.
-6. Build and test the Windows player ([#2](https://github.com/Ale-Newport/AfterFall/issues/2)).
+6. Play the Windows build on a real PC ([#2](https://github.com/Ale-Newport/AfterFall/issues/2)); a WebGL demo ([#8](https://github.com/Ale-Newport/AfterFall/issues/8)).
 7. Visual follow-ups: power lines between poles and pylons ([#3](https://github.com/Ale-Newport/AfterFall/issues/3)), interior furnishing of POI buildings, a closable door leaf, construction-stage visuals for blueprints, a performance pass on renderer counts.
 
 ## How to run (current)

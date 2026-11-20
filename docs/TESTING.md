@@ -29,8 +29,11 @@ Requirements: .NET SDK 10 (`brew install dotnet`). On macOS Homebrew installs yo
 | FarmingTests / FarmJobTests | seeds unlock agriculture, growth only while watered, bottle returned, harvest, pump irrigation, crop save/load; a colonist plants, waters, harvests and replants from storage |
 | AcceptanceLoopTests | **organic early game** (bare hands → tools → workbench → planks → foundation → drink → save/load → continue) and the **industrial chain** (workbench → metalworking → furnace smelting → electrification → generator + workshop → gears → water works → fuel outage → refuel → resume) |
 | PerformanceTests | busy-settlement simulation budget (prints per-system timings) |
+| ProgressionTests | on eight generated worlds, a fixpoint over what a new game actually contains (kit, rolled loot, resource nodes, POIs) proves every technology, building, recipe and required item is **reachable**; every content reference resolves |
+| SoakTests | a settlement with two colonists, a furnace, crops and threats runs **two in-game days** with a save and reload every quarter-day (validation, reservations, weight, positions); a reloaded game evolves **byte-identically** to the unsaved one for ten minutes |
+| RegressionTests | one test per fixed review finding: saved random streams and infected timers, beds of dead colonists, emptied drops, watering with a full pack, clearing a recipe mid-cycle, rerouted raids, saves after content changes (#5), fuel vs ingredient hauls (#6) |
 
-Last result: **131 passed, 0 failed** (see docs/PROGRESS.md for the date and environment).
+Last result: **155 passed, 0 failed** (see docs/PROGRESS.md for the date and environment).
 
 ## 2. Unity compile check — no Unity license required
 `tools/unity-compile-check/compile_check.py` compiles every asmdef assembly (runtime, editor, EditMode and PlayMode tests) with the .NET SDK against **Unity's own reference assemblies** and the **source** of the pinned packages, using Unity-like scripting defines. It runs in two passes: `player` (no `UNITY_EDITOR`) and `editor`.

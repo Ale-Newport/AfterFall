@@ -4,6 +4,27 @@ All notable changes, grouped by release and milestone. Dates are UTC. The projec
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-20
+
+A Windows build, save-compatibility and colony fixes, and much deeper automated play testing. Saves from 0.1.0 load in 0.1.1.
+
+### Added
+- A Windows (64-bit) build next to the universal macOS build. The `Windows player` workflow runs the scripted tour of it on a GitHub-hosted Windows runner; `tools/package-windows.sh` packages it.
+- Progression tests: on eight generated worlds, everything a new game can reach is worked out from what the world actually contains (starting kit, rolled loot, resource nodes, points of interest), and every technology, building, recipe and required item must be reachable. Another test checks that every content reference points at an existing definition.
+- Soak tests: a settlement with two colonists, a furnace, crops and threats runs for two in-game days with a save and reload every quarter-day, checking validation, reservations, carry weight and positions throughout. A reloaded game must evolve exactly like the game that was never saved, compared over ten in-game minutes.
+- Regression tests for every fix below (155 EditMode tests in total).
+
+### Fixed
+- A content update that removes an item or lowers its stack size no longer makes saves with in-progress hauls unloadable: reservations that no longer fit are dropped with a warning, and the haul is planned again ([#5](https://github.com/Ale-Newport/AfterFall/issues/5)).
+- Colonists no longer hold back fuel while ingredients are on their way to a machine, and wood hauled as fuel no longer counts toward a recipe that also takes wood ([#6](https://github.com/Ale-Newport/AfterFall/issues/6)).
+- After a load, systems that tick slowly (farming, the threat director, resource regrowth) lost up to one tick of time. Each system's progress toward its next tick is now saved.
+- Actions taken while dead (building, crafting, transfers) now say why they fail instead of failing silently.
+- Scripted tour: `-afterfall-tour-patience <factor>` for slow machines; the infected screenshot is taken as soon as they close in; the power check fails only on a consumer that is denied power.
+- Code quality ([#4](https://github.com/Ale-Newport/AfterFall/issues/4)): unused assignments removed (rendered textures and icons are byte-identical), explicit null checks for harvesting without a tool, farm plots without a farm definition, unpowered machines and generator rows in the strategic panel, and a documented empty `catch` in save-slot listing.
+
+### Changed
+- Version 0.1.1 in the player settings.
+
 ## [0.1.0] - 2026-11-19
 
 The first public release: an early playable prototype of the whole survival → industry → settlement loop. A universal macOS build is attached; the Windows build is untested, and nobody has played the loop by hand yet.
@@ -113,5 +134,6 @@ The first public release: an early playable prototype of the whole survival → 
 ### Known limitations
 - Not yet run in a licensed Unity Editor; in-engine behaviour is unverified (see docs/PROGRESS.md).
 
-[Unreleased]: https://github.com/Ale-Newport/AfterFall/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Ale-Newport/AfterFall/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Ale-Newport/AfterFall/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Ale-Newport/AfterFall/releases/tag/v0.1.0

@@ -1,14 +1,14 @@
 # Launch kit
 
-Ready-to-post announcements for AFTERFALL `v0.1.0`, written to be accurate about what the project is: an early prototype with procedural art, verified by tests and a scripted tour, not yet played by hand. Post them yourself from your own accounts, one community at a time, and stay in the thread to answer questions.
+Ready-to-post announcements for AFTERFALL `v0.1.1`, written to be accurate about what the project is: an early prototype with procedural art, verified by tests and a scripted tour, not yet played by hand. Post them yourself from your own accounts, one community at a time, and stay in the thread to answer questions.
 
 ## When to post
 
-The project is strongest once two open issues are done: [a hand playtest of the full loop](https://github.com/Ale-Newport/AfterFall/issues/1) and [a tested Windows build](https://github.com/Ale-Newport/AfterFall/issues/2). Most players on these sites use Windows, and "nobody has played it yet" invites the obvious first comment. A good order:
+Since v0.1.1 there is a Windows build, and its scripted tour runs on a GitHub-hosted Windows runner. One gate remains: [a hand playtest of the full loop](https://github.com/Ale-Newport/AfterFall/issues/1), ideally including someone on a real Windows PC ([#2](https://github.com/Ale-Newport/AfterFall/issues/2)). "Nobody has played it yet" invites the obvious first comment. A good order:
 
 1. **Now:** r/Unity3D (developer audience, interested in the architecture) and the Discussions *Show and tell* category.
 2. **After a playtest pass:** Show HN, r/gamedev on its self-promotion day, r/csharp.
-3. **After a Windows build:** r/IndieDev, r/SurvivalGaming and r/BaseBuildingGames, where their rules allow posts about free open-source games.
+3. **After a playtest on a real Windows PC:** r/IndieDev, r/SurvivalGaming and r/BaseBuildingGames, where their rules allow posts about free open-source games.
 
 Read each community's current rules before posting; they change. Never ask for stars or upvotes, never post the same text to several subreddits on the same day, and never use extra accounts.
 
@@ -26,11 +26,11 @@ Rules: https://news.ycombinator.com/showhn.html. People must be able to try it: 
 
 > Hi HN. AfterFall is a single-player 3D survival game in Unity 6 that I'm building in the open. You start with bare hands in a ruined valley, build a shelter, smelt iron, bring a generator online, and end up running a small powered settlement with colonists who haul, build and farm.
 >
-> The part I find most interesting technically: the whole game is a deterministic C# simulation that never references UnityEngine. Inventories, crafting, construction, machines, the power grid (with battery storage and priority load shedding), colonist jobs, the infected and saves all live in one WorldState. Unity only renders it and feeds it input. The same sources compile for netstandard2.1, so 131 tests run without Unity on Linux, Windows and macOS in CI. Items can only move through a transactional, reservation-based inventory, which has made "colonist hauling never loses items" a testable property instead of a hope.
+> The part I find most interesting technically: the whole game is a deterministic C# simulation that never references UnityEngine. Inventories, crafting, construction, machines, the power grid (with battery storage and priority load shedding), colonist jobs, the infected and saves all live in one WorldState. Unity only renders it and feeds it input. The same sources compile for netstandard2.1, so 155 tests run without Unity on Linux, Windows and macOS in CI. Items can only move through a transactional, reservation-based inventory, which has made "colonist hauling never loses items" a testable property instead of a hope.
 >
 > All the art is code: meshes, textures and item icons are generated procedurally, and there's no third-party art or audio.
 >
-> Honest status: it's a v0.1.0 prototype. A scripted tour of the macOS build exercises every system with no failures, but nobody has played the loop by hand yet and the Windows build is untested. The macOS download is in the release. I'd love feedback on the architecture, and from anyone willing to play for 20 minutes.
+> Honest status: it's a v0.1.1 prototype. A scripted tour exercises every system with no failures on the macOS build and on a GPU-less Windows CI runner, and tests check that every technology, building and recipe is reachable on generated worlds. But nobody has played the loop by hand yet. Windows and macOS downloads are in the release. I'd love feedback on the architecture, and from anyone willing to play for 20 minutes.
 >
 > Code is MIT licensed.
 
@@ -38,7 +38,7 @@ Rules: https://news.ycombinator.com/showhn.html. People must be able to try it: 
 
 Use the *Show-Off* flair (check the current flair names). Attach `docs/media/afterfall-demo.gif` or a short screen capture.
 
-**Title:** I'm building an open-source survival → industry game where the whole simulation runs without UnityEngine (131 headless tests)
+**Title:** I'm building an open-source survival → industry game where the whole simulation runs without UnityEngine (155 headless tests)
 
 **Body:**
 
@@ -65,13 +65,13 @@ Only on the day the subreddit allows self-promotion (check the sidebar), or as a
 
 ## r/csharp
 
-**Title:** A deterministic game simulation in C# 9 / netstandard2.1 with a transactional inventory and 131 tests
+**Title:** A deterministic game simulation in C# 9 / netstandard2.1 with a transactional inventory and 155 tests
 
 **Body:** focus on the code: `Inventory` reservations and two-phase `ReservedTransfers`, `DeterministicRandom` (xorshift64*) with saved state, the fixed-rate tick scheduler, and the save format (versioned JSON, SHA-256 checksum, migrations, atomic writes and backup recovery). Link to `Assets/_Afterfall/Scripts/Domain` and `docs/ARCHITECTURE.md`.
 
 ## r/IndieDev, r/SurvivalGaming, r/BaseBuildingGames
 
-Wait for the Windows build. Lead with the GIF and one sentence on the player fantasy ("from scavenging alone to running a powered settlement with colonists"), say plainly that it is a free, early, open-source prototype, and ask for playtest feedback rather than wishlists.
+Wait for a hand playtest on Windows. Lead with the GIF and one sentence on the player fantasy ("from scavenging alone to running a powered settlement with colonists"), say plainly that it is a free, early, open-source prototype, and ask for playtest feedback rather than wishlists.
 
 ## Assets to reuse
 
