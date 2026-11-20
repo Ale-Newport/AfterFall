@@ -335,8 +335,8 @@ namespace Afterfall.Domain.Colony
             if (HasActiveJob(JobType.Farm, plot.Id, null)) return;
             BuildingDefinition def = _content.Building(plot.DefId);
             Farming.CropState crop = plot.Crop;
-            if (def?.Farm == null || crop == null) return;
-            string name = def?.Name ?? "planter bed";
+            if (def?.Farm == null) return;
+            string name = def.Name;
             if (crop.Ready)
             {
                 AddJob(new Job { Type = JobType.Farm, Farm = FarmAction.Harvest, TargetStructure = plot.Id, Description = $"Harvest {name}", CreatedAt = now });
