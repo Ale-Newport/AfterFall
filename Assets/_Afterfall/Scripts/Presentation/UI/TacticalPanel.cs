@@ -25,6 +25,8 @@ namespace Afterfall.Presentation.UI
         private float _slow;
         private readonly List<Label> _labelPool = new List<Label>();
         private readonly ColonyPanel _colony;
+        private readonly VisualElement _zones;
+        private string _zonesShown;
 
         public VisualElement Root { get; }
 
@@ -45,6 +47,11 @@ namespace Afterfall.Presentation.UI
             _power = _left.Put(UiKit.Text("", "wrap"));
             _left.Add(UiKit.Text("Threats", "subtitle"));
             _threat = _left.Put(UiKit.Text("", "wrap"));
+            var zoneHead = _left.Put(UiKit.Div("row"));
+            zoneHead.Add(UiKit.Text("Gathering areas", "subtitle"));
+            zoneHead.Add(UiKit.Div("spacer"));
+            zoneHead.Add(UiKit.Btn("Mark area…", () => _gc.Tactical.BeginZone(), "btn--small"));
+            _zones = _left.Put(UiKit.Div("col"));
             _left.Add(UiKit.Text("Known locations", "subtitle"));
             _places = _left.Put(UiKit.Text("", "muted"));
 
@@ -77,7 +84,7 @@ namespace Afterfall.Presentation.UI
         private void RefreshOverview()
         {
             Dictionary<string, int> totals = _gc.Session.ResourceOverview();
-            _resources.text = totals.Count == 0 ? "Nothing stored yet." : string.Join("\n", totals.OrderByDescending(k => k.Value).Take(12).Select(k => $"{_gc.Session.Content.Items.NameOf(k.Key)}: {k.Value}"));
+            _resources.text = totals.Count == 0 ? "Nothing stored yet." : string.Join("\n", totals.OrderByDescending(k => k.Value).Take(8).Select(k => $"{_gc.Session.Content.Items.NameOf(k.Key)}: {k.Value}"));
 
             IReadOnlyList<PowerNetworkInfo> nets = _gc.Session.Power.Networks;
             var lines = new List<string>();
@@ -100,10 +107,47 @@ namespace Afterfall.Presentation.UI
             if (forecast.ColdSnapInHours >= 0) sky += $"\n! Cold snap expected in about {forecast.ColdSnapInHours:0.#} h";
             _threat.text = $"Noise/attention: {t.Heat:0}%\nInfected recently seen: {seen}{raid}{sky}";
 
+            RefreshZones();
+
             var places = new List<string>();
             foreach (PoiInfo p in _gc.Session.World.Layout.Pois)
-                if (_gc.Session.World.Exploration.DiscoveredPois.Contains(p.Id)) places.Add($"{p.Name} — risk {p.Risk}");
-            _places.text = places.Count == 0 ? "Explore to discover locations." : string.Join("\n", places);
+                if (_gc.Session.World.Exploration.DiscoveredPois.Contains(p.Id)) places.Add($"{p.Name} ({p.Risk.ToLowerInvariant()} risk)");
+            _places.text = places.Count == 0 ? "Explore to discover locations." : string.Join(" · ", places);
+        }
+
+        /// <summary>One row per gathering area: what it gathers (toggles), what the planner found, and Remove.</summary>
+        private void RefreshZones()
+        {
+            WorldState w = _gc.Session.World;
+            var ids = w.WorkZones.Keys.OrderBy(k => k).ToList();
+            string shown = string.Join(";", ids.Select(k => $"{k.Value}:{w.WorkZones[k].Gather}:{w.WorkZones[k].Status}"));
+            if (shown == _zonesShown) return;
+            _zonesShown = shown;
+            _zones.Clear();
+            if (ids.Count == 0)
+            {
+                _zones.Add(UiKit.Text("None. Mark an area on explored land, and colonists with Gather work will cut, mine and pick there (tools come from storage).", "muted", "wrap"));
+                return;
+            }
+            int n = 1;
+            foreach (EntityId id in ids)
+            {
+                Afterfall.Domain.Colony.WorkZone z = w.WorkZones[id];
+                EntityId zid = id;
+                _zones.Add(UiKit.Text($"Area {n++} ({z.Radius:0} m): {z.Status}", "wrap"));
+                var row = _zones.Put(UiKit.Div("row"));
+                row.style.flexWrap = Wrap.Wrap;
+                foreach (Afterfall.Domain.Colony.GatherKinds k in new[] { Afterfall.Domain.Colony.GatherKinds.Wood, Afterfall.Domain.Colony.GatherKinds.Stone, Afterfall.Domain.Colony.GatherKinds.Fiber, Afterfall.Domain.Colony.GatherKinds.Food })
+                {
+                    Afterfall.Domain.Colony.GatherKinds kind = k;
+                    bool on = (z.Gather & kind) != 0;
+                    Button b = UiKit.Btn(kind.ToString(), () => { Toast(_gc.Session.SetZoneGather(zid, kind, !on)); _zonesShown = null; }, "btn--small");
+                    if (on) b.AddToClassList("btn--selected");
+                    row.Add(b);
+                }
+                row.Add(UiKit.Btn("Focus", () => _gc.CameraRig.Tactical.Focus(z.Center.ToUnity(), 0f), "btn--small"));
+                row.Add(UiKit.Btn("Remove", () => { Toast(_gc.Session.RemoveWorkZone(zid)); _zonesShown = null; }, "btn--small", "btn--danger"));
+            }
         }
 
         private void RefreshSelection()
@@ -226,6 +270,12 @@ namespace Afterfall.Presentation.UI
             }
             foreach (PoiInfo p in _gc.Session.World.Layout.Pois)
                 if (_gc.Session.World.Exploration.DiscoveredPois.Contains(p.Id)) Place(Next(p.Name, null), p.Center.ToUnity() + Vector3.up * 12f);
+            foreach (Afterfall.Domain.Colony.WorkZone z in _gc.Session.World.WorkZones.Values)
+            {
+                Vector3 c = z.Center.ToUnity();
+                c.y = _gc.GroundHeight(c) + 3f;
+                Place(Next($"Gathering: {Afterfall.Domain.Colony.GatherRules.Describe(z.Gather)}", "overlay-label--good"), c);
+            }
             foreach (KeyValuePair<EntityId, ColonistView> kv in _gc.Sync.Colonists)
             {
                 if (kv.Value == null || !_gc.Session.World.Colonists.TryGetValue(kv.Key, out Afterfall.Domain.Colony.ColonistState c) || !c.Recruited) continue;

@@ -10,11 +10,13 @@ All notable changes, grouped by release and milestone. Dates are UTC. The projec
 - **Cold snaps and body warmth.** Every two or three days, never on the first night, a foretold cold snap drops the temperature by up to 18 °C overnight. A new Warmth vital follows the felt temperature: shelter under a roof or inside a building and heat from fires warm you; being cold drains food faster and slows stamina, and freezing costs health. The HUD shows warmth, the felt and outdoor temperature, the sky and any warning; the strategic panel shows the weather and what is coming.
 - **Campfire** (Survival Basics: 4 logs, 6 stones): burns logs or charcoal (a log lasts about an hour of game time), warms everyone within 5 m, lights the night and cooks a **Baked Potato** that also warms you. The start camp's cold fire pit is now a real campfire you can light. Colonists keep a lit fire fed from storage and, when cold, walk to the nearest fire (or a bed under a roof) to warm up.
 - Rain waters planter beds in the open.
+- **Gathering areas.** In the strategic view, "Mark area…" places a gathering area on explored land; toggles choose wood, stone, fiber and food. Colonists with the new Gather work fetch an axe or pickaxe from storage when a node needs one, cut, mine or pick there, and carry the load and the tool back. Each area says what it found and what is missing. The colony panel shows each colonist's warmth and the Gather priority.
 
 ### Changed
 - A machine, generator, battery, lamp or pole at or below 30 % health is broken: it stops and leaves its grid until repaired. Broken equipment can be repaired from its prompt or panel.
 
 ### Fixed
+- Colonists collecting from a machine or crate now stop at its edge instead of trying to reach within 1.8 m of its centre, so a workshop boxed in by its neighbours no longer keeps a colonist walking in place.
 - A loaded game with colonists could plan their jobs half a second apart from the unsaved game: the colony planner's beat and each colonist's next assignment time were not saved. They are now (regression test included).
 
 ### Removed

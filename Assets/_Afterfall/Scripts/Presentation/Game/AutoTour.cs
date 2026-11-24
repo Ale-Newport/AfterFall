@@ -214,6 +214,7 @@ namespace Afterfall.Presentation
             yield return ColonyLife(gc, town);
             yield return PumpOutpost(gc, town);
             yield return PowerGrid(gc, town);
+            yield return Gathering(gc, town);
             yield return WeatherScene(gc, town);
 
             SkipTo(gc, 22.0);
@@ -222,6 +223,7 @@ namespace Afterfall.Presentation
             while (Time.realtimeSinceStartup - sleepWait < P(20f) && town.Mara.Activity != ColonistActivity.Resting) yield return null;
             Time.timeScale = 1f;
             Check(town.Mara.Activity == ColonistActivity.Resting, $"At night {town.Mara.Name} sleeps in her bed ({town.Mara.Activity}: {town.Mara.Status})");
+            if (town.Mara.Activity != ColonistActivity.Resting) LogColonist(gc, town.Mara);
             StandAndLook(gc, town.Site + new Vector3(-9f, 0f, -7f), town.Site);
             yield return Seconds(2f);
             yield return Capture("21_night_at_base");
@@ -955,6 +957,69 @@ namespace Afterfall.Presentation
                 $"Generator back on: everything powered (workshops: {shopStates}; lamp: {town.Lamp.Power.Reason}; generator enabled {gen.Enabled}, {gen.Generator.Status}, fuel {Units(gen.Generator.Fuel)} items, buffer {gen.Generator.BufferJoules / 1000:0} kJ)");
             gc.Tactical.Select(EntityId.None);
             gc.SetTactical(false);
+        }
+
+        /// <summary>
+        /// Marks a gathering area over trees near the settlement in the strategic view, puts a stone axe in
+        /// the crate, and watches a colonist fetch it, chop, and bring the logs and the axe back.
+        /// </summary>
+        private IEnumerator Gathering(GameController gc, Settlement town)
+        {
+            GameSession s = gc.Session;
+            SkipTo(gc, 10.0);
+            Vec3 site = town.Site.ToSim();
+            ResourceNodeState tree = s.World.ResourceNodes.Values
+                .Where(n => n.DefId.StartsWith("tree_") && !n.Depleted && s.World.Exploration.IsRevealed(n.Position.X, n.Position.Z))
+                .OrderBy(n => Vec3.DistanceXZ(n.Position, site)).FirstOrDefault();
+            if (tree == null)
+            {
+                Line("FAIL: no explored tree near the settlement to gather");
+                yield break;
+            }
+            OpResult marked = s.AddWorkZone(tree.Position, 10f, out WorkZone zone);
+            if (!marked.Ok)
+            {
+                Line("FAIL: marking a gathering area: " + marked.Message);
+                yield break;
+            }
+            s.SetZoneGather(zone.Id, GatherKinds.Stone | GatherKinds.Fiber | GatherKinds.Food, false);
+            Inventory bag = s.Player.Inventory;
+            Grant(bag, "stone_axe", 1);
+            yield return Deposit(gc, town.Crate, "stone_axe", 1, town.Crate.Storage);
+            int woodBefore = town.Crate.Storage.Count("wood");
+            gc.SetTactical(true);
+            gc.CameraRig.Tactical.Focus(zone.Center.ToUnity(), 0f);
+            yield return Seconds(2.5f);
+            yield return Capture("20b_gathering_area");
+            gc.SetTactical(false);
+
+            Time.timeScale = 4f;
+            ColonistState worker = null;
+            bool shot = false;
+            float start = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - start < P(40f) && !(town.Crate.Storage.Count("wood") > woodBefore && town.Crate.Storage.Count("stone_axe") == 1))
+            {
+                worker = worker ?? s.World.Colonists.Values.FirstOrDefault(c => c.Recruited && c.CurrentJob.IsValid && s.World.Jobs.TryGetValue(c.CurrentJob, out Job j) && j.Type == JobType.Gather && j.Stage == HaulStage.ToDestination);
+                if (!shot && worker != null && worker.Activity == ColonistActivity.Working)
+                {
+                    shot = true;
+                    Time.timeScale = 1f;
+                    // From above: the trees around a gatherer hide them from a shoulder camera.
+                    gc.SetTactical(true);
+                    gc.CameraRig.Tactical.Focus(worker.Position.ToUnity(), 18f);
+                    yield return Seconds(1.5f);
+                    yield return Capture("20c_gatherer_at_work");
+                    gc.SetTactical(false);
+                    Time.timeScale = 4f;
+                }
+                yield return null;
+            }
+            Time.timeScale = 1f;
+            // The survivor keeps their own stone axe; count the settlement's (storage and colonists' packs).
+            int units = s.World.AllInventories.Where(inv => inv != bag).Sum(inv => inv.Count("stone_axe"));
+            Check(town.Crate.Storage.Count("wood") > woodBefore && town.Crate.Storage.Count("stone_axe") == 1 && units == 1,
+                $"{worker?.Name ?? "A colonist"} fetched the axe, chopped in the gathering area and brought logs ({woodBefore} -> {town.Crate.Storage.Count("wood")}) and the axe back to the crate ({units} in the settlement)");
+            s.RemoveWorkZone(zone.Id);
         }
 
         /// <summary>

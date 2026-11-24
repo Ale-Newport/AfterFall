@@ -77,9 +77,11 @@ namespace Afterfall.Persistence
                     Description = j.Description, FailureReason = j.FailureReason, CreatedAt = j.CreatedAt, TargetStructure = j.TargetStructure.Value,
                     SourceInventory = j.SourceInventory.Value, DestinationInventory = j.DestinationInventory.Value, ItemId = j.ItemId, Quantity = j.Quantity,
                     Stage = j.Stage.ToString(), SourceToken = j.SourceToken.Id, DestinationToken = j.DestinationToken.Id, DeliverToBlueprint = j.DeliverToBlueprint,
-                    Farm = j.Farm.ToString()
+                    Farm = j.Farm.ToString(), TargetNode = j.TargetNode.Value, Progress = j.Progress, Harvests = j.Harvests
                 });
             }
+            foreach (WorkZone z in Sorted(w.WorkZones))
+                dto.WorkZones.Add(new WorkZoneDto { Id = z.Id.Value, Center = z.Center, Radius = z.Radius, Gather = z.Gather.ToString() });
             dto.UnlockedTechs.AddRange(w.Tech.Unlocked);
             dto.UnlockedTechs.Sort(StringComparer.Ordinal);
             foreach (KeyValuePair<string, int> kv in w.Tech.Progress) dto.TechProgress[kv.Key] = kv.Value;
@@ -363,10 +365,23 @@ namespace Afterfall.Persistence
                     SourceToken = jd.SourceToken > 0 ? new ReservationToken(new EntityId(jd.SourceInventory), jd.SourceToken) : default,
                     DestinationToken = jd.DestinationToken > 0 ? new ReservationToken(new EntityId(jd.DestinationInventory), jd.DestinationToken) : default,
                     DeliverToBlueprint = jd.DeliverToBlueprint,
-                    Farm = Enum.TryParse(jd.Farm, out FarmAction fa) ? fa : FarmAction.Plant
+                    Farm = Enum.TryParse(jd.Farm, out FarmAction fa) ? fa : FarmAction.Plant,
+                    TargetNode = new EntityId(jd.TargetNode), Progress = jd.Progress, Harvests = jd.Harvests
                 };
                 w.Jobs[j.Id] = j;
                 w.Ids.EnsureAbove(j.Id);
+            }
+
+            foreach (WorkZoneDto zd in dto.WorkZones ?? new List<WorkZoneDto>())
+            {
+                var z = new WorkZone
+                {
+                    Id = new EntityId(zd.Id), Center = zd.Center,
+                    Radius = Math.Max(WorkZone.MinRadius, Math.Min(WorkZone.MaxRadius, zd.Radius)),
+                    Gather = Enum.TryParse(zd.Gather, out GatherKinds gk) ? gk : GatherKinds.All
+                };
+                w.WorkZones[z.Id] = z;
+                w.Ids.EnsureAbove(z.Id);
             }
 
             foreach (string t in dto.UnlockedTechs) w.Tech.Unlocked.Add(t);

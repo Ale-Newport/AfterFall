@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Afterfall.Core;
 using Afterfall.Domain.AI;
+using Afterfall.Domain.Colony;
 using Afterfall.Domain.Construction;
 using Afterfall.Domain.Events;
 using Afterfall.Domain.Industry;
@@ -34,6 +35,14 @@ namespace Afterfall.Presentation
         /// <summary>When set, the next selected structure is connected to this one.</summary>
         public EntityId LinkSource { get; private set; }
 
+        /// <summary>The next left click on explored ground marks a gathering area.</summary>
+        public bool PlacingZone { get; private set; }
+
+        private Transform _zoneRoot;
+        private GameObject _zonePreview;
+        private readonly List<GameObject> _zoneDiscs = new List<GameObject>();
+        private Material _zoneMat;
+
         public IReadOnlyDictionary<EntityId, float> SeenZombies => _seenZombies;
 
         public void Initialize(GameController gc)
@@ -43,6 +52,11 @@ namespace Afterfall.Presentation
             _cableRoot.SetParent(transform, false);
             _selectionRing = Shapes.Part(transform, "SelectionRing", MeshFactory.Cylinder(24), MaterialLibrary.UnlitTransparent(new Color(1f, 0.85f, 0.3f, 0.45f)), Vector3.zero, new Vector3(3, 0.05f, 3), null, false);
             _selectionRing.SetActive(false);
+            _zoneRoot = new GameObject("WorkZones").transform;
+            _zoneRoot.SetParent(transform, false);
+            _zoneMat = MaterialLibrary.UnlitTransparent(new Color(0.45f, 0.9f, 0.4f, 0.16f));
+            _zonePreview = Shapes.Part(_zoneRoot, "ZonePreview", MeshFactory.Cylinder(48), MaterialLibrary.UnlitTransparent(new Color(0.95f, 0.9f, 0.4f, 0.22f)), Vector3.zero, Vector3.one, null, false);
+            _zonePreview.SetActive(false);
             BuildFog();
             SetVisible(false);
         }
@@ -50,11 +64,13 @@ namespace Afterfall.Presentation
         public void SetVisible(bool visible)
         {
             _cableRoot.gameObject.SetActive(visible);
+            _zoneRoot.gameObject.SetActive(visible);
             if (_fog != null) _fog.SetActive(visible);
             if (!visible)
             {
                 _selectionRing.SetActive(false);
                 LinkSource = EntityId.None;
+                PlacingZone = false;
             }
         }
 
@@ -62,6 +78,14 @@ namespace Afterfall.Presentation
         {
             Selected = id;
             LinkSource = EntityId.None;
+        }
+
+        /// <summary>Starts marking a gathering area: the next left click on explored ground places it (right click cancels).</summary>
+        public void BeginZone()
+        {
+            PlacingZone = true;
+            LinkSource = EntityId.None;
+            _gc.Toast("Click on explored ground to mark a gathering area (right click cancels).");
         }
 
         public void BeginLink(EntityId from)
@@ -78,15 +102,21 @@ namespace Afterfall.Presentation
 
             if (_gc.TacticalInputActive && !_gc.Build.IsPlacing && !_gc.Ui.PointerOverUi)
             {
-                if (_gc.Input.TacSelect.WasPressedThisFrame()) Pick();
+                if (_gc.Input.TacSelect.WasPressedThisFrame())
+                {
+                    if (PlacingZone) PlaceZone();
+                    else Pick();
+                }
                 if (_gc.Input.TacCommand.WasPressedThisFrame())
                 {
-                    if (LinkSource.IsValid) LinkSource = EntityId.None;
+                    if (PlacingZone) PlacingZone = false;
+                    else if (LinkSource.IsValid) LinkSource = EntityId.None;
                     else Selected = EntityId.None;
                 }
             }
 
             UpdateSelectionRing();
+            UpdateZones();
             _cableRefresh -= Time.unscaledDeltaTime;
             if (_cableRefresh <= 0f || _cableVersion != _gc.Session.World.PowerTopologyVersion) RefreshCables();
             if (_fogVersion != _gc.Session.World.Exploration.Version) RefreshFog();
@@ -111,6 +141,46 @@ namespace Afterfall.Presentation
                 return;
             }
             Selected = view.Id;
+        }
+
+        private bool GroundUnderCursor(out Vector3 point)
+        {
+            point = default;
+            Ray ray = _gc.CameraRig.AimRay(true);
+            if (!Physics.Raycast(ray, out RaycastHit hit, 800f, Layers.Mask(Layers.Terrain), QueryTriggerInteraction.Ignore)) return false;
+            point = hit.point;
+            return true;
+        }
+
+        private void PlaceZone()
+        {
+            if (!GroundUnderCursor(out Vector3 p)) return;
+            OpResult r = _gc.Session.AddWorkZone(p.ToSim(), WorkZone.DefaultRadius, out _);
+            _gc.Toast(r.Message, r.Ok ? Severity.Success : Severity.Warning);
+            if (r.Ok) PlacingZone = false;
+        }
+
+        /// <summary>A translucent disc per gathering area, plus a preview under the cursor while marking one.</summary>
+        private void UpdateZones()
+        {
+            int i = 0;
+            foreach (WorkZone z in _gc.Session.World.WorkZones.Values)
+            {
+                if (i == _zoneDiscs.Count) _zoneDiscs.Add(Shapes.Part(_zoneRoot, "Zone", MeshFactory.Cylinder(48), _zoneMat, Vector3.zero, Vector3.one, null, false));
+                GameObject disc = _zoneDiscs[i++];
+                disc.SetActive(true);
+                Vector3 c = z.Center.ToUnity();
+                c.y = _gc.GroundHeight(c);
+                disc.transform.position = c;
+                disc.transform.localScale = new Vector3(z.Radius * 2f, 1.2f, z.Radius * 2f);
+            }
+            for (; i < _zoneDiscs.Count; i++) _zoneDiscs[i].SetActive(false);
+            bool preview = PlacingZone && GroundUnderCursor(out Vector3 at);
+            _zonePreview.SetActive(preview);
+            if (!preview) return;
+            GroundUnderCursor(out Vector3 p);
+            _zonePreview.transform.position = p;
+            _zonePreview.transform.localScale = new Vector3(WorkZone.DefaultRadius * 2f, 1.2f, WorkZone.DefaultRadius * 2f);
         }
 
         private void UpdateSelectionRing()

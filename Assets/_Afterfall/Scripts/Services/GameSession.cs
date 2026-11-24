@@ -60,6 +60,7 @@ namespace Afterfall.Services
             if (Colony.Movement is DirectColonistMovement walk) walk.GroundHeight = p => World.Layout.HeightAt(p.X, p.Z);
             Weather = new WeatherSystem(World, Content, Events);
             Weather.EmitNoise = (p, r, src) => Zombies.Noise.Emit(p, r, Now, src);
+            Colony.EmitNoise = (p, r, src) => Zombies.Noise.Emit(p, r, Now, src);
             Heaters = new HeaterSystem(World, Content);
             Zombies.SightFactor = () => WeatherReadout.Of(World).SightFactor;
             Zombies.HearingFactor = () => WeatherReadout.Of(World).HearingFactor;
@@ -587,6 +588,52 @@ namespace Afterfall.Services
             if (type == JobType.Eat || type == JobType.Rest || type == JobType.WarmUp) return OpResult.Fail("personal", "Eating, resting and warming up are personal needs.");
             c.Work.Priorities[type] = Math.Max(0, Math.Min(4, priority));
             return OpResult.Success(priority == 0 ? $"{c.Name} will no longer {type.ToString().ToLowerInvariant()}." : $"{c.Name}: {type} priority {priority}.");
+        }
+
+        public const int MaxWorkZones = 6;
+
+        /// <summary>
+        /// Marks a gathering area centred on an explored spot. Colonists with Gather work cut, mine and pick
+        /// what the zone allows there; the order is carried out by people walking out with real tools.
+        /// </summary>
+        public OpResult AddWorkZone(Vec3 center, float radius, out WorkZone zone)
+        {
+            zone = null;
+            if (World.WorkZones.Count >= MaxWorkZones) return OpResult.Fail("too_many", $"At most {MaxWorkZones} gathering areas. Remove one first.");
+            if (center.X < 0 || center.Z < 0 || center.X > WorldLayout.WorldSize || center.Z > WorldLayout.WorldSize) return OpResult.Fail("outside", "Outside the valley.");
+            if (!World.Exploration.IsRevealed(center.X, center.Z)) return OpResult.Fail("unexplored", "You have not explored there yet.");
+            if (World.Layout != null && World.Layout.IsWater(center.X, center.Z)) return OpResult.Fail("water", "That is open water.");
+            zone = new WorkZone
+            {
+                Id = World.Ids.Allocate(), Center = center,
+                Radius = Math.Max(WorkZone.MinRadius, Math.Min(WorkZone.MaxRadius, radius))
+            };
+            World.WorkZones[zone.Id] = zone;
+            return OpResult.Success($"Gathering area marked ({zone.Radius:0} m). Colonists with Gather work will collect {GatherRules.Describe(zone.Gather)} there.");
+        }
+
+        public OpResult SetZoneGather(EntityId zoneId, GatherKinds kind, bool allowed)
+        {
+            if (!World.WorkZones.TryGetValue(zoneId, out WorkZone z)) return OpResult.Fail("missing", "No such gathering area.");
+            z.Gather = allowed ? z.Gather | kind : z.Gather & ~kind;
+            return OpResult.Success($"Gathering area: {GatherRules.Describe(z.Gather)}.");
+        }
+
+        /// <summary>Removes a gathering area. Work not yet started there is cancelled; colonists already out finish their trip.</summary>
+        public OpResult RemoveWorkZone(EntityId zoneId)
+        {
+            if (!World.WorkZones.TryGetValue(zoneId, out WorkZone z)) return OpResult.Fail("missing", "No such gathering area.");
+            World.WorkZones.Remove(zoneId);
+            var cancel = new List<EntityId>();
+            foreach (Job j in World.Jobs.Values)
+            {
+                if (j.Type != JobType.Gather || j.State != JobState.Open || !World.ResourceNodes.TryGetValue(j.TargetNode, out ResourceNodeState n) || !z.Contains(n.Position)) continue;
+                bool elsewhere = false;
+                foreach (WorkZone other in World.WorkZones.Values) elsewhere |= other.Contains(n.Position);
+                if (!elsewhere) cancel.Add(j.Id);
+            }
+            foreach (EntityId id in cancel) World.Jobs.Remove(id);
+            return OpResult.Success("Gathering area removed.");
         }
 
         public int RecruitedCount

@@ -93,6 +93,15 @@ namespace Afterfall.Domain.Colony
         }
         public IColonistMovement Movement { get; set; } = new DirectColonistMovement();
 
+        /// <summary>Noise of colonists' work (set by the session to the infected's noise field).</summary>
+        public Action<Vec3, float, string> EmitNoise { get; set; }
+
+        /// <summary>Harvests a gatherer makes before carrying the load home.</summary>
+        public const int GatherHarvestsPerTrip = 6;
+
+        /// <summary>Colonists take this much longer per harvest than the player.</summary>
+        public const float GatherSlowdown = 1.3f;
+
         // ================================================================== recruitment
 
         public ColonistState CreateSurvivor(string name, Vec3 position, Dictionary<JobType, float> skills)
@@ -277,6 +286,181 @@ namespace Afterfall.Domain.Colony
                 if (s.Generator != null) PlanFuel(s.Id, s.Generator.Fuel, storages, now, energy: true);
                 if (s.Heater != null && s.Enabled) PlanFuel(s.Id, s.Heater.Fuel, storages, now, energy: false);
             }
+            PlanGathering(storages, now);
+        }
+
+        // ------------------------------------------------------------------ gathering
+
+        /// <summary>
+        /// One gather job per node, up to one per colonist who gathers. A node is worked only if it lies in
+        /// a zone that allows its kind, its yield has somewhere to be stored, and any tool it needs is in storage.
+        /// </summary>
+        private void PlanGathering(List<Structure> storages, double now)
+        {
+            if (_world.WorkZones.Count == 0) return;
+            int gatherers = 0;
+            foreach (ColonistState c in _world.Colonists.Values)
+                if (c.Recruited && c.Activity != ColonistActivity.Down && c.Work.PriorityFor(JobType.Gather) > 0) gatherers++;
+            var busy = new HashSet<EntityId>();
+            int active = 0;
+            foreach (Job j in _world.Jobs.Values)
+            {
+                if (j.Type != JobType.Gather || !j.IsActive) continue;
+                busy.Add(j.TargetNode);
+                active++;
+            }
+            var zoneIds = new List<EntityId>(_world.WorkZones.Keys);
+            zoneIds.Sort();
+            var nodeIds = new List<EntityId>(_world.ResourceNodes.Keys);
+            nodeIds.Sort();
+            foreach (EntityId zid in zoneIds)
+            {
+                WorkZone zone = _world.WorkZones[zid];
+                int found = 0;
+                string missing = null;
+                foreach (EntityId nid in nodeIds)
+                {
+                    ResourceNodeState node = _world.ResourceNodes[nid];
+                    if (node.Depleted || !zone.Contains(node.Position)) continue;
+                    ResourceNodeDefinition def = _content.Node(node.DefId);
+                    if (def == null || (GatherRules.KindsOf(def, _content.Items) & zone.Gather) == 0) continue;
+                    found++;
+                    if (busy.Contains(nid) || active >= gatherers) continue;
+                    if (BestStorageFor(def.Yields[0].ItemId, 1, storages, node.Position) == null)
+                    {
+                        missing = "have no storage space for what they yield";
+                        continue;
+                    }
+                    Structure toolStore = null;
+                    string toolId = null;
+                    if (def.RequiredTool != ToolType.None && !FindTool(def.RequiredTool, storages, out toolStore, out toolId))
+                    {
+                        missing = $"need {WithArticle(HarvestRules.ToolName(def.RequiredTool))} in storage";
+                        continue;
+                    }
+                    var job = new Job
+                    {
+                        Type = JobType.Gather, Priority = JobPriority.Productive, TargetNode = nid, CreatedAt = now,
+                        Description = $"{def.Verb} {def.Name}"
+                    };
+                    if (toolStore != null)
+                    {
+                        job.SourceInventory = toolStore.Storage.Id;
+                        job.ItemId = toolId;
+                        job.Quantity = 1;
+                    }
+                    AddJob(job);
+                    busy.Add(nid);
+                    active++;
+                }
+                zone.Status = found == 0 ? $"Nothing to gather ({GatherRules.Describe(zone.Gather)})"
+                    : gatherers == 0 ? $"{found} to gather — no colonist has Gather work"
+                    : missing != null ? $"{found} to gather — some {missing}" : $"{found} to gather";
+            }
+        }
+
+        private static string WithArticle(string noun) => ("aeiou".IndexOf(char.ToLowerInvariant(noun[0])) >= 0 ? "an " : "a ") + noun;
+
+        /// <summary>The best tool of a type that storage holds and nobody has claimed.</summary>
+        private bool FindTool(ToolType type, List<Structure> storages, out Structure store, out string itemId)
+        {
+            store = null;
+            itemId = null;
+            float bestPower = 0f;
+            foreach (Structure st in storages)
+            {
+                foreach (KeyValuePair<string, int> kv in st.Storage.Totals())
+                {
+                    ItemDefinition d = _content.Items.Get(kv.Key);
+                    if (d.Tool == null || d.Tool.Type != type || d.Tool.GatherPower <= bestPower) continue;
+                    if (st.Storage.Available(d.Id) - PendingOutgoing(st.Storage.Id, d.Id) <= 0) continue;
+                    store = st;
+                    itemId = d.Id;
+                    bestPower = d.Tool.GatherPower;
+                }
+            }
+            return store != null;
+        }
+
+        private void ExecuteGather(ColonistState c, Job j, float dt)
+        {
+            if (!_world.ResourceNodes.TryGetValue(j.TargetNode, out ResourceNodeState node))
+            {
+                Fail(c, j, "the resource is gone");
+                return;
+            }
+            if (j.SourceInventory.IsValid && j.Stage == HaulStage.ToSource)
+            {
+                // Fetch the tool from storage first.
+                Inventory src = _world.FindInventory(j.SourceInventory);
+                if (src == null || !src.HasReservation(j.SourceToken))
+                {
+                    Fail(c, j, $"the {_content.Items.NameOf(j.ItemId)} is no longer in storage");
+                    return;
+                }
+                if (!MoveTo(c, InventoryPosition(j.SourceInventory, c), dt, SourceArrive(j.SourceInventory))) return;
+                var taken = new List<ItemStack>();
+                if (!c.Carry.CanAccept(j.ItemId, 1) || !src.CommitOutgoing(j.SourceToken, taken))
+                {
+                    Fail(c, j, "could not take the tool");
+                    return;
+                }
+                foreach (ItemStack st in taken) c.Carry.TryAddStack(st);
+                j.SourceToken = default;
+                j.Stage = HaulStage.ToDestination;
+                return;
+            }
+            ResourceNodeDefinition def = _content.Node(node.DefId);
+            if (node.Depleted)
+            {
+                if (j.Harvests > 0) Complete(c, j);
+                else Fail(c, j, "nothing left to gather there");
+                return;
+            }
+            if (!MoveTo(c, node.Position, dt, 1.2f + 0.6f * node.Scale)) return;
+            c.Activity = ColonistActivity.Working;
+            int toolSlot = ToolSlot(c.Carry, def);
+            ItemDefinition tool = toolSlot >= 0 ? _content.Items.Get(c.Carry.GetSlot(toolSlot).ItemId) : null;
+            if (def.RequiredTool != ToolType.None && tool == null)
+            {
+                Fail(c, j, $"no {HarvestRules.ToolName(def.RequiredTool)} to work with");
+                return;
+            }
+            j.Progress += dt * c.Skill(JobType.Gather);
+            float action = HarvestRules.ActionSeconds(def, tool) * GatherSlowdown;
+            if (j.Progress < action) return;
+            j.Progress -= action;
+            var gained = new List<ItemAmount>();
+            OpResult r = HarvestRules.Harvest(_world, _content, node, tool, c.Carry, _world.SessionRng, gained);
+            if (!r.Ok)
+            {
+                if (r.Code == "inventory_full" && j.Harvests > 0) Complete(c, j);
+                else Fail(c, j, r.Message);
+                return;
+            }
+            j.Harvests++;
+            if (tool?.Tool != null && c.Carry.Wear(toolSlot, tool.Tool.WearPerUse))
+                _bus?.Publish(new Notification($"{c.Name}'s {tool.Name} broke.", Severity.Warning));
+            EmitNoise?.Invoke(node.Position, def.NoiseRadius, "harvest");
+            if (node.Depleted || j.Harvests >= GatherHarvestsPerTrip || c.Carry.TotalWeight > CarryKg * 0.8f) Complete(c, j);
+        }
+
+        /// <summary>The carried tool that suits a node best (its preferred tool, else its required one), or -1.</summary>
+        private int ToolSlot(Inventory carry, ResourceNodeDefinition def)
+        {
+            int best = -1;
+            float bestPower = 0f;
+            for (int i = 0; i < carry.SlotCount; i++)
+            {
+                ItemStack st = carry.GetSlot(i);
+                if (st.IsEmpty) continue;
+                ToolStats t = _content.Items.Get(st.ItemId).Tool;
+                if (t == null || (t.Type != def.PreferredTool && t.Type != def.RequiredTool) || t.Type == ToolType.None) continue;
+                if (t.GatherPower <= bestPower) continue;
+                best = i;
+                bestPower = t.GatherPower;
+            }
+            return best;
         }
 
         private void PlanBlueprint(Structure s, List<Structure> storages, double now)
@@ -570,7 +754,7 @@ namespace Afterfall.Domain.Colony
         public bool Claim(ColonistState c, Job j)
         {
             if (j.State != JobState.Open || j.AssigneeId.IsValid) return false;
-            if (j.Type == JobType.Haul || j.Type == JobType.Eat || (j.Type == JobType.Farm && j.SourceInventory.IsValid))
+            if (j.Type == JobType.Haul || j.Type == JobType.Eat || ((j.Type == JobType.Farm || j.Type == JobType.Gather) && j.SourceInventory.IsValid))
             {
                 Inventory src = _world.FindInventory(j.SourceInventory);
                 if (src == null || !src.TryReserveItems(j.ItemId, j.Quantity, out ReservationToken st))
@@ -641,6 +825,9 @@ namespace Afterfall.Domain.Colony
                 case JobType.WarmUp:
                     ExecuteWarmUp(c, j, dt);
                     break;
+                case JobType.Gather:
+                    ExecuteGather(c, j, dt);
+                    break;
                 case JobType.Rest:
                     if (!_world.Structures.TryGetValue(j.TargetStructure, out Structure bed))
                     {
@@ -670,7 +857,7 @@ namespace Afterfall.Domain.Colony
                     Fail(c, j, src == null ? "the source container is gone" : "the reserved items are no longer there");
                     return;
                 }
-                if (!MoveTo(c, InventoryPosition(j.SourceInventory, c), dt, ArriveDistance)) return;
+                if (!MoveTo(c, InventoryPosition(j.SourceInventory, c), dt, SourceArrive(j.SourceInventory))) return;
                 if (src == c.Carry)
                 {
                     // Putting away own items: nothing to pick up.
@@ -764,7 +951,7 @@ namespace Afterfall.Domain.Colony
                     Fail(c, j, $"no {_content.Items.NameOf(j.ItemId)} left in storage");
                     return;
                 }
-                if (!MoveTo(c, InventoryPosition(j.SourceInventory, c), dt, ArriveDistance)) return;
+                if (!MoveTo(c, InventoryPosition(j.SourceInventory, c), dt, SourceArrive(j.SourceInventory))) return;
                 var taken = new List<ItemStack>();
                 if (!c.Carry.CanAccept(j.ItemId, 1) || !src.CommitOutgoing(j.SourceToken, taken))
                 {
@@ -801,7 +988,7 @@ namespace Afterfall.Domain.Colony
                 Fail(c, j, "the food is gone");
                 return;
             }
-            if (!MoveTo(c, InventoryPosition(j.SourceInventory, c), dt, ArriveDistance)) return;
+            if (!MoveTo(c, InventoryPosition(j.SourceInventory, c), dt, SourceArrive(j.SourceInventory))) return;
             var taken = new List<ItemStack>();
             if (!src.CommitOutgoing(j.SourceToken, taken))
             {
@@ -962,7 +1149,8 @@ namespace Afterfall.Domain.Colony
 
         private Vec3 JobPosition(Job j)
         {
-            if ((j.Type == JobType.Haul || j.Type == JobType.Eat) && j.SourceInventory.IsValid) return InventoryPosition(j.SourceInventory, null);
+            if ((j.Type == JobType.Haul || j.Type == JobType.Eat || j.Type == JobType.Gather) && j.SourceInventory.IsValid) return InventoryPosition(j.SourceInventory, null);
+            if (j.Type == JobType.Gather && _world.ResourceNodes.TryGetValue(j.TargetNode, out ResourceNodeState n)) return n.Position;
             return _world.Structures.TryGetValue(j.TargetStructure, out Structure s) ? s.Position : Vec3.Zero;
         }
 
@@ -973,6 +1161,15 @@ namespace Afterfall.Domain.Colony
             if (_world.Colonists.TryGetValue(owner, out ColonistState c)) return c.Position;
             if (_world.Drops.TryGetValue(owner, out WorldDrop d)) return d.Position;
             return fallback?.Position ?? Vec3.Zero;
+        }
+
+        /// <summary>
+        /// How close a colonist must get to a container to use it: to the edge of a structure's footprint,
+        /// as for deliveries, so a machine boxed in by its neighbours can still be emptied from any side.
+        /// </summary>
+        private float SourceArrive(EntityId inventory)
+        {
+            return _world.Structures.TryGetValue(_world.OwnerOf(inventory), out Structure s) ? ArriveDistance + FootprintRadius(s) : ArriveDistance;
         }
 
         private float FootprintRadius(Structure s)

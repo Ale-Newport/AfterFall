@@ -15,7 +15,10 @@ namespace Afterfall.Domain.Colony
         Farm,
 
         /// <summary>Personal need: go and stand by a fire (or a sheltered bed) until warm again.</summary>
-        WarmUp
+        WarmUp,
+
+        /// <summary>Cut, mine or pick a resource node inside a work zone (fetching a tool from storage first if needed).</summary>
+        Gather
     }
 
     public enum FarmAction
@@ -83,6 +86,12 @@ namespace Afterfall.Domain.Colony
         /// <summary>Farm jobs: what to do at the planter bed.</summary>
         public FarmAction Farm { get; set; }
 
+        /// <summary>Gather jobs: the resource node to work, seconds of work toward the next harvest, and harvests done.</summary>
+        public EntityId TargetNode { get; set; }
+
+        public float Progress { get; set; }
+        public int Harvests { get; set; }
+
         public bool IsActive => State == JobState.Open || State == JobState.Claimed;
     }
 
@@ -93,7 +102,8 @@ namespace Afterfall.Domain.Colony
         {
             [JobType.Haul] = 3,
             [JobType.Build] = 3,
-            [JobType.Farm] = 3
+            [JobType.Farm] = 3,
+            [JobType.Gather] = 3
         };
 
         public int PriorityFor(JobType t) => Priorities.TryGetValue(t, out int p) ? p : 0;

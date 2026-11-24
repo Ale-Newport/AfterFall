@@ -122,6 +122,9 @@ namespace Afterfall.Domain.World
         public Dictionary<EntityId, ZombieState> Zombies { get; } = new Dictionary<EntityId, ZombieState>();
         public Dictionary<EntityId, ColonistState> Colonists { get; } = new Dictionary<EntityId, ColonistState>();
         public Dictionary<EntityId, Job> Jobs { get; } = new Dictionary<EntityId, Job>();
+
+        /// <summary>Areas marked in the strategic view where colonists gather resources.</summary>
+        public Dictionary<EntityId, WorkZone> WorkZones { get; } = new Dictionary<EntityId, WorkZone>();
         public TechnologyState Tech { get; } = new TechnologyState();
         public ExplorationState Exploration { get; }
         public ThreatState Threat { get; } = new ThreatState();

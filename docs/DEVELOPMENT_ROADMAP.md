@@ -47,7 +47,7 @@ Needs, day and night, Wanderer and Runner infected with perception, chase, attac
 | About 1 km² world, 8–12 POIs | 🔲 (512 m, 6 POIs) |
 | 35–50 items, 20–30 recipes, 15–20 modules | ✅ 37 items, 21 recipes, 19 modules |
 | 2–5 working colonists | ⏳ 2 recruitable |
-| Four professions / job types | ⏳ haul, build, farm (plus eat, sleep, warm up); guard, medic, mechanic not started |
+| Four professions / job types | ✅ haul, build, farm, gather (plus eat, sleep, warm up); guard, medic, mechanic not started |
 | Multiple infected archetypes | ⏳ Wanderer, Runner; armoured not started |
 | Hostile human group | 🔲 |
 | Dangerous wildlife | 🔲 |
@@ -55,7 +55,7 @@ Needs, day and night, Wanderer and Runner infected with perception, chase, attac
 | Agriculture | ✅ |
 | More complete electricity | ⏳ batteries, cables, priority shedding, broken components and repair, lightning rods; switches not started |
 | Basic environmental events | ✅ thunderstorms with lightning, cold snaps with body warmth, rain (fires, floods and disease not started) |
-| Meaningful strategic orders | ⏳ recipes, on/off, cables, work priorities; work zones and storage designation not started |
+| Meaningful strategic orders | ⏳ recipes, on/off, cables, work priorities, gathering areas; storage designation not started |
 
 **Acceptance:** a coherent 60–90 minute playthrough from survival into industry and colony management.
 
@@ -67,7 +67,7 @@ Performance optimisation on the defined hardware targets, content completion, ac
 
 ## Immediate backlog (ordered)
 1. Human playtest of the acceptance scenario and of a full day-two-and-three session with weather ([#1](https://github.com/Ale-Newport/AfterFall/issues/1)); tune movement, harvest rates, day length, and weather and cold-snap balance.
-2. Work zones and storage designation in the strategic view; the Guard profession.
+2. Storage designation in the strategic view; the Guard profession.
 3. Conveyors (automation level 3) between storage and machines.
 4. More colonists and professions; the armoured infected; wildlife.
 5. Spatial index for structure queries (the climate, colony planner and machine automation scan all structures); profile in-engine on the target hardware.

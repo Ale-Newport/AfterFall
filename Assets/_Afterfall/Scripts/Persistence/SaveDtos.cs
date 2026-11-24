@@ -202,6 +202,17 @@ namespace Afterfall.Persistence
         public long DestinationToken { get; set; }
         public bool DeliverToBlueprint { get; set; }
         public string Farm { get; set; } = "";
+        public long TargetNode { get; set; }
+        public float Progress { get; set; }
+        public int Harvests { get; set; }
+    }
+
+    public sealed class WorkZoneDto
+    {
+        public long Id { get; set; }
+        public Vec3 Center { get; set; }
+        public float Radius { get; set; }
+        public string Gather { get; set; } = "";
     }
 
     public sealed class WorldDto
@@ -229,6 +240,7 @@ namespace Afterfall.Persistence
         public List<ZombieDto> Zombies { get; set; } = new List<ZombieDto>();
         public List<ColonistDto> Colonists { get; set; } = new List<ColonistDto>();
         public List<JobDto> Jobs { get; set; } = new List<JobDto>();
+        public List<WorkZoneDto> WorkZones { get; set; } = new List<WorkZoneDto>();
         public List<string> UnlockedTechs { get; set; } = new List<string>();
         public Dictionary<string, int> TechProgress { get; set; } = new Dictionary<string, int>();
 

@@ -67,7 +67,8 @@ Power runs before machines in each tick, so machines see this tick's allocation.
 - `Structures` (`Structure`): a definition id, transform, `Blueprint` or `Complete` state, delivered materials, work, health. Optional components: `Storage`, `MachineState`, `GeneratorState`, `BatteryState`, `PowerState`. World loot containers are structures with `PlayerBuilt = false`.
 - `PowerLinks`: cables between structure ids.
 - `ResourceNodes`, `Drops` (ground containers, including the player's belongings after death), `Zombies`.
-- `Colonists` (`ColonistState`: needs, carry inventory, skills, work priorities, current job, home bed, recent failures) and `Jobs` (`Job`: type, priority, owner, state, haul data including live reservation tokens).
+- `Colonists` (`ColonistState`: needs, carry inventory, skills, work priorities, current job, home bed, recent failures) and `Jobs` (`Job`: type, priority, owner, state, haul data including live reservation tokens, and for gathering the target node and work progress).
+- `WorkZones` (`WorkZone`: centre, radius, allowed gather kinds): gathering areas marked in the strategic view.
 - Structures may also carry a `CropState` (planter beds) or a `HeaterState` (campfires: fuel inventory, burn time left).
 - `Tech` (unlocked techs and trigger counters), `Exploration` (revealed cells, discovered POIs), `Threat`, `Weather`, `Metrics`.
 - Every random stream (`SessionRng`, `ZombieRng`, `ThreatRng`, `FarmRng`, `WeatherRng`), each system's tick phase, the colony planner's next pass and each colonist's next assignment time are saved, so a loaded game continues exactly like the unsaved one.

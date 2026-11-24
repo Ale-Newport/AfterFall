@@ -1,17 +1,17 @@
 # Progress log
 
-_Last updated: 2026-11-24 (session 6: weather, cold snaps and body warmth, campfires, lightning rods; a colony save-determinism fix)._
+_Last updated: 2026-11-24 (session 6: weather, cold snaps and body warmth, campfires, lightning rods; gathering areas for colonists; a colony save-determinism fix)._
 
 ## Snapshot
 | | |
 |---|---|
 | Branch | `main` (every commit pushed to `origin`). Latest release: `v0.1.1` |
 | Unity version | 6000.3.28f1 (arm64), installed through Unity Hub 3.22.6 with a Personal license |
-| Last headless tests | 2026-11-24: **168/168 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on Linux, Windows and macOS on each push. |
-| Last Unity EditMode run | 2026-11-24: **168/168 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
+| Last headless tests | 2026-11-24: **174/174 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on Linux, Windows and macOS on each push. |
+| Last Unity EditMode run | 2026-11-24: **174/174 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
 | Last Unity PlayMode run | 2026-11-24: **7/7 passed** (5 smoke tests plus 2 Input System integration tests; the Input System package's 2 Windows mouse tests skip themselves on macOS). |
 | Last player builds | 2026-11-24: macOS (universal), no errors. 2026-11-20: Windows x64 (Mono), attached to the v0.1.1 release with the macOS build |
-| Last scripted tour of the build | 2026-11-24 (macOS, with the new weather scene): **0 failed checks, 0 errors logged**, new game in 2.4 s, frames 8.3 ms average at the start camp, in the strategic view, in the rain and at night (vsync-capped, Apple M2 Max, 1600×900). 2026-11-20 (v0.1.1): Windows (GitHub-hosted `windows-latest`, WARP software rendering, 800×450, patience 25): **0 failed checks, 0 errors logged**, 46 minutes. |
+| Last scripted tour of the build | 2026-11-24 (macOS, with the new gathering and weather scenes): **0 failed checks, 0 errors logged**, new game in 2.4 s, frames 8.3–8.6 ms average at the start camp, in the strategic view, in the rain and at night (vsync-capped, Apple M2 Max, 1600×900). 2026-11-20 (v0.1.1): Windows (GitHub-hosted `windows-latest`, WARP software rendering, 800×450, patience 25): **0 failed checks, 0 errors logged**, 46 minutes. |
 | Last model gallery | 2026-11-09: **151 screenshots, 0 errors logged** (`tools/gallery.sh`, all sections), reviewed by eye. |
 | Human playtest of the acceptance loop | **not yet** |
 | Windows build | built (v0.1.1); the full scripted tour passes on a GitHub-hosted runner; **never run on a real Windows PC with a GPU** |
@@ -107,13 +107,20 @@ Before Unity was available, an independent review of the Unity layer found:
 All twelve are fixed (commit `fix(game): runtime issues found in presentation review`). This shows how much risk remains until the game runs in Unity.
 
 ## Partially implemented
-- **Strategic orders:** machine recipes, on/off, cables and colonist work priorities work. Work zones and storage designation are not done.
-- **Colony:** Haul, Build, Farm, Eat and Rest work. Guard, medic and mechanic professions, morale effects and more than two survivors are not done.
+- **Strategic orders:** machine recipes, on/off, cables, colonist work priorities and gathering areas work. Storage designation is not done.
+- **Colony:** Haul, Build, Farm, Gather, Eat, Rest and Warm up work. Guard, medic and mechanic professions, morale effects and more than two survivors are not done.
 - **Accessibility:** rebinding, UI scale, sensitivity, FOV, invert Y, camera shake, captions and text-based status are done. A colour-blind review and a tactical pause toggle (the setting exists in difficulty presets but has no UI) are not.
 - **Survival:** health, stamina, hunger, thirst, carry weight and body warmth are done. Fatigue, injuries and infection are not.
 
 ## Not started
 Conveyors and pipes, disasters other than storms and cold snaps (fires, floods, disease), factions, wildlife, the armoured infected, firearms, vehicles, multiple regions and streaming, skinned character animation, recorded audio, localisation.
+
+## Gathering areas (session 6, 2026-11-24)
+- **Strategic order:** "Mark area…" in the strategic view, then a click on explored ground, places a gathering area (6–30 m, default 14 m; at most six). Toggles choose wood, stone, fiber and food; "Focus" and "Remove" act on it. A translucent disc and a world label show each area in the strategic view.
+- **Gather work** (`JobType.Gather`, a fourth work priority in the colony panel): the planner gives each gathering colonist one node in an area that allows its kind, if its yield has storage space and any tool it needs is in storage. The colonist fetches the best tool (reserved, so it is never taken twice), harvests up to six times through the same `HarvestRules` as the player (1.3× slower, scaled by skill; tool wear; noise), then brings the load and the tool back to storage. Salvage stays the survivor's work. Each area reports what it found and what is missing.
+- **Colonists now collect from a container's edge** (its footprint plus 1.8 m) instead of 1.8 m from its centre. In the tour a workshop boxed in by its neighbours could not be reached and Mara walked in place all night.
+- **Tour:** a gathering scene marks an area over the trees nearest the settlement and puts a stone axe in the crate; Eli fetches it, chops a birch and brings 16 logs and the axe back. The first run failed two checks (the check counted the survivor's own axe; Mara stalled at the boxed-in workshop all night) and both were fixed. Screenshots `20b_gathering_area` and `20c_gatherer_at_work` were inspected.
+- **Tests:** 6 `GatheringTests` (planning by kind, tool and gatherers; fetching the axe, chopping and bringing logs and the axe back with the axe never duplicated; bare-handed fiber and berries; zones and gather jobs survive saves; removing a zone cancels its work; explored-land and limit rules; kinds from yields). 174 EditMode tests in total.
 
 ## Weather and warmth (session 6, 2026-11-24)
 - **Weather** (`Domain/Weather`): fronts of clear, overcast, rain and thunderstorm roll from a saved random stream (`WorldState.WeatherRng`), with the next front decided ahead. `WeatherReadout` derives cloud, rain, storm, cold-snap intensity and the outdoor temperature from the saved `WeatherState` and the clock. Storms are foretold about 1.5 game hours ahead; cold snaps (every two or three days, from the evening of day 2 at the earliest) three hours ahead.
@@ -237,7 +244,7 @@ Bugs that only showed up in the engine, all fixed:
   - Terrain rock patches stretch on steep slopes (URP terrain has no triplanar mapping).
   - Grass can poke through decoration that has no collider, such as porches.
 - **Low.** Low-sun shadows are deliberately dark (ACES). Raise the low-sun ambient if the playtest finds it too dark. The charcoal icon reads somewhat like dark stone.
-- **Low.** At 1600×900 the HUD vitals panel overlaps the bottom-left corner of centred windows.
+- **Low.** At 1600×900 the HUD vitals panel overlaps the bottom-left corner of centred windows, and the strategic view's left panel reaches a few pixels into it.
 - **Medium.** The fog of war is only partly opaque, and trees taller than its 9 m layer show through.
 - **Medium.** The threat director treats distance as "out of sight" and does not check the camera frustum.
 - **Medium.** Irrigation does not add electrical load; a pump irrigates whenever its grid has supply.
@@ -252,7 +259,7 @@ Bugs that only showed up in the engine, all fixed:
 
 ## Next development tasks
 1. **Playtest the acceptance scenario** ([#1](https://github.com/Ale-Newport/AfterFall/issues/1), docs/TESTING.md) by hand in the editor or the macOS build, including a session into days 2–3 for storms and a cold snap. Tune movement, camera, harvest and colonist pacing, day length, and weather balance. Record time to first construction and to first machine output.
-2. Work zones (colonists gathering wood, stone and fiber in a marked area) and storage designation in the strategic view; the Guard profession.
+2. Storage designation in the strategic view (which crates take what); the Guard profession.
 3. Conveyors (automation level 3) between storage and machines.
 4. Recorded audio where licensed assets are available; skinned characters to hide joint seams.
 5. Play the Windows build on a real PC ([#2](https://github.com/Ale-Newport/AfterFall/issues/2)); a WebGL demo ([#8](https://github.com/Ale-Newport/AfterFall/issues/8)).

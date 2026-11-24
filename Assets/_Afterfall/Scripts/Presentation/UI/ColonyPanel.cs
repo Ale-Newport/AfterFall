@@ -14,7 +14,7 @@ namespace Afterfall.Presentation.UI
     /// </summary>
     public sealed class ColonyPanel
     {
-        private static readonly JobType[] WorkTypes = { JobType.Haul, JobType.Build, JobType.Farm };
+        private static readonly JobType[] WorkTypes = { JobType.Haul, JobType.Build, JobType.Farm, JobType.Gather };
         private readonly GameController _gc;
         private readonly VisualElement _list;
         private readonly Label _summary;
@@ -51,7 +51,7 @@ namespace Afterfall.Presentation.UI
                 if (!_rows.TryGetValue(c.Id, out var row)) continue;
                 string activity = c.Activity.ToString();
                 row.Status.text = c.Activity == ColonistActivity.Down || c.Status.StartsWith(activity, System.StringComparison.OrdinalIgnoreCase) ? c.Status : $"{activity}: {c.Status}";
-                row.Needs.text = $"Health {c.Vitals.Health:0} · food {c.Vitals.Hunger:0}% · water {c.Vitals.Thirst:0}% · carrying {c.Carry.TotalWeight:0.#} kg";
+                row.Needs.text = $"Health {c.Vitals.Health:0} · food {c.Vitals.Hunger:0}% · water {c.Vitals.Thirst:0}% · warmth {c.Vitals.Warmth:0}% · carrying {c.Carry.TotalWeight:0.#} kg";
                 row.Failures.text = c.RecentFailures.Count > 0 ? "Recent problem: " + c.RecentFailures[0] : "";
                 foreach (JobType t in WorkTypes)
                 {
@@ -84,6 +84,7 @@ namespace Afterfall.Presentation.UI
                 Label failures = box.Put(UiKit.Text("", "warn"));
                 var buttons = new Dictionary<JobType, Button>();
                 var row = box.Put(UiKit.Div("row"));
+                row.style.flexWrap = Wrap.Wrap;
                 foreach (JobType t in WorkTypes)
                 {
                     JobType type = t;

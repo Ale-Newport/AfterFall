@@ -84,6 +84,7 @@ The first Unity run failed 7 save tests that pass on .NET. Unity's Mono formats 
 - lets an infected chase Mara (she flees), makes her hungry (she eats), and recruits Eli, who walks 245 m to the settlement;
 - builds a pump outpost on the lake (bottles filled, a bed irrigated);
 - runs a pole and cable to a distant lamp (cuts and reconnects it) and adds a battery and two more workshops. At night it switches the generator off to watch the lamp being shed, then back on;
+- marks a gathering area over trees in the strategic view and puts a stone axe in the crate; a colonist fetches the axe, chops, and brings the logs and the axe back;
 - turns on the weather (every other scene keeps a clear sky): rain over the settlement waters the planter bed; in a thunderstorm lightning damages and then breaks an exposed conductor, which is repaired with a hammer, and a lightning rod then takes the strikes near it; a cold snap brings frost, a campfire is built, fed and lit, warms the survivor and bakes a potato;
 - checks that Mara sleeps at night, then dies, respawns and recovers the belongings;
 - opens the pause menu and the F3 overlay;
@@ -139,6 +140,7 @@ Art changes are judged by looking at them. Two tools make that quick:
 11. Remove the generator's fuel: the workshop shows "No power: generator out of fuel". Refuel: it resumes.
 12. Meet an infected: fight (LMB), crouch-sneak or run. Watch the vitals.
 13. Tab → strategic view. Select the workshop, change the recipe, inspect the grid, run a cable to a lamp.
+13a. In the strategic view, "Mark area…" over nearby trees, put an axe in a crate and check that a colonist with Gather work chops there and brings logs back (the area's line in the panel explains any wait).
 13b. Play on into day 2 (or longer): watch for a storm warning, then the storm (rain, wind, lightning, thunder delay). If a pole, lamp or generator is struck, repair it with a hammer (E). From the evening of day 2 or 3 a cold snap is announced three hours ahead: check that a campfire and a roof keep you warm and that colonists warm up at the fire.
 14. Esc → save. Quit to desktop. Relaunch → Continue. Check the world, inventories, structures and machines.
 
