@@ -33,6 +33,13 @@ namespace Afterfall.Presentation
         private static readonly int StarsId = Shader.PropertyToID("_StarIntensity");
         private static readonly int CloudLitId = Shader.PropertyToID("_CloudLitColor");
         private static readonly int CloudShadeId = Shader.PropertyToID("_CloudShadeColor");
+        private static readonly int CloudCoverId = Shader.PropertyToID("_CloudCover");
+        private static readonly int CloudDriftId = Shader.PropertyToID("_CloudDrift");
+
+        /// <summary>Cloud cover (0–1) and drift speed multiplier pushed to the sky; set from the weather each frame.</summary>
+        public static float CloudCover = 0.42f;
+
+        public static float CloudDrift = 1f;
 
         private ReflectionProbe _probe;
         private float _probeElevation = float.NaN;
@@ -131,6 +138,8 @@ namespace Afterfall.Presentation
                 sky.SetFloat(StarsId, look.Stars);
                 sky.SetVector(CloudLitId, Linear(look.CloudLit));
                 sky.SetVector(CloudShadeId, Linear(look.CloudShade));
+                sky.SetFloat(CloudCoverId, CloudCover);
+                sky.SetVector(CloudDriftId, new Vector4(0.0035f, 0.0012f, 0f, 0f) * CloudDrift);
                 if (RenderSettings.skybox != sky) RenderSettings.skybox = sky;
             }
 

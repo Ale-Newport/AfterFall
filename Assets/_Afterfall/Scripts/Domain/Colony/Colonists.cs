@@ -12,7 +12,10 @@ namespace Afterfall.Domain.Colony
         Build,
         Eat,
         Rest,
-        Farm
+        Farm,
+
+        /// <summary>Personal need: go and stand by a fire (or a sheltered bed) until warm again.</summary>
+        WarmUp
     }
 
     public enum FarmAction
@@ -127,6 +130,12 @@ namespace Afterfall.Domain.Colony
 
         public bool HasMoveTarget { get; set; }
         public float Morale { get; set; } = 60f;
+
+        /// <summary>Earliest simulation time of the next job assignment (saved so a loaded game assigns on the same beat).</summary>
+        public double NextAssignAt { get; set; }
+
+        /// <summary>Temperature the colonist feels where they stand (derived each tick; not saved).</summary>
+        public float FeltTemperatureC { get; set; } = 15f;
 
         /// <summary>Most recent failure reasons for the strategic UI.</summary>
         public List<string> RecentFailures { get; } = new List<string>();

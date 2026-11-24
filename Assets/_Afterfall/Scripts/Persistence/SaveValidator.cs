@@ -35,6 +35,7 @@ namespace Afterfall.Persistence
                     if (s.Machine.Fuel != null) Check(s.Machine.Fuel.Id, "machine fuel of " + s.Id);
                 }
                 if (s.Generator != null) Check(s.Generator.Fuel.Id, "generator fuel of " + s.Id);
+                if (s.Heater != null) Check(s.Heater.Fuel.Id, "heater fuel of " + s.Id);
             }
             foreach (var n in w.ResourceNodes.Values) Check(n.Id, "node");
             foreach (var d in w.Drops.Values)

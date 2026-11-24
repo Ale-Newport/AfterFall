@@ -35,14 +35,15 @@ Inspirations are used only as genre references (creative construction, dangerous
 - **Vertical slice target:** about 1 km², 8–12 POIs, streaming sectors of about 128 m (not started).
 
 ## 5. Survival model
-Health, stamina, hunger, thirst and carry weight are implemented. Fatigue, temperature, injuries, infection and clothing are deferred.
+Health, stamina, hunger, thirst, carry weight and body warmth are implemented. Fatigue, injuries, infection and clothing are deferred.
 - The day length is 48 real minutes (configurable).
 - Hunger empties in 2.2 game days and thirst in 1.4 days at drain ×1. Sprinting costs 1.6× and walking 1.1×.
 - At 0 hunger you lose 8 HP per game hour; at 0 thirst, 12 HP per game hour. Health regenerates 4 HP per game hour while hunger and thirst are both ≥ 50.
 - Sprinting costs 13 stamina per second. Stamina regenerates at 20 per second after a 0.9 s delay (halved while hungry or thirsty).
 - Carry weight: comfortable up to 35 kg, then slower, with a hard cap of 55 kg.
+- **Warmth (0–100):** it falls while the felt temperature is below 10 °C (1.3 points per game hour per degree) and recovers above it. Below 30 you are cold: food and water drain 1.35× faster, stamina returns at 0.6× and health does not regenerate. At 0 you freeze, losing 10 HP per game hour. The felt temperature is the outdoor temperature (about 9 °C before dawn to 20 °C mid-afternoon, lower under clouds, rain and wind) plus 10 °C under a roof or inside a building (where rain and wind are kept off) plus the strongest nearby heat: a lit campfire gives up to +22 °C within 5 m, a burning furnace +12 °C within 3.5 m. Hot food (a baked potato) restores warmth.
 - **Death (standard):** carried items and refunded crafting inputs drop as "Your belongings" (blue beacon). You respawn at your bedroll or at the start camp. **Hardcore:** permadeath.
-- **Difficulty presets:** Exploration, Survival, Hardcore. Each sets enemy density, loot abundance, survival drain, enemy damage, weather severity (reserved), tactical pause and permadeath independently (`GameSettings`).
+- **Difficulty presets:** Exploration, Survival, Hardcore. Each sets enemy density, loot abundance, survival drain, enemy damage, weather severity (storm chance and cold-snap depth), tactical pause and permadeath independently (`GameSettings`).
 
 ## 6. Items & economy
 There are 8 categories: Natural, Salvaged, Processed, Food/Medicine, Tool, Construction, Mechanical, Electrical. Each item has a stable id, name, description, stack size, weight, volume, optional durability, tags, icon code and colour, plus consumable, tool, burn-time or energy data. Economic correctness is a hard requirement (see ARCHITECTURE → Economic invariants).
@@ -98,11 +99,19 @@ Structures with power components form networks: union-find over cables, rebuilt 
 ## 11d. Audio
 All sound is synthesised at runtime: footsteps by distance travelled, harvest impacts by material, combat, infected groans and lunges, machine and generator loops tied to their state, wind and night ambience, UI and warning cues. **Captions** (on by default) describe important sounds with a direction ("[Infected groaning to your left]").
 
+## 11b. Weather and environmental events
+- **Fronts:** clear (5–12 game h), overcast (2–6 h), rain (2–5 h) and thunderstorms (1–2.5 h) follow a fixed Markov chain from a saved random stream. Clear skies always cloud over first; storms grow only out of clouds or rain, never in the first 10 game hours. Weather severity scales the storm chance.
+- **Warnings:** a storm is foretold about 1.5 game hours before it breaks (thunder from a compass direction); a cold snap three game hours before it sets in. Both appear as toasts, in the HUD and in the strategic panel. The weather is never foretold further ahead than these signs.
+- **Rain** waters planter beds in the open, makes fires in the open burn faster and shortens the infected's sight and hearing.
+- **Thunderstorms** add wind and throw lightning every 12–40 s. A strike hits the settlement's exposed conductors (poles, lamps, generators, rods; taller ones more often) with a chance of 10 % plus 4 % per exposed conductor (at most 40 %), otherwise open ground. A strike takes half a structure's health; a second breaks it until it is repaired with a hammer. Lightning never destroys anything. A lightning rod takes every strike meant for structures within 18 m. Thunder is a noise the infected hear.
+- **Cold snaps** come every two or three days, starting in the evening (never the first night) and lasting 10–16 game hours, dropping the temperature by up to 18 °C at weather severity 1. Countermeasures: campfires (logs or charcoal; colonists keep a lit fire fed and warm up at it), roofs, hot food.
+- **Implementation deviation:** disasters other than storms and cold snaps (fires, floods, industrial accidents, disease) are not started.
+
 ## 12. Strategic UI
 Shows the stockpile, electricity per grid, threat (heat, recently seen infected, announced groups), known locations, the selected structure's status, health and power with actions, world labels for machines, blueprints, POIs and seen infected, and fog of war over unexplored 16 m cells.
 
 ## 13. Persistence
-Everything listed in the brief's §22 that exists in the prototype is saved: seed and settings, time, player, inventories (with reservations and durability), structures (blueprint progress, machine progress and fuel, generator burner, batteries, power state), cables, resource depletion, drops, zombies, tech progress, exploration, threat state and metrics. The terrain and props are regenerated from the seed.
+Everything listed in the brief's §22 that exists in the prototype is saved: seed and settings, time, player, inventories (with reservations and durability), structures (blueprint progress, machine progress and fuel, generator burner, batteries, power state), cables, resource depletion, drops, zombies, tech progress, exploration, threat state, weather (fronts, cold snaps, warnings), campfires and metrics. The terrain and props are regenerated from the seed.
 
 ## 14. Out of scope for the prototype (tracked in the roadmap)
-Further NPC professions (farmer, guard, medic, mechanic), work zones, conveyors and pipes, weather and disasters, factions, animals, firearms, vehicles, multiple regions and streaming, authored animation, models and recorded audio, localisation.
+Further NPC professions (farmer, guard, medic, mechanic), work zones, conveyors and pipes, fires, floods and other disasters, factions, animals, firearms, vehicles, multiple regions and streaming, authored animation, models and recorded audio, localisation.

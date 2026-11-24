@@ -42,6 +42,12 @@ namespace Afterfall.Domain.World
         /// <summary>Simulation time before which the player cannot attack/harvest again.</summary>
         public double NextActionTime { get; set; }
 
+        /// <summary>Temperature the survivor feels where they stand (derived each tick; not saved).</summary>
+        public float FeltTemperatureC { get; set; } = 15f;
+
+        /// <summary>Under a roof or inside a building (derived each tick; not saved).</summary>
+        public bool Sheltered { get; set; }
+
         public ItemStack EquippedStack => Inventory.GetSlot(SelectedHotbar);
     }
 }

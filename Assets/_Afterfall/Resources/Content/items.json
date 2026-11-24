@@ -468,5 +468,20 @@
       "hunger": 16,
       "thirst": 2
     }
+  },
+  {
+    "id": "baked_potato",
+    "name": "Baked Potato",
+    "description": "Hot from the embers of a campfire. Filling, and it warms you through.",
+    "category": "FoodMedicine",
+    "maxStack": 20,
+    "weight": 0.2,
+    "icon": "BP",
+    "color": "#C9974F",
+    "consumable": {
+      "hunger": 26,
+      "thirst": 0,
+      "warmth": 22
+    }
   }
 ]

@@ -93,7 +93,12 @@ namespace Afterfall.Presentation.UI
             ThreatState t = _gc.Session.World.Threat;
             int seen = _gc.Tactical.SeenZombies.Count;
             string raid = t.PendingRaidAt > _gc.Session.Now ? $"\n!! Group approaching — arrives in {t.PendingRaidAt - _gc.Session.Now:0}s" : "";
-            _threat.text = $"Noise/attention: {t.Heat:0}%\nInfected recently seen: {seen}{raid}";
+            Afterfall.Domain.Weather.WeatherReadout weather = _gc.Session.WeatherNow;
+            Afterfall.Domain.Weather.WeatherForecast forecast = _gc.Session.Weather.Forecast();
+            string sky = $"\nWeather: {Afterfall.Domain.Weather.WeatherTuning.Describe(weather.Kind)}, {weather.OutdoorC:0} °C{(forecast.ColdSnapActive ? " (cold snap)" : "")}";
+            if (forecast.StormInHours >= 0) sky += $"\n! Storm expected in about {forecast.StormInHours:0.#} h";
+            if (forecast.ColdSnapInHours >= 0) sky += $"\n! Cold snap expected in about {forecast.ColdSnapInHours:0.#} h";
+            _threat.text = $"Noise/attention: {t.Heat:0}%\nInfected recently seen: {seen}{raid}{sky}";
 
             var places = new List<string>();
             foreach (PoiInfo p in _gc.Session.World.Layout.Pois)
@@ -136,7 +141,7 @@ namespace Afterfall.Presentation.UI
             _builtFor = id;
             _selActions.Clear();
             _recipeList.Clear();
-            if (s.PlayerBuilt && (s.Machine != null || s.Generator != null || def.Light != null))
+            if (s.PlayerBuilt && (s.Machine != null || s.Generator != null || s.Heater != null || def.Light != null))
                 _selActions.Add(UiKit.Btn("Switch on/off", () => Toast(_gc.Session.ToggleEnabled(id)), "btn--small"));
             if (s.Power != null && s.IsComplete)
             {

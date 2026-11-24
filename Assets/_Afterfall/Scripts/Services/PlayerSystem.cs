@@ -5,6 +5,7 @@ using Afterfall.Domain.Events;
 using Afterfall.Domain.Items;
 using Afterfall.Domain.Survival;
 using Afterfall.Domain.Technology;
+using Afterfall.Domain.Weather;
 using Afterfall.Domain.World;
 
 namespace Afterfall.Services
@@ -20,6 +21,7 @@ namespace Afterfall.Services
         private bool _deathHandled;
         private float _lastHungerWarn = 100f;
         private float _lastThirstWarn = 100f;
+        private float _lastWarmthWarn = 100f;
 
         public PlayerSystem(GameSession session)
         {
@@ -39,17 +41,21 @@ namespace Afterfall.Services
                 if (!_deathHandled)
                 {
                     _deathHandled = true;
-                    _session.HandleDeath(p.Vitals.Hunger <= 0 ? "starvation" : p.Vitals.Thirst <= 0 ? "dehydration" : "injuries");
+                    _session.HandleDeath(CauseOf(p.Vitals, "injuries"));
                 }
                 return;
             }
             _deathHandled = false;
 
             float loss = SurvivalRules.Tick(p.Vitals, _session.Content.Survival, p.Activity, dt, w.Clock.SecondsPerGameHour, w.Settings.SurvivalDrain);
+            ClimateReading climate = _session.ClimateAt(p.Position);
+            p.FeltTemperatureC = climate.TemperatureC;
+            p.Sheltered = climate.Sheltered;
+            loss += SurvivalRules.TickWarmth(p.Vitals, _session.Content.Survival, climate.TemperatureC, dt, w.Clock.SecondsPerGameHour);
             if (loss > 0f && p.Vitals.IsDead)
             {
                 _deathHandled = true;
-                _session.HandleDeath(p.Vitals.Hunger <= 0 ? "starvation" : "dehydration");
+                _session.HandleDeath(CauseOf(p.Vitals, "the cold"));
                 return;
             }
             WarnNeeds(p.Vitals);
@@ -103,8 +109,17 @@ namespace Afterfall.Services
             }
         }
 
+        private static string CauseOf(SurvivalState v, string fallback) =>
+            v.Hunger <= 0 ? "starvation" : v.Thirst <= 0 ? "dehydration" : v.Warmth <= 0 ? "the cold" : fallback;
+
         private void WarnNeeds(SurvivalState v)
         {
+            SurvivalConfig c = _session.Content.Survival;
+            if (v.Warmth < c.ColdThreshold && _lastWarmthWarn >= c.ColdThreshold)
+                _session.Events.Publish(new Notification("You are getting cold. Find a fire or get under a roof.", Severity.Warning));
+            if (v.Warmth <= 0f && _lastWarmthWarn > 0f)
+                _session.Events.Publish(new Notification("You are freezing and losing health! Warm up by a fire now.", Severity.Danger));
+            _lastWarmthWarn = v.Warmth;
             float low = _session.Content.Survival.LowThreshold;
             if (v.Hunger < low && _lastHungerWarn >= low)
                 _session.Events.Publish(new Notification("You are starving. Eat something soon.", Severity.Warning));

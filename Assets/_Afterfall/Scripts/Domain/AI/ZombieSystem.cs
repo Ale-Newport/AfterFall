@@ -94,6 +94,11 @@ namespace Afterfall.Domain.AI
 
         /// <summary>Used to damage player structures that block the infected (set by the session).</summary>
         public ConstructionService Construction { get; set; }
+
+        /// <summary>Weather multipliers on sight and hearing ranges (rain and storms hide the survivors); 1 when unset.</summary>
+        public Func<float> SightFactor { get; set; }
+
+        public Func<float> HearingFactor { get; set; }
         public NoiseBoard Noise { get; } = new NoiseBoard();
         public IZombieWorldAdapter Adapter { get; set; } = new DirectZombieAdapter();
 
@@ -122,6 +127,8 @@ namespace Afterfall.Domain.AI
             PlayerState player = _world.Player;
             bool alive = player != null && !player.Vitals.IsDead;
             float daylight = _world.Clock.Daylight01;
+            float sightFactor = SightFactor?.Invoke() ?? 1f;
+            float hearingFactor = HearingFactor?.Invoke() ?? 1f;
             var toRemove = new List<EntityId>();
 
             var ids = new List<EntityId>(_world.Zombies.Keys);
@@ -145,7 +152,7 @@ namespace Afterfall.Domain.AI
                     if (alive && p.TargetDistance <= a.SightRange * 1.2f)
                     {
                         bool los = Adapter.HasLineOfSight(z, player.Position);
-                        p.TargetVisible = PerceptionRules.CanSee(z, a, player.Position, daylight, player.Activity.Crouching, player.Activity.Sprinting, los);
+                        p.TargetVisible = PerceptionRules.CanSee(z, a, player.Position, daylight, player.Activity.Crouching, player.Activity.Sprinting, los, sightFactor);
                     }
                 }
                 // Colonists are prey too: the nearest visible living one wins if closer than a visible player.
@@ -154,14 +161,14 @@ namespace Afterfall.Domain.AI
                     if (!c.Recruited || c.Activity == Colony.ColonistActivity.Down) continue;
                     float cd = Vec3.Distance(z.Position, c.Position);
                     if (cd > a.SightRange * 1.2f || (p.TargetVisible && cd >= p.TargetDistance)) continue;
-                    if (!PerceptionRules.CanSee(z, a, c.Position, daylight, false, false, Adapter.HasLineOfSight(z, c.Position))) continue;
+                    if (!PerceptionRules.CanSee(z, a, c.Position, daylight, false, false, Adapter.HasLineOfSight(z, c.Position), sightFactor)) continue;
                     p.TargetVisible = true;
                     p.TargetAlive = true;
                     p.TargetPosition = c.Position;
                     p.TargetDistance = cd;
                     colonistTarget = c.Id;
                 }
-                if (Noise.TryHear(z.Position, a.HearingMultiplier, out NoiseEvent heard))
+                if (Noise.TryHear(z.Position, a.HearingMultiplier * hearingFactor, out NoiseEvent heard))
                 {
                     p.HeardNoise = true;
                     p.NoisePosition = heard.Position;

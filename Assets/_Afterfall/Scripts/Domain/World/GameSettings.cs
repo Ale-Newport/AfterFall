@@ -27,7 +27,7 @@ namespace Afterfall.Domain.World
         /// <summary>Multiplier on damage dealt by the infected.</summary>
         public float EnemyDamage { get; set; } = 1f;
 
-        /// <summary>Reserved for weather events (storms, cold) — not simulated yet.</summary>
+        /// <summary>Multiplier on the chance of thunderstorms and the depth of cold snaps.</summary>
         public float WeatherSeverity { get; set; } = 1f;
 
         /// <summary>Allow pausing the simulation while in the strategic camera.</summary>

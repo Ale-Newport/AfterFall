@@ -117,6 +117,12 @@ namespace Afterfall.Presentation
                 case "battery":
                     Battery(k, sx, sy, sz, color);
                     break;
+                case "campfire":
+                    Campfire(k, sx, sz);
+                    break;
+                case "lightning_rod":
+                    LightningRod(k, sy);
+                    break;
                 case "cabinet":
                     Cabinet(k, sx, sy, sz, color);
                     break;
@@ -239,6 +245,10 @@ namespace Afterfall.Presentation
                     break;
                 case "bed":
                 case "planter":
+                case "campfire":
+                    break;
+                case "lightning_rod":
+                    ColliderCylinder(root, "Mast", new Vector3(0.14f, sy, 0.14f));
                     break;
                 case "furnace":
                     ColliderBox(root, "Body", new Vector3(0f, sy * 0.4f, 0f), new Vector3(sx, sy * 0.8f, sz));

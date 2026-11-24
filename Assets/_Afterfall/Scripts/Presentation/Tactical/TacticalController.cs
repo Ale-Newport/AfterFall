@@ -246,8 +246,10 @@ namespace Afterfall.Presentation
         {
             BuildingDefinition d = gc.Session.Content.Building(s.DefId);
             if (!s.IsComplete) return $"Blueprint — {gc.Session.Construction.WorkProgress01(s) * 100:0}%";
+            if (d.IsBroken(s.Health) && s.PlayerBuilt) return $"Broken ({s.Health:0}/{d.MaxHealth:0}) — repair it with a hammer";
             if (s.Machine != null) return UI.UiKit.StatusText(s.Machine);
             if (s.Generator != null) return s.Generator.Status;
+            if (s.Heater != null) return s.Heater.Status;
             if (s.Battery != null) return $"Stored {s.Battery.StoredJoules / 1000:0}/{d.Battery.CapacityKJ:0} kJ ({s.Battery.FlowWatts:+0;-0;0} W)";
             if (d.Light != null) return s.Power?.Reason ?? "";
             if (s.Storage != null) return $"{CountUsed(s)} / {s.Storage.SlotCount} slots used";

@@ -68,6 +68,46 @@ namespace Afterfall.Presentation.Art
             Part(c, l => PotatoBody(l, 42f, 62f, 29f, 20f, 12f, skin, 92), 2.4f, 0.5f);
         }
 
+        /// <summary>A potato baked in the embers: crinkled, scorched foil peeled back and the skin split open on fluffy flesh with a pat of butter.</summary>
+        private static void BakedPotato(IconCanvas c)
+        {
+            Rgba foil = new Rgba(0.74f, 0.75f, 0.78f);
+            Rgba skin = new Rgba(0.55f, 0.36f, 0.18f);
+            Rgba flesh = new Rgba(0.96f, 0.86f, 0.56f);
+            // Foil cupped under the potato, its edges scorched.
+            Part(c, l =>
+            {
+                l.Polygon(Paint.Linear(foil.Lighter(0.25f), foil.Darker(0.3f), 20f, 52f, 80f, 92f), 12f, 64f, 24f, 56f, 50f, 60f, 76f, 55f, 89f, 63f, 82f, 84f, 52f, 91f, 22f, 85f);
+                Inside(l, d =>
+                {
+                    for (int i = 0; i < 9; i++)
+                    {
+                        float x = 16f + i * 8f;
+                        d.Line(x, 60f + (i % 3) * 3f, x + 4f, 88f - (i % 2) * 4f, 0.8f, foil.Lighter(0.4f).WithAlpha(0.6f));
+                    }
+                    d.Ellipse(20f, 82f, 10f, 5f, 15f, new Rgba(0.15f, 0.12f, 0.1f, 0.35f));
+                    d.Ellipse(84f, 70f, 8f, 6f, -20f, new Rgba(0.15f, 0.12f, 0.1f, 0.3f));
+                });
+            }, 1.6f, 0.4f);
+            // The potato, darker for its time in the fire, split along the top.
+            Part(c, l =>
+            {
+                PotatoBody(l, 50f, 62f, 31f, 19f, -6f, skin, 93);
+                Inside(l, d => d.Ellipse(50f, 70f, 28f, 10f, -6f, new Rgba(0.12f, 0.07f, 0.03f, 0.35f)));
+            }, 2.2f, 0.45f);
+            Part(c, l =>
+            {
+                l.Ellipse(50f, 55f, 19f, 7.5f, -6f, Paint.Radial(flesh.Lighter(0.3f), flesh.Darker(0.18f), 45f, 52f, 20f));
+                Inside(l, d =>
+                {
+                    for (int i = 0; i < 14; i++)
+                        d.Circle(36f + IconCanvas.Hash01(94, i, 1) * 28f, 51f + IconCanvas.Hash01(94, i, 2) * 8f, 1.2f, flesh.Lighter(0.4f).WithAlpha(0.7f));
+                });
+            }, 1.4f, 0.3f);
+            // A melting pat of butter.
+            Part(c, l => l.RoundRect(53f, 52f, 10f, 6f, 1.8f, -12f, Paint.Linear(new Rgba(1f, 0.93f, 0.55f), new Rgba(0.95f, 0.78f, 0.3f), 48f, 49f, 58f, 56f)), 1f, 0.25f);
+        }
+
         /// <summary>A lumpy potato with eyes and earthy specks (no effects; callers wrap it in a part).</summary>
         private static void PotatoBody(IconCanvas c, float cx, float cy, float rx, float ry, float rot, Rgba skin, int seed)
         {

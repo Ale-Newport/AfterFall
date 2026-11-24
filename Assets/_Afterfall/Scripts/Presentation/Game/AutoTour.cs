@@ -10,6 +10,7 @@ using Afterfall.Domain.Colony;
 using Afterfall.Domain.Construction;
 using Afterfall.Domain.Industry;
 using Afterfall.Domain.Items;
+using Afterfall.Domain.Weather;
 using Afterfall.Domain.World;
 using Afterfall.Presentation.UI;
 using Afterfall.Services;
@@ -112,6 +113,8 @@ namespace Afterfall.Presentation
             Line($"New game ready in {Time.realtimeSinceStartup - t0:0.0} s");
             if (_patience > 1f) Line($"Tour patience: real-time budgets x{_patience:0.#}");
             gc.Session.Threats.SpawningEnabled = false;
+            // Clear skies for every scene except the weather scene, so the screenshots stay comparable.
+            gc.Session.Weather.Hold(WeatherKind.Clear);
             float navTimeout = Time.realtimeSinceStartup + P(60f);
             while (!gc.NavReady && Time.realtimeSinceStartup < navTimeout) yield return null;
             Line($"NavMesh ready: {gc.NavReady} after {Time.realtimeSinceStartup - t0:0.0} s");
@@ -211,6 +214,7 @@ namespace Afterfall.Presentation
             yield return ColonyLife(gc, town);
             yield return PumpOutpost(gc, town);
             yield return PowerGrid(gc, town);
+            yield return WeatherScene(gc, town);
 
             SkipTo(gc, 22.0);
             Time.timeScale = 4f;
@@ -951,6 +955,122 @@ namespace Afterfall.Presentation
                 $"Generator back on: everything powered (workshops: {shopStates}; lamp: {town.Lamp.Power.Reason}; generator enabled {gen.Enabled}, {gen.Generator.Status}, fuel {Units(gen.Generator.Fuel)} items, buffer {gen.Generator.BufferJoules / 1000:0} kJ)");
             gc.Tactical.Select(EntityId.None);
             gc.SetTactical(false);
+        }
+
+        /// <summary>
+        /// Rain over the settlement, a thunderstorm whose lightning breaks an exposed conductor (repaired
+        /// with a hammer) until a lightning rod takes the strikes, then a cold snap that a campfire beats.
+        /// </summary>
+        private IEnumerator WeatherScene(GameController gc, Settlement town)
+        {
+            GameSession s = gc.Session;
+            WeatherSystem weather = s.Weather;
+            Inventory bag = s.Player.Inventory;
+            weather.Enabled = true;
+            SkipTo(gc, 14.0);
+
+            weather.ForceFront(WeatherKind.Rain, 3, true);
+            s.World.Structures.TryGetValue(town.Plot, out Structure plot);
+            if (plot?.Crop != null) plot.Crop.Water = 0f;
+            StandAndLook(gc, town.Site + new Vector3(-9f, 0f, -7f), town.Site);
+            yield return Seconds(3f);
+            yield return Capture("21a_rain");
+            yield return MeasureFrames("rain at the settlement", 3f);
+            Check(s.WeatherNow.Rain > 0.5f && (plot?.Crop == null || plot.Crop.Water > 0f),
+                $"Rain falls ({s.WeatherNow.Rain:0.00}) and waters the planter bed in the open (soil water {plot?.Crop?.Water ?? -1f:0.0})");
+
+            weather.ForceFront(WeatherKind.Storm, 3, true);
+            // Watch the grid's conductors from a distance, so a strike on them is in the picture.
+            Vector3 g = town.Gen.Position.ToUnity();
+            StandAndLook(gc, g + new Vector3(-6f, 0f, -24f), g + Vector3.up * 3f);
+            yield return Seconds(1f);
+            LightningStruck first = null;
+            Structure struck = null;
+            for (int i = 0; i < 150 && struck == null; i++)
+            {
+                LightningStruck e = weather.Strike();
+                if (e.StructureId.IsValid && !e.AbsorbedByRod)
+                {
+                    Structure target = s.World.Structures[e.StructureId];
+                    if (first == null)
+                    {
+                        first = e;
+                        yield return null;
+                        yield return Capture("21b_lightning_strike");
+                        BuildingDefinition d = s.Content.Building(target.DefId);
+                        Check(target.Health >= d.MaxHealth * (1f - WeatherTuning.StrikeDamageFraction) - 0.5f,
+                            $"A first strike damages the exposed {d.Name} ({target.Health:0}/{d.MaxHealth:0})");
+                    }
+                    if (s.Content.Building(target.DefId).IsBroken(target.Health)) struck = target;
+                }
+                yield return Seconds(0.12f);
+            }
+            if (struck == null)
+            {
+                Line("FAIL: no lightning strike broke anything in the settlement in 150 tries");
+                weather.Hold(WeatherKind.Clear);
+                yield break;
+            }
+            BuildingDefinition struckDef = s.Content.Building(struck.DefId);
+            yield return Seconds(1f);
+            Check(struckDef.IsBroken(struck.Health) && s.World.Structures.ContainsKey(struck.Id),
+                $"A second strike broke the exposed {struckDef.Name} without destroying it ({struck.Health:0}/{struckDef.MaxHealth:0}; {struck.Power?.Reason ?? struck.Generator?.Status})");
+            if (bag.Count("hammer") == 0) Grant(bag, "hammer", 1);
+            foreach (ItemAmount a in s.Construction.RepairCost(struck)) Grant(bag, a.ItemId, a.Quantity);
+            yield return Use(gc, struck, () => s.Repair(struck.Id), $"repair the {struckDef.Name}");
+            yield return Seconds(1f);
+            Check(!struckDef.IsBroken(struck.Health) && (struck.Power == null || !struck.Power.Reason.StartsWith("Broken")),
+                $"Repaired with a hammer, the {struckDef.Name} works again ({struck.Health:0}/{struckDef.MaxHealth:0}; {struck.Power?.Reason})");
+
+            Structure rod = null;
+            yield return Construct(gc, "lightning_rod", struck.Position.ToUnity(), x => rod = x, 2f, 6f);
+            if (rod != null)
+            {
+                float radius = s.Content.Building("lightning_rod").LightningRod.Radius;
+                int toRod = 0, unprotected = 0;
+                for (int i = 0; i < 25; i++)
+                {
+                    LightningStruck e = weather.Strike();
+                    if (e.StructureId.IsValid && e.AbsorbedByRod) toRod++;
+                    else if (e.StructureId.IsValid && Vec3.DistanceXZ(s.World.Structures[e.StructureId].Position, rod.Position) <= radius) unprotected++;
+                    if (i == 3)
+                    {
+                        StandAndLook(gc, rod.Position.ToUnity() + new Vector3(-12f, 0f, -9f), rod.Position.ToUnity() + Vector3.up * 4f);
+                        yield return null;
+                        yield return Capture("21c_lightning_rod");
+                    }
+                    yield return Seconds(0.15f);
+                }
+                Check(toRod > 0 && unprotected == 0, $"The lightning rod took {toRod} strikes; {unprotected} hit structures within its {radius:0} m");
+            }
+
+            weather.ForceFront(WeatherKind.Clear, 8, true);
+            weather.ForceColdSnap(8);
+            SkipTo(gc, 19.5);
+            Vector3 camp = FreeSpotNear(gc, town.Site + new Vector3(8f, 0f, -10f), 0f);
+            StandAndLook(gc, camp, town.Site);
+            yield return Seconds(1f);
+            float outdoors = s.Player.FeltTemperatureC;
+            Check(s.WeatherNow.ColdSnap > 0.9f && outdoors < 0f, $"A cold snap brings frost ({s.WeatherNow.OutdoorC:0} °C, the survivor feels {outdoors:0} °C in the open)");
+            Structure fire = null;
+            yield return Construct(gc, "campfire", camp, x => fire = x, 1.5f, 4f);
+            if (fire != null)
+            {
+                Grant(bag, "wood", 6);
+                yield return Deposit(gc, fire, "wood", 6, fire.Heater.Fuel);
+                StandAndLook(gc, fire.Position.ToUnity() + new Vector3(1.3f, 0f, 0.6f), fire.Position.ToUnity());
+                yield return Seconds(1.5f);
+                Check(fire.Heater.Lit && s.Player.FeltTemperatureC > 10f, $"The campfire burns ({fire.Heater.Status}) and warms the survivor to {s.Player.FeltTemperatureC:0} °C");
+                Grant(bag, "potato", 1);
+                OpResult cook = s.Craft("bake_potato");
+                yield return Seconds(7f);
+                Check(cook.Ok && bag.Count("baked_potato") > 0, $"A potato bakes over the fire ({cook.Message})");
+                SkipTo(gc, 21.0);
+                StandAndLook(gc, fire.Position.ToUnity() + new Vector3(-4f, 0f, -3f), fire.Position.ToUnity());
+                yield return Seconds(1.5f);
+                yield return Capture("21d_cold_snap_campfire");
+            }
+            weather.Hold(WeatherKind.Clear);
         }
 
         private IEnumerator DeathAndRespawn(GameController gc)

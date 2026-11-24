@@ -80,9 +80,9 @@ namespace Afterfall.Domain.Industry
                 SetStatus(m, MachineStatus.Unbuilt, "Under construction");
                 return;
             }
-            if (s.Health <= 0f)
+            if (def.IsBroken(s.Health))
             {
-                SetStatus(m, MachineStatus.Damaged, "Damaged — repair it with a hammer");
+                SetStatus(m, MachineStatus.Damaged, "Broken — repair it with a hammer");
                 return;
             }
             if (!s.Enabled)

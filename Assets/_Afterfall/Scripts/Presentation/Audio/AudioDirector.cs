@@ -15,7 +15,8 @@ namespace Afterfall.Presentation
     public sealed class AudioDirector : MonoBehaviour
     {
         private GameController _gc;
-        private AudioSource _ui, _wind, _night;
+        private AudioSource _ui, _wind, _night, _rain;
+        private readonly List<(float At, bool Near, float Volume)> _thunder = new List<(float, bool, float)>();
         private readonly List<AudioSource> _pool = new List<AudioSource>();
         private readonly Dictionary<EntityId, AudioSource> _loops = new Dictionary<EntityId, AudioSource>();
         private readonly List<System.IDisposable> _subs = new List<System.IDisposable>();
@@ -43,6 +44,11 @@ namespace Afterfall.Presentation
             _night.loop = true;
             _night.volume = 0f;
             _night.Play();
+            _rain = Source2D("Rain");
+            _rain.clip = ProceduralAudio.Get("loop_rain");
+            _rain.loop = true;
+            _rain.volume = 0f;
+            _rain.Play();
             for (int i = 0; i < 20; i++)
             {
                 var go = new GameObject("Sfx");
@@ -59,6 +65,12 @@ namespace Afterfall.Presentation
             {
                 PlayAt("hit_flesh", _gc.Player.transform.position, 0.9f);
                 PlayAt("player_hurt", _gc.Player.transform.position, 0.7f);
+            }));
+            _subs.Add(bus.Subscribe<Afterfall.Domain.Weather.LightningStruck>(e =>
+            {
+                // Sound travels 343 m/s: the further the strike, the longer the wait and the softer the roll.
+                float d = Vector3.Distance(_gc.Player.transform.position, new Vector3(e.Position.X, e.Position.Y, e.Position.Z));
+                _thunder.Add((Time.time + d / 343f, d < 60f, Mathf.Clamp(1.2f - d / 250f, 0.25f, 1f)));
             }));
             _subs.Add(bus.Subscribe<ZombieKilled>(e => PlayAt("zombie_death", new Vector3(e.Position.X, e.Position.Y, e.Position.Z), 0.9f)));
             _subs.Add(bus.Subscribe<BuildingCompleted>(e =>
@@ -140,8 +152,18 @@ namespace Afterfall.Presentation
             if (_gc?.Session == null || _gc.Player == null) return;
             float dt = Time.deltaTime;
             float daylight = _gc.Session.World.Clock.Daylight01;
-            _wind.volume = Mathf.Lerp(_wind.volume, Mathf.Lerp(0.12f, 0.3f, daylight), dt);
             _night.volume = Mathf.Lerp(_night.volume, (1f - daylight) * 0.35f, dt);
+            Afterfall.Domain.Weather.WeatherReadout weather = _gc.Session.WeatherNow;
+            float shelter = _gc.Session.Player.Sheltered ? 0.45f : 1f;
+            _wind.volume = Mathf.Lerp(_wind.volume, Mathf.Lerp(0.12f, 0.3f, daylight) + 0.35f * weather.Storm * shelter, dt);
+            _rain.volume = Mathf.Lerp(_rain.volume, weather.Rain * 0.55f * shelter, dt);
+            for (int i = _thunder.Count - 1; i >= 0; i--)
+            {
+                if (Time.time < _thunder[i].At) continue;
+                Play2D(_thunder[i].Near ? "thunder_crack" : "thunder", _thunder[i].Volume);
+                SetCaption(_thunder[i].Near ? "[Lightning strikes close by — a deafening crack]" : "[Thunder rolls]");
+                _thunder.RemoveAt(i);
+            }
             bool paused = _gc.Session.Paused;
             _wind.pitch = paused ? 0.6f : 1f;
 
@@ -184,6 +206,7 @@ namespace Afterfall.Presentation
                 string clip = null;
                 if (s.Generator != null && s.Generator.Running && s.Generator.OutputWatts > 1f) clip = "loop_generator";
                 else if (s.Machine != null && s.Machine.Status == MachineStatus.Working) clip = s.Machine.Fuel != null ? "loop_fire" : "loop_workshop";
+                else if (s.Heater != null && s.Heater.Lit) clip = "loop_fire";
                 if (clip == null) continue;
                 alive.Add(kv.Key);
                 if (!_loops.TryGetValue(kv.Key, out AudioSource src) || src == null)

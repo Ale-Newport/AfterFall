@@ -46,6 +46,14 @@ namespace Afterfall.Presentation
                 case "loop_generator": return Loop(name, 1f, (t, i) => (Mathf.Sin(2 * Mathf.PI * 50 * t) * 0.4f + Saw(100, t) * 0.15f + Lowpass(Noise(rnd), 0.1f, i) * 0.2f) * (0.75f + 0.25f * Mathf.Sin(2 * Mathf.PI * 12 * t)));
                 case "loop_workshop": return Loop(name, 2f, (t, i) => Mathf.Sin(2 * Mathf.PI * 180 * t) * 0.18f + Saw(90, t) * 0.06f + (Mathf.Repeat(t, 1f) < 0.05f ? Noise(rnd) * 0.4f : 0f));
                 case "loop_fire": return Loop(name, 2f, (t, i) => Lowpass(Noise(rnd), 0.25f, i) * 0.25f + (rnd.NextDouble() < 0.0006 ? 0.8f : 0f));
+                case "loop_rain": return Loop(name, 4f, (t, i) =>
+                {
+                    // Hiss (noise minus its low end) with the odd louder drop.
+                    float n = Noise(rnd);
+                    return (n - Lowpass(n, 0.08f, i)) * 0.4f + (rnd.NextDouble() < 0.0015 ? Noise(rnd) * 0.45f : 0f);
+                });
+                case "thunder": return Clip(name, 5f, (t, i) => Lowpass(Noise(rnd), 0.018f + 0.03f * Env(t, 0.01f, 0.4f), i) * 7f * Env(t, 0.12f, 3.6f) * (0.75f + 0.25f * Mathf.Sin(2 * Mathf.PI * 1.1f * t)));
+                case "thunder_crack": return Clip(name, 4f, (t, i) => Noise(rnd) * 0.85f * Env(t, 0.001f, 0.07f) + Lowpass(Noise(rnd), 0.035f, i) * 6f * Env(t, 0.02f, 2.8f));
                 case "loop_wind": return Loop(name, 6f, (t, i) => Lowpass(Noise(rnd), 0.03f, i) * 2.2f * (0.6f + 0.4f * Mathf.Sin(2 * Mathf.PI * t / 6f)));
                 case "loop_night": return Loop(name, 3f, (t, i) => Mathf.Sin(2 * Mathf.PI * 4200 * t) * 0.05f * (Mathf.Repeat(t * 7f, 1f) < 0.12f && Mathf.Repeat(t, 1.5f) < 0.6f ? 1f : 0f) + Lowpass(Noise(rnd), 0.03f, i) * 0.8f);
                 default: return Clip(name, 0.1f, (t, i) => 0f);

@@ -92,7 +92,7 @@ namespace Afterfall.Domain.Construction
 
         /// <summary>
         /// Instantiates components using ids from <paramref name="idForRole"/> (roles: storage,
-        /// input, output, fuel, generator_fuel). Loading passes the saved ids so references survive.
+        /// input, output, fuel, generator_fuel, heater_fuel). Loading passes the saved ids so references survive.
         /// </summary>
         public static void InitializeComponents(ContentDatabase content, Structure s, Func<string, EntityId> idForRole)
         {
@@ -126,6 +126,9 @@ namespace Afterfall.Domain.Construction
 
             if (def.Generator != null && s.Generator == null)
                 s.Generator = new GeneratorState { Fuel = new Inventory(idForRole("generator_fuel"), catalog, def.Generator.FuelSlots, 0f, InventoryFilter.Energy(), $"{def.Name} fuel") };
+
+            if (def.Heater != null && s.Heater == null)
+                s.Heater = new Weather.HeaterState { Fuel = new Inventory(idForRole("heater_fuel"), catalog, def.Heater.FuelSlots, 0f, InventoryFilter.Burnable(), $"{def.Name} fuel") };
 
             if (def.Battery != null && s.Battery == null) s.Battery = new BatteryState();
             if (def.Farm != null && s.Crop == null) s.Crop = new Farming.CropState();
@@ -310,7 +313,9 @@ namespace Afterfall.Domain.Construction
                 foreach (ItemAmount m in from.Missing(cost)) parts.Add($"{m.Quantity} {_content.Items.NameOf(m.ItemId)}");
                 return OpResult.Fail("missing_materials", "Repair needs " + string.Join(", ", parts) + ".");
             }
+            bool wasBroken = def.IsBroken(s.Health);
             s.Health = def.MaxHealth;
+            if (wasBroken && s.Power != null) _world.MarkPowerTopologyChanged();
             return OpResult.Success($"{def.Name} repaired.");
         }
 
@@ -318,9 +323,14 @@ namespace Afterfall.Domain.Construction
         public bool Damage(Structure s, float amount, string source)
         {
             if (s == null || amount <= 0f) return false;
-            s.Health -= amount;
-            if (s.Health > 0f) return false;
             BuildingDefinition def = _content.Building(s.DefId);
+            bool wasBroken = def != null && def.IsBroken(s.Health);
+            s.Health -= amount;
+            if (s.Health > 0f)
+            {
+                if (!wasBroken && s.Power != null && def != null && def.IsBroken(s.Health)) _world.MarkPowerTopologyChanged();
+                return false;
+            }
             SpillContents(s);
             _world.RemoveStructure(s.Id);
             _bus?.Publish(new BuildingRemoved(s.Id, s.DefId, "destroyed by " + source));
@@ -340,6 +350,7 @@ namespace Afterfall.Domain.Construction
                 CollectStacks(s.Machine.Fuel, stacks);
             }
             if (s.Generator != null) CollectStacks(s.Generator.Fuel, stacks);
+            if (s.Heater != null) CollectStacks(s.Heater.Fuel, stacks);
             foreach (KeyValuePair<string, int> kv in s.Delivered)
                 stacks.Add(new ItemStack(kv.Key, kv.Value));
             if (stacks.Count > 0) CreateDrop(stacks, s.Position, "Contents of " + (_content.Building(s.DefId)?.Name ?? s.DefId), false);

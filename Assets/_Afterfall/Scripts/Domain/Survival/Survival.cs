@@ -17,6 +17,9 @@ namespace Afterfall.Domain.Survival
         /// <summary>100 = fully hydrated, 0 = dehydrated.</summary>
         public float Thirst { get; set; } = 80f;
 
+        /// <summary>Body warmth: 100 = comfortable, below the cold threshold = chilled, 0 = freezing (losing health).</summary>
+        public float Warmth { get; set; } = 100f;
+
         /// <summary>Seconds since stamina was last spent (regen waits for a short delay).</summary>
         public float SinceExertion { get; set; } = 10f;
 
@@ -28,6 +31,7 @@ namespace Afterfall.Domain.Survival
             Stamina = MaxStamina;
             Hunger = Math.Max(Hunger, 50f);
             Thirst = Math.Max(Thirst, 50f);
+            Warmth = Math.Max(Warmth, 60f);
             SinceExertion = 10f;
         }
     }
@@ -52,6 +56,23 @@ namespace Afterfall.Domain.Survival
         public float HealthRegenPerHour { get; set; } = 4f;
         public float WellFedThreshold { get; set; } = 50f;
         public float LowThreshold { get; set; } = 20f;
+
+        /// <summary>At or above this felt temperature (°C) the body warms up; below it, it cools.</summary>
+        public float ComfortTemperatureC { get; set; } = 10f;
+
+        /// <summary>Warmth lost per game hour for each degree below comfort.</summary>
+        public float WarmthLossPerDegreeHour { get; set; } = 1.3f;
+
+        /// <summary>Warmth regained per game hour at comfort, plus <see cref="WarmthGainPerDegreeHour"/> per degree above it.</summary>
+        public float WarmthRecoveryPerHour { get; set; } = 4f;
+
+        public float WarmthGainPerDegreeHour { get; set; } = 1.5f;
+
+        /// <summary>Below this warmth you are cold: hunger drains faster and stamina returns slower.</summary>
+        public float ColdThreshold { get; set; } = 30f;
+
+        /// <summary>Health lost per game hour at 0 warmth.</summary>
+        public float FreezingDamagePerHour { get; set; } = 10f;
     }
 
     public static class SurvivalRules
@@ -65,6 +86,9 @@ namespace Afterfall.Domain.Survival
             if (s.IsDead || dt <= 0) return 0f;
             double secondsPerDay = secondsPerGameHour * 24.0;
             float exertion = activity.Sprinting ? 1.6f : activity.Moving ? 1.1f : 1f;
+            bool cold = IsCold(s, c);
+            // A cold body burns more food to stay warm.
+            if (cold) exertion *= 1.35f;
 
             s.Hunger = Clamp(s.Hunger - (float)(100.0 / (c.HungerDaysToEmpty * secondsPerDay) * dt) * drainMultiplier * exertion, 0f, 100f);
             s.Thirst = Clamp(s.Thirst - (float)(100.0 / (c.ThirstDaysToEmpty * secondsPerDay) * dt) * drainMultiplier * exertion, 0f, 100f);
@@ -83,6 +107,7 @@ namespace Afterfall.Domain.Survival
                     float regen = c.StaminaRegenPerSecond;
                     if (s.Hunger < c.LowThreshold) regen *= 0.5f;
                     if (s.Thirst < c.LowThreshold) regen *= 0.5f;
+                    if (cold) regen *= 0.6f;
                     s.Stamina = Clamp(s.Stamina + regen * (float)dt, 0f, s.MaxStamina);
                 }
             }
@@ -96,10 +121,30 @@ namespace Afterfall.Domain.Survival
             {
                 s.Health = Clamp(s.Health - damage, 0f, s.MaxHealth);
             }
-            else if (s.Hunger >= c.WellFedThreshold && s.Thirst >= c.WellFedThreshold)
+            else if (s.Hunger >= c.WellFedThreshold && s.Thirst >= c.WellFedThreshold && !cold)
             {
                 s.Health = Clamp(s.Health + c.HealthRegenPerHour * hours, 0f, s.MaxHealth);
             }
+            return damage;
+        }
+
+        public static bool IsCold(SurvivalState s, SurvivalConfig c) => s.Warmth < c.ColdThreshold;
+
+        /// <summary>
+        /// Moves body warmth toward the felt temperature: it falls below the comfort temperature (faster
+        /// the colder it is) and recovers above it. Returns the health lost to freezing this step.
+        /// </summary>
+        public static float TickWarmth(SurvivalState s, SurvivalConfig c, float feltTemperatureC, double dt, double secondsPerGameHour)
+        {
+            if (s.IsDead || dt <= 0) return 0f;
+            float hours = (float)(dt / secondsPerGameHour);
+            float delta = feltTemperatureC < c.ComfortTemperatureC
+                ? -(c.ComfortTemperatureC - feltTemperatureC) * c.WarmthLossPerDegreeHour * hours
+                : (c.WarmthRecoveryPerHour + (feltTemperatureC - c.ComfortTemperatureC) * c.WarmthGainPerDegreeHour) * hours;
+            s.Warmth = Clamp(s.Warmth + delta, 0f, 100f);
+            if (s.Warmth > 0f) return 0f;
+            float damage = c.FreezingDamagePerHour * hours;
+            s.Health = Clamp(s.Health - damage, 0f, s.MaxHealth);
             return damage;
         }
 
@@ -119,6 +164,7 @@ namespace Afterfall.Domain.Survival
             s.Thirst = Clamp(s.Thirst + e.Thirst, 0f, 100f);
             s.Health = Clamp(s.Health + e.Health, 0f, s.MaxHealth);
             s.Stamina = Clamp(s.Stamina + e.Stamina, 0f, s.MaxStamina);
+            s.Warmth = Clamp(s.Warmth + e.Warmth, 0f, 100f);
         }
 
         /// <summary>Applies damage; returns true if this damage killed the character.</summary>

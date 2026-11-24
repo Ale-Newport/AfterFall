@@ -53,6 +53,7 @@ namespace Afterfall.Domain.Construction
         public BatteryState Battery { get; set; }
 
         public Farming.CropState Crop { get; set; }
+        public Weather.HeaterState Heater { get; set; }
 
         /// <summary>Electrical state for any power-participating structure.</summary>
         public PowerState Power { get; set; }

@@ -33,6 +33,9 @@ namespace Afterfall.Domain.Items
         public float Health { get; set; }
         public float Stamina { get; set; }
 
+        /// <summary>Body warmth restored (hot food and drink).</summary>
+        public float Warmth { get; set; }
+
         /// <summary>Item returned after consumption (e.g. an empty bottle), "" for none.</summary>
         public string Returns { get; set; } = "";
     }

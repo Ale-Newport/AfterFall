@@ -7,6 +7,7 @@ using Afterfall.Domain.Events;
 using Afterfall.Domain.Industry;
 using Afterfall.Domain.Items;
 using Afterfall.Domain.Power;
+using Afterfall.Domain.Weather;
 using Afterfall.Domain.World;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -434,6 +435,16 @@ namespace Afterfall.Presentation.UI
                 left.Add(FuelHeader(items.All.Where(i => i.EnergyKJ > 0).OrderByDescending(i => i.EnergyKJ).Take(3), i => $"{i.EnergyKJ:0} kJ"));
                 _fuel = Grid(left, s.Generator.Fuel.SlotCount, 0, (sl, e) => Take(s.Generator.Fuel, sl.Index));
             }
+            else if (s.Heater != null)
+            {
+                ItemCatalog items = gc.Session.Content.Items;
+                float mult = def.Heater.BurnTimeMultiplier;
+                double hour = gc.Session.World.Clock.SecondsPerGameHour;
+                left.Add(FuelHeader(items.All.Where(i => i.BurnSeconds > 0 && i.HasTag("fuel")).OrderByDescending(i => i.BurnSeconds).Take(3), i => $"{i.BurnSeconds * mult / hour:0.#} h"));
+                _fuel = Grid(left, s.Heater.Fuel.SlotCount, 0, (sl, e) => Take(s.Heater.Fuel, sl.Index));
+                if (!string.IsNullOrEmpty(def.CraftingStation))
+                    left.Add(UiKit.Btn("Cook over the fire…", () => Gc.Ui.OpenInventory(true), "btn--primary"));
+            }
             var right = body.Put(UiKit.Div("col"));
             right.style.marginLeft = 20;
             right.style.width = 600;
@@ -480,6 +491,7 @@ namespace Afterfall.Presentation.UI
                 else if (s.Machine.Input.Accepts(st.ItemId)) target = s.Machine.Input;
             }
             else if (s.Generator != null) target = s.Generator.Fuel;
+            else if (s.Heater != null) target = s.Heater.Fuel;
             if (target == null)
             {
                 Gc.Toast($"{Name(st.ItemId)} is not used by this machine.", Severity.Warning);
@@ -504,7 +516,7 @@ namespace Afterfall.Presentation.UI
             }
             BuildingDefinition def = Gc.Session.Content.Building(s.DefId);
             ItemCatalog items = Gc.Session.Content.Items;
-            _toggle.text = s.Enabled ? "Switch off" : "Switch on";
+            _toggle.text = s.Heater != null ? (s.Enabled ? "Put out" : "Light") : s.Enabled ? "Switch off" : "Switch on";
             if (s.Machine != null)
             {
                 MachineState m = s.Machine;
@@ -562,6 +574,21 @@ namespace Afterfall.Presentation.UI
                 double seconds = g.OutputWatts > 1f ? (g.BufferJoules + unit * 1000) / g.OutputWatts : 0;
                 _stats.text = g.OutputWatts > 1f ? $"Fuel lasts about {seconds / 60:0.#} min at the current load. Generators are loud — the infected hear them." : "Idle generators burn no fuel.";
                 Fill(_fuel, g.Fuel, items);
+            }
+            else if (s.Heater != null)
+            {
+                HeaterState h = s.Heater;
+                _status.text = h.Lit ? "Status: Burning" : s.Enabled ? "Status: Out of fuel" : "Status: Put out";
+                _detail.text = h.Status;
+                UiKit.SetClass(_detail, "bad", !h.Lit);
+                float left = Gc.Session.Heaters.FuelSecondsLeft(h, def.Heater);
+                double hour = Gc.Session.World.Clock.SecondsPerGameHour;
+                _progress.Set(Mathf.Clamp01(left / (float)(hour * 4)), $"About {left / hour:0.#} game hours of fire left");
+                ClimateReading here = Gc.Session.ClimateAt(Gc.Session.Player.Position);
+                WeatherReadout weather = Gc.Session.WeatherNow;
+                _power.text = $"Warms everyone within {def.Heater.Radius:0} m by up to {def.Heater.WarmthC:0} °C · lights the night{(string.IsNullOrEmpty(def.CraftingStation) ? "" : " · cooks food while it burns")}";
+                _stats.text = $"You feel {here.TemperatureC:0} °C here (outdoors {weather.OutdoorC:0} °C){(here.Sheltered ? " · sheltered" : "")}. Colonists keep a lit fire fed from storage.";
+                Fill(_fuel, h.Fuel, items);
             }
             else if (s.Battery != null)
             {

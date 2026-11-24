@@ -1,17 +1,17 @@
 # Progress log
 
-_Last updated: 2026-11-20 (session 5: v0.1.1, Windows build, save-compatibility and colony fixes, progression and soak tests)._
+_Last updated: 2026-11-24 (session 6: weather, cold snaps and body warmth, campfires, lightning rods; a colony save-determinism fix)._
 
 ## Snapshot
 | | |
 |---|---|
 | Branch | `main` (every commit pushed to `origin`). Latest release: `v0.1.1` |
 | Unity version | 6000.3.28f1 (arm64), installed through Unity Hub 3.22.6 with a Personal license |
-| Last headless tests | 2026-11-20: **155/155 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on Linux, Windows and macOS on each push. |
-| Last Unity EditMode run | 2026-11-20: **155/155 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
-| Last Unity PlayMode run | 2026-11-20: **7/7 passed** (5 smoke tests plus 2 Input System integration tests). With the Windows module installed the Input System package adds 2 Windows mouse tests that it skips itself ("Unstable due to 1252825"). |
-| Last player builds | 2026-11-20: macOS (universal), 120 MB, and Windows x64 (Mono), 100 MB, no errors; both attached to the v0.1.1 release |
-| Last scripted tour of the build | 2026-11-20 (v0.1.1): macOS **0 failed checks, 0 errors logged**, new game in 2.7 s, frames 8.4–8.5 ms average. Windows (GitHub-hosted `windows-latest`, WARP software rendering, 800×450, patience 25): **0 failed checks, 0 errors logged**, all 32 screenshots, 46 minutes. |
+| Last headless tests | 2026-11-24: **168/168 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on Linux, Windows and macOS on each push. |
+| Last Unity EditMode run | 2026-11-24: **168/168 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
+| Last Unity PlayMode run | 2026-11-24: **7/7 passed** (5 smoke tests plus 2 Input System integration tests; the Input System package's 2 Windows mouse tests skip themselves on macOS). |
+| Last player builds | 2026-11-24: macOS (universal), no errors. 2026-11-20: Windows x64 (Mono), attached to the v0.1.1 release with the macOS build |
+| Last scripted tour of the build | 2026-11-24 (macOS, with the new weather scene): **0 failed checks, 0 errors logged**, new game in 2.4 s, frames 8.3 ms average at the start camp, in the strategic view, in the rain and at night (vsync-capped, Apple M2 Max, 1600×900). 2026-11-20 (v0.1.1): Windows (GitHub-hosted `windows-latest`, WARP software rendering, 800×450, patience 25): **0 failed checks, 0 errors logged**, 46 minutes. |
 | Last model gallery | 2026-11-09: **151 screenshots, 0 errors logged** (`tools/gallery.sh`, all sections), reviewed by eye. |
 | Human playtest of the acceptance loop | **not yet** |
 | Windows build | built (v0.1.1); the full scripted tour passes on a GitHub-hosted runner; **never run on a real Windows PC with a GPU** |
@@ -110,10 +110,21 @@ All twelve are fixed (commit `fix(game): runtime issues found in presentation re
 - **Strategic orders:** machine recipes, on/off, cables and colonist work priorities work. Work zones and storage designation are not done.
 - **Colony:** Haul, Build, Farm, Eat and Rest work. Guard, medic and mechanic professions, morale effects and more than two survivors are not done.
 - **Accessibility:** rebinding, UI scale, sensitivity, FOV, invert Y, camera shake, captions and text-based status are done. A colour-blind review and a tactical pause toggle (the setting exists in difficulty presets but has no UI) are not.
-- **Survival:** health, stamina, hunger, thirst and carry weight are done. Fatigue, temperature, injuries and infection are not.
+- **Survival:** health, stamina, hunger, thirst, carry weight and body warmth are done. Fatigue, injuries and infection are not.
 
 ## Not started
-Conveyors and pipes, weather and disasters, factions, wildlife, the armoured infected, firearms, vehicles, multiple regions and streaming, skinned character animation, recorded audio, localisation.
+Conveyors and pipes, disasters other than storms and cold snaps (fires, floods, disease), factions, wildlife, the armoured infected, firearms, vehicles, multiple regions and streaming, skinned character animation, recorded audio, localisation.
+
+## Weather and warmth (session 6, 2026-11-24)
+- **Weather** (`Domain/Weather`): fronts of clear, overcast, rain and thunderstorm roll from a saved random stream (`WorldState.WeatherRng`), with the next front decided ahead. `WeatherReadout` derives cloud, rain, storm, cold-snap intensity and the outdoor temperature from the saved `WeatherState` and the clock. Storms are foretold about 1.5 game hours ahead; cold snaps (every two or three days, from the evening of day 2 at the earliest) three hours ahead.
+- **Lightning:** during storms, every 12–40 s; it finds the settlement's exposed conductors with a chance of 10 % + 4 % each (at most 40 %). A strike takes half a structure's health and a second breaks it (never destroyed). Broken machines, generators, batteries, lamps and poles (≤ 30 % health) leave their grid until repaired, for any cause. A **Lightning Rod** (Electrification) takes every strike meant for structures within 18 m. Thunder is a noise for the infected; rain and storms shorten their sight (to 0.55× in a full storm) and hearing.
+- **Body warmth:** a new vital follows the felt temperature (outdoor temperature, +10 °C under a roof or inside a valley building, + the nearest fire). Cold drains food and water faster, slows stamina and stops health regeneration; freezing costs 10 HP per game hour.
+- **Campfire** (4 logs, 6 stones; Survival Basics): burns logs or charcoal (8× a furnace's burn time, faster in the rain in the open), warms within 5 m, lights the night, and is the cooking station for the new **Baked Potato** (+22 warmth). The start camp's decorative fire pit is now a real campfire, put out until the player lights it. Colonists refuel lit fires from storage and walk to a fire (or a bed under a roof) to warm up when cold.
+- **Presentation:** weather-driven sky (cloud cover and drift, grey and darker colours, softer sun and shadows, thicker fog), world-anchored rain streaks around the camera, lightning bolts with a sky flash and a strike light, procedural rain, wind and thunder (delayed by distance), campfire crackle, flame animation and firelight. HUD warmth bar and weather in the clock line; storm and cold-snap warnings in the HUD and the strategic panel; a campfire panel (fuel, status, light/put out, cook).
+- **Fixed (pre-existing):** the colony planner's 2 s beat and each colonist's next-assignment time were not saved, so a loaded game could plan jobs half a second apart from the unsaved game. Found by a new soak test with colonists tending a fire; that test fails on the old code.
+- **Tests:** 12 `WeatherTests` (deterministic fronts with every storm foretold, cold-snap schedule and warnings, freezing and campfire recovery, campfire fuel conservation and cooking, faster burning in the rain, shelter under roofs and in houses, two-strike lightning and repair, lightning rods, thunder and perception, rain on planter beds, colonists warming up and refuelling, save and load with identical continuation) and the soak regression test. 168 EditMode tests in total.
+- **Tour:** a weather scene after the power grid (every other scene holds a clear sky with `WeatherSystem.Hold`, so earlier screenshots stay comparable). Verified in the macOS build and inspected by eye: rain over the settlement waters the open bed; a first strike damages a lamp (40/80), a second breaks it (1/80, off the grid), a hammer repairs it; a lightning rod built beside it takes 11 strikes with none getting through within 18 m; a cold snap brings −2 °C, a campfire warms the survivor to 20 °C and bakes a potato; Mara still sleeps at night; save and reload keep everything. The first tour run showed faint rain, a one-frame-late flash and a truncated warmth label; all three were fixed before the final run.
+- **Balance to check in a playtest:** storm frequency (storms grow out of cloud or rain: about one every day or two), lightning pressure, cold-snap depth (−18 °C at Survival severity), campfire fuel use (a log lasts about one game hour) and warmth loss rates.
 
 ## v0.1.1 (session 5, 2026-11-20)
 - **Fixes:** saves with in-progress hauls survive content changes (#5); fuel hauls are planned beside ingredient hauls and counted per destination inventory (#6); each system's tick phase is saved (`WorldState.TickPhases`), so after a load farming, threats and regrowth no longer lose up to one tick and the game evolves exactly like the unsaved one; CodeQL warnings resolved (#4), with ArtPreview output byte-identical.
@@ -210,6 +221,10 @@ Bugs that only showed up in the engine, all fixed:
 
 ## Known issues and risks (severity)
 - **High — no human playtest yet.** The tour grants building materials and drives commands directly, so gathering pace, mouse-and-keyboard building, and the overall feel still need someone at the keyboard. Follow the manual script in docs/TESTING.md.
+- **Medium — weather balance is untested by a person.** Storm frequency, lightning pressure, cold-snap depth and campfire fuel use are first guesses (see session 6).
+- **Low.** Rain streaks ignore roofs: they are hidden while the survivor is sheltered in the third-person view, but still drawn around the strategic camera and through open-sided structures. There are no splashes or wet surfaces.
+- **Low.** Saves made before session 6 have no campfire at the start camp (its decorative fire pit is gone); building one is cheap.
+- **Low.** Repairing a generator costs a circuit board however small the damage (repair costs round each material up). Lightning now damages before it breaks, but a rarer-material rule may be needed.
 - **Low.** Tree canopies can poke through structures built right next to them, and the camera can end up inside one.
 - **Medium.** UI windows are still slightly see-through.
 - **Medium — visuals judged on stills.** The gallery and tour take stills, so motion (wind sway, procedural animation, ground-cover pop-in) has not been seen by a person. Check them in the playtest.
@@ -226,7 +241,7 @@ Bugs that only showed up in the engine, all fixed:
 - **Medium.** The fog of war is only partly opaque, and trees taller than its 9 m layer show through.
 - **Medium.** The threat director treats distance as "out of sight" and does not check the camera frustum.
 - **Medium.** Irrigation does not add electrical load; a pump irrigates whenever its grid has supply.
-- **Low.** The colony planner and machine automation scan all structures (fine at prototype scale).
+- **Low.** The colony planner, machine automation and the climate (shelter and heat for the survivor and each colonist) scan all structures (fine at prototype scale).
 - **Low.** UI glyphs (·, —, …, ×) rely on the default font; untested.
 
 ## Metrics (headless)
@@ -236,13 +251,12 @@ Bugs that only showed up in the engine, all fixed:
 - Not yet measured (needs playtests): time to first construction, time to first machine output, playtime without critical bugs.
 
 ## Next development tasks
-1. **Playtest the acceptance scenario** ([#1](https://github.com/Ale-Newport/AfterFall/issues/1), docs/TESTING.md) by hand in the editor or the macOS build. Tune movement, camera, harvest and colonist pacing, and day-length balance. Record time to first construction and to first machine output.
-2. Work zones and storage designation in the strategic view; the Guard profession.
+1. **Playtest the acceptance scenario** ([#1](https://github.com/Ale-Newport/AfterFall/issues/1), docs/TESTING.md) by hand in the editor or the macOS build, including a session into days 2–3 for storms and a cold snap. Tune movement, camera, harvest and colonist pacing, day length, and weather balance. Record time to first construction and to first machine output.
+2. Work zones (colonists gathering wood, stone and fiber in a marked area) and storage designation in the strategic view; the Guard profession.
 3. Conveyors (automation level 3) between storage and machines.
-4. Weather (storm or cold snap) with warnings and consequences for power and needs.
-5. Recorded audio where licensed assets are available; skinned characters to hide joint seams.
-6. Play the Windows build on a real PC ([#2](https://github.com/Ale-Newport/AfterFall/issues/2)); a WebGL demo ([#8](https://github.com/Ale-Newport/AfterFall/issues/8)).
-7. Visual follow-ups: power lines between poles and pylons ([#3](https://github.com/Ale-Newport/AfterFall/issues/3)), interior furnishing of POI buildings, a closable door leaf, construction-stage visuals for blueprints, a performance pass on renderer counts.
+4. Recorded audio where licensed assets are available; skinned characters to hide joint seams.
+5. Play the Windows build on a real PC ([#2](https://github.com/Ale-Newport/AfterFall/issues/2)); a WebGL demo ([#8](https://github.com/Ale-Newport/AfterFall/issues/8)).
+6. Visual follow-ups: power lines between poles and pylons ([#3](https://github.com/Ale-Newport/AfterFall/issues/3)), interior furnishing of POI buildings, a closable door leaf, construction-stage visuals for blueprints, a performance pass on renderer counts.
 
 ## How to run (current)
 - Headless tests: `dotnet test tools/dotnet/AfterfallSim.Tests/AfterfallSim.Tests.csproj`

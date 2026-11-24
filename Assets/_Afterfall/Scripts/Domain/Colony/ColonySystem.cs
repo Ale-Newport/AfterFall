@@ -7,6 +7,7 @@ using Afterfall.Domain.Crafting;
 using Afterfall.Domain.Events;
 using Afterfall.Domain.Items;
 using Afterfall.Domain.Survival;
+using Afterfall.Domain.Weather;
 using Afterfall.Domain.World;
 
 namespace Afterfall.Domain.Colony
@@ -55,6 +56,14 @@ namespace Afterfall.Domain.Colony
         public const int MaxHaulQuantity = 20;
         public const double PlanInterval = 2.0;
         public const float NeedThreshold = 35f;
+
+        /// <summary>Below this warmth a colonist leaves their work to warm up; they go back at <see cref="WarmEnough"/>.</summary>
+        public const float WarmUpThreshold = 35f;
+
+        public const float WarmEnough = 90f;
+
+        /// <summary>How far a cold colonist will walk to a fire.</summary>
+        public const float WarmUpSearchRadius = 90f;
         public const float FleeRadius = 9f;
 
         /// <summary>Idle colonists further than this from their bed walk back to the settlement.</summary>
@@ -65,8 +74,6 @@ namespace Afterfall.Domain.Colony
         private readonly EventBus _bus;
         private readonly ConstructionService _construction;
         private Farming.FarmingSystem _farming;
-        private readonly Dictionary<EntityId, double> _nextAssign = new Dictionary<EntityId, double>();
-        private double _nextPlan;
 
         public ColonySystem(WorldState world, ContentDatabase content, EventBus bus, ConstructionService construction)
         {
@@ -132,9 +139,9 @@ namespace Afterfall.Domain.Colony
         public void Tick(double dt)
         {
             double now = _world.Clock.ElapsedSeconds;
-            if (now >= _nextPlan)
+            if (now >= _world.ColonyNextPlanAt)
             {
-                _nextPlan = now + PlanInterval;
+                _world.ColonyNextPlanAt = now + PlanInterval;
                 PlanJobs(now);
             }
             foreach (EntityId id in SortedColonists())
@@ -144,9 +151,9 @@ namespace Afterfall.Domain.Colony
                 Needs(c, dt);
                 if (c.Activity == ColonistActivity.Down) continue;
                 if (Flee(c, (float)dt)) continue;
-                if ((!c.CurrentJob.IsValid || !_world.Jobs.ContainsKey(c.CurrentJob)) && (!_nextAssign.TryGetValue(c.Id, out double next) || now >= next))
+                if ((!c.CurrentJob.IsValid || !_world.Jobs.ContainsKey(c.CurrentJob)) && now >= c.NextAssignAt)
                 {
-                    _nextAssign[c.Id] = now + 1.0;
+                    c.NextAssignAt = now + 1.0;
                     Assign(c, now);
                 }
                 if (c.CurrentJob.IsValid && c.HasMoveTarget && Movement.CannotReach(c) && _world.Jobs.TryGetValue(c.CurrentJob, out Job stuck))
@@ -183,12 +190,15 @@ namespace Afterfall.Domain.Colony
         {
             var activity = new PlayerActivity { Moving = c.Activity == ColonistActivity.Moving };
             SurvivalRules.Tick(c.Vitals, _content.Survival, activity, dt, _world.Clock.SecondsPerGameHour, _world.Settings.SurvivalDrain * 0.75f);
+            ClimateReading climate = Climate.At(_world, _content, c.Position, WeatherReadout.Of(_world));
+            c.FeltTemperatureC = climate.TemperatureC;
+            SurvivalRules.TickWarmth(c.Vitals, _content.Survival, climate.TemperatureC, dt, _world.Clock.SecondsPerGameHour);
             if (c.Activity == ColonistActivity.Resting)
             {
                 c.Vitals.Stamina = Math.Min(c.Vitals.MaxStamina, c.Vitals.Stamina + 5f * (float)dt);
                 c.Vitals.Health = Math.Min(c.Vitals.MaxHealth, c.Vitals.Health + 0.05f * (float)dt);
             }
-            if (c.Vitals.IsDead) Down(c, c.Vitals.Hunger <= 0 ? "starvation" : c.Vitals.Thirst <= 0 ? "dehydration" : "injuries");
+            if (c.Vitals.IsDead) Down(c, c.Vitals.Hunger <= 0 ? "starvation" : c.Vitals.Thirst <= 0 ? "dehydration" : c.Vitals.Warmth <= 0 ? "the cold" : "injuries");
         }
 
         /// <summary>Colonist killed: their job fails cleanly and carried items drop where they fell.</summary>
@@ -265,6 +275,7 @@ namespace Afterfall.Domain.Colony
                 if (s.Machine != null) PlanMachine(s, storages, now);
                 if (s.Crop != null && _farming != null) PlanFarm(s, storages, now);
                 if (s.Generator != null) PlanFuel(s.Id, s.Generator.Fuel, storages, now, energy: true);
+                if (s.Heater != null && s.Enabled) PlanFuel(s.Id, s.Heater.Fuel, storages, now, energy: false);
             }
         }
 
@@ -479,6 +490,7 @@ namespace Afterfall.Domain.Colony
                     _world.Jobs.Remove(eat.Id);
                 }
             }
+            if (c.Vitals.Warmth < WarmUpThreshold && c.FeltTemperatureC < _content.Survival.ComfortTemperatureC && TryWarmUp(c, now)) return true;
             if (_world.Clock.IsNight && c.HomeBed.IsValid && _world.Structures.ContainsKey(c.HomeBed))
             {
                 var rest = new Job { Type = JobType.Rest, Priority = JobPriority.Survival, TargetStructure = c.HomeBed, Description = "Sleep until morning", CreatedAt = now };
@@ -486,6 +498,72 @@ namespace Afterfall.Domain.Colony
                 return Claim(c, rest);
             }
             return false;
+        }
+
+        /// <summary>
+        /// A cold colonist heads for the nearest burning fire or working furnace, or failing that a
+        /// bed under a roof. With neither, they keep working and say why they are freezing.
+        /// </summary>
+        private bool TryWarmUp(ColonistState c, double now)
+        {
+            Structure best = FindWarmSpot(c);
+            if (best == null)
+            {
+                const string reason = "Freezing: no fire burning and no bed under a roof";
+                c.Status = reason;
+                if (c.RecentFailures.Count == 0 || c.RecentFailures[0] != reason) c.RecordFailure(reason);
+                return false;
+            }
+            var job = new Job
+            {
+                Type = JobType.WarmUp, Priority = JobPriority.Survival, TargetStructure = best.Id, CreatedAt = now,
+                Description = $"Warm up at the {_content.Building(best.DefId)?.Name ?? "fire"}"
+            };
+            AddJob(job);
+            if (Claim(c, job)) return true;
+            _world.Jobs.Remove(job.Id);
+            return false;
+        }
+
+        /// <summary>The nearest burning fire or working furnace in reach, else the colonist's bed if it is under a roof.</summary>
+        private Structure FindWarmSpot(ColonistState c)
+        {
+            Structure best = null;
+            float bestDist = WarmUpSearchRadius;
+            foreach (EntityId id in _world.SortedStructureIds())
+            {
+                Structure s = _world.Structures[id];
+                if (!s.PlayerBuilt || !s.IsComplete) continue;
+                if (Climate.HeatAt(s, _content.Building(s.DefId), s.Position) <= 0f) continue;
+                float d = Vec3.DistanceXZ(s.Position, c.Position);
+                if (d >= bestDist) continue;
+                best = s;
+                bestDist = d;
+            }
+            if (best == null && c.HomeBed.IsValid && _world.Structures.TryGetValue(c.HomeBed, out Structure bed) && Climate.IsSheltered(_world, _content, bed.Position + new Vec3(0f, 0.1f, 0f)))
+                best = bed;
+            return best;
+        }
+
+        private void ExecuteWarmUp(ColonistState c, Job j, float dt)
+        {
+            if (!_world.Structures.TryGetValue(j.TargetStructure, out Structure spot))
+            {
+                Fail(c, j, "the fire is gone");
+                return;
+            }
+            BuildingDefinition def = _content.Building(spot.DefId);
+            bool bed = def != null && def.IsBed;
+            if (!bed && Climate.HeatAt(spot, def, spot.Position) <= 0f)
+            {
+                Fail(c, j, "the fire went out");
+                return;
+            }
+            float arrive = bed ? 1.2f : Math.Max(1.2f, (def?.Heater?.Radius ?? Climate.FurnaceHeatRadius) * 0.35f);
+            if (!MoveTo(c, spot.Position, dt, arrive)) return;
+            c.Activity = ColonistActivity.Idle;
+            c.Status = $"Warming up at the {def?.Name ?? "fire"}";
+            if (c.Vitals.Warmth >= WarmEnough) Complete(c, j);
         }
 
         /// <summary>Claims a job for a colonist, acquiring every reservation it needs (all or nothing).</summary>
@@ -560,10 +638,18 @@ namespace Afterfall.Domain.Colony
                 case JobType.Farm:
                     ExecuteFarm(c, j, dt);
                     break;
+                case JobType.WarmUp:
+                    ExecuteWarmUp(c, j, dt);
+                    break;
                 case JobType.Rest:
                     if (!_world.Structures.TryGetValue(j.TargetStructure, out Structure bed))
                     {
                         Fail(c, j, "their bed was destroyed");
+                        return;
+                    }
+                    if (c.Vitals.Warmth < WarmUpThreshold && c.FeltTemperatureC < _content.Survival.ComfortTemperatureC && FindWarmSpot(c) is Structure warm && warm.Id != bed.Id)
+                    {
+                        Fail(c, j, "too cold to sleep there");
                         return;
                     }
                     if (!MoveTo(c, bed.Position, dt, 1.2f)) return;

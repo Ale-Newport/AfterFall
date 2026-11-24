@@ -59,6 +59,18 @@ namespace Afterfall.Services
                 index++;
             }
 
+            // The cold campfire at the start camp is a real one: add logs and light it. It starts put out, so
+            // colonists do not keep feeding it the settlement's wood until the player lights it.
+            BuildingDefinition campfire = content.Building("campfire");
+            foreach (PropPlacement prop in world.Layout.Props)
+            {
+                if (prop.Kind != "firepit" || campfire == null) continue;
+                Structure fire = StructureFactory.Create(world, campfire, prop.Position, prop.Yaw, StructureState.Complete);
+                fire.Enabled = false;
+                StructureFactory.InitializeComponents(world, content, fire);
+                world.AddStructure(fire);
+            }
+
             var session = new GameSession(content, world);
             session.Tech.Evaluate();
 

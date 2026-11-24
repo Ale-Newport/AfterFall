@@ -13,6 +13,7 @@ using Afterfall.Domain.Power;
 using Afterfall.Domain.Survival;
 using Afterfall.Domain.Technology;
 using Afterfall.Domain.Threats;
+using Afterfall.Domain.Weather;
 using Afterfall.Domain.World;
 
 namespace Afterfall.Services
@@ -57,6 +58,11 @@ namespace Afterfall.Services
                 return net != null && (net.RunningGenerators > 0 || net.StoredJoules > 0);
             };
             if (Colony.Movement is DirectColonistMovement walk) walk.GroundHeight = p => World.Layout.HeightAt(p.X, p.Z);
+            Weather = new WeatherSystem(World, Content, Events);
+            Weather.EmitNoise = (p, r, src) => Zombies.Noise.Emit(p, r, Now, src);
+            Heaters = new HeaterSystem(World, Content);
+            Zombies.SightFactor = () => WeatherReadout.Of(World).SightFactor;
+            Zombies.HearingFactor = () => WeatherReadout.Of(World).HearingFactor;
             _playerSystem = new PlayerSystem(this);
 
             Zombies.PlayerHit += (z, dmg) => DamagePlayer(dmg, "the infected");
@@ -71,6 +77,8 @@ namespace Afterfall.Services
             Scheduler.Register(Farming, 1);
             Scheduler.Register(Zombies, 10);
             Scheduler.Register(Threats, 0.5);
+            Scheduler.Register(Weather, 1);
+            Scheduler.Register(Heaters, 2);
             Scheduler.Register(new ResourceRespawnSystem(World, Content), 0.2);
             Scheduler.RestorePhases(World.TickPhases);
         }
@@ -88,6 +96,14 @@ namespace Afterfall.Services
         public ThreatDirector Threats { get; }
         public ColonySystem Colony { get; }
         public Afterfall.Domain.Farming.FarmingSystem Farming { get; }
+        public WeatherSystem Weather { get; }
+        public HeaterSystem Heaters { get; }
+
+        /// <summary>The weather right now (derived from the saved state and the clock).</summary>
+        public WeatherReadout WeatherNow => WeatherReadout.Of(World);
+
+        /// <summary>Temperature, shelter and heat at a spot (the player's by default).</summary>
+        public ClimateReading ClimateAt(Vec3 position) => Climate.At(World, Content, position, WeatherNow);
 
         public PlayerState Player => World.Player;
         public double Now => World.Clock.ElapsedSeconds;
@@ -344,6 +360,8 @@ namespace Afterfall.Services
                 if (!s.IsComplete) continue;
                 BuildingDefinition def = Content.Building(s.DefId);
                 if (def == null || string.IsNullOrEmpty(def.CraftingStation)) continue;
+                // A fire is a cooking station only while it burns.
+                if (s.Heater != null && !s.Heater.Lit) continue;
                 if (Vec3.Distance(s.Position, Player.Position) <= StationRange) set.Add(def.CraftingStation);
             }
             return set;
@@ -566,7 +584,7 @@ namespace Afterfall.Services
         public OpResult SetWorkPriority(EntityId colonistId, JobType type, int priority)
         {
             if (!World.Colonists.TryGetValue(colonistId, out ColonistState c) || !c.Recruited) return OpResult.Fail("missing", "No such colonist.");
-            if (type == JobType.Eat || type == JobType.Rest) return OpResult.Fail("personal", "Eating and resting are personal needs.");
+            if (type == JobType.Eat || type == JobType.Rest || type == JobType.WarmUp) return OpResult.Fail("personal", "Eating, resting and warming up are personal needs.");
             c.Work.Priorities[type] = Math.Max(0, Math.Min(4, priority));
             return OpResult.Success(priority == 0 ? $"{c.Name} will no longer {type.ToString().ToLowerInvariant()}." : $"{c.Name}: {type} priority {priority}.");
         }

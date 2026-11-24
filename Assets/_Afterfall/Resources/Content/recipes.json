@@ -64,6 +64,19 @@
     "category": "Medical"
   },
   {
+    "id": "bake_potato",
+    "name": "Baked Potato",
+    "inputs": [
+      "potato:1"
+    ],
+    "outputs": [
+      "baked_potato:1"
+    ],
+    "station": "campfire",
+    "duration": 6,
+    "category": "Cooking"
+  },
+  {
     "id": "saw_planks",
     "name": "Saw Planks",
     "inputs": [

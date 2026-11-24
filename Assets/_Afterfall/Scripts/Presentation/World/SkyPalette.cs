@@ -72,6 +72,52 @@ namespace Afterfall.Presentation
         }
 
         /// <summary>The palette at a sun elevation in degrees (negative = below the horizon).</summary>
+        /// <summary>
+        /// Turns a clear-sky look into the same moment under weather: clouds grey and darken the sky,
+        /// soften the sun and its shadows and hide the stars; rain and storms thicken the fog. A
+        /// lightning <paramref name="flash"/> (0–1) briefly lights everything a cold blue-white.
+        /// </summary>
+        public static SkyLook ApplyWeather(SkyLook look, float cloud, float rain, float storm, float flash)
+        {
+            float o = Mathf.Clamp01((cloud - 0.15f) / 0.85f);
+            float dim = 1f - 0.32f * o - 0.18f * storm;
+            look.Zenith = Grey(look.Zenith, 0.7f * o, dim);
+            look.Horizon = Grey(look.Horizon, 0.6f * o, dim + 0.08f * o);
+            look.HorizonGlow = Grey(look.HorizonGlow, 0.8f * o, dim);
+            look.SunHalo = Grey(look.SunHalo, 0.8f * o, 1f - 0.7f * o);
+            look.CloudLit = Grey(look.CloudLit, 0.6f * o, 1f - 0.35f * o - 0.2f * storm);
+            look.CloudShade = Grey(look.CloudShade, 0.5f * o, 1f - 0.4f * o - 0.25f * storm);
+            look.AmbientSky = Grey(look.AmbientSky, 0.5f * o, 1f - 0.15f * o - 0.1f * storm);
+            look.AmbientEquator = Grey(look.AmbientEquator, 0.4f * o, 1f - 0.1f * o);
+            look.SunIntensity *= 1f - 0.72f * o;
+            look.MoonIntensity *= 1f - 0.85f * o;
+            look.ShadowStrength *= 1f - 0.75f * o;
+            look.Stars *= 1f - o;
+            look.FogDensity *= 1f + 1.6f * rain + 1.2f * storm;
+            look.Saturation -= 18f * o;
+            look.Exposure -= 0.2f * o;
+            if (flash > 0f)
+            {
+                var white = new Color(0.82f, 0.86f, 1f);
+                look.Zenith = Color.Lerp(look.Zenith, white, flash * 0.6f);
+                look.Horizon = Color.Lerp(look.Horizon, white, flash * 0.5f);
+                look.CloudLit = Color.Lerp(look.CloudLit, white, flash * 0.8f);
+                look.CloudShade = Color.Lerp(look.CloudShade, white * 0.8f, flash * 0.7f);
+                look.AmbientSky = Color.Lerp(look.AmbientSky, white, flash * 0.75f);
+                look.AmbientEquator = Color.Lerp(look.AmbientEquator, white * 0.8f, flash * 0.6f);
+                look.Exposure += 0.6f * flash;
+            }
+            return look;
+        }
+
+        private static Color Grey(Color c, float amount, float brightness)
+        {
+            float l = c.r * 0.3f + c.g * 0.59f + c.b * 0.11f;
+            Color g = Color.Lerp(c, new Color(l, l, l * 1.04f, c.a), amount) * brightness;
+            g.a = c.a;
+            return g;
+        }
+
         public static SkyLook Evaluate(float sunElevationDegrees)
         {
             if (sunElevationDegrees <= Keys[0].Elevation) return Keys[0].Look;

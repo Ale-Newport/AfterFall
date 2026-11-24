@@ -3,6 +3,7 @@ using Afterfall.Domain.Construction;
 using Afterfall.Domain.Crafting;
 using Afterfall.Domain.Items;
 using Afterfall.Domain.Survival;
+using Afterfall.Domain.Weather;
 using Afterfall.Domain.World;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -14,7 +15,7 @@ namespace Afterfall.Presentation.UI
     {
         private readonly UiManager _ui;
         private readonly GameController _gc;
-        private readonly Bar _health, _stamina, _hunger, _thirst;
+        private readonly Bar _health, _stamina, _hunger, _thirst, _warmth;
         private readonly Label _carry, _equipped, _clock, _prompt, _mode, _warnings, _craftLabel, _placeTitle, _placeReasons, _caption;
         private readonly Bar _craftBar;
         private readonly VisualElement _crosshair, _craftPanel, _placePanel, _vitals, _hotbarRow, _equippedIcon, _craftIcon, _placeCost;
@@ -36,6 +37,7 @@ namespace Afterfall.Presentation.UI
             _stamina = _vitals.Put(new Bar(new Color(0.85f, 0.72f, 0.25f)));
             _hunger = _vitals.Put(new Bar(new Color(0.78f, 0.5f, 0.22f)));
             _thirst = _vitals.Put(new Bar(new Color(0.25f, 0.52f, 0.85f)));
+            _warmth = _vitals.Put(new Bar(WarmColor));
             _carry = _vitals.Put(UiKit.Text("", "hud-equipped"));
             var hand = _vitals.Put(UiKit.Div("row", "hud-hand"));
             _equippedIcon = hand.Put(UiKit.GlyphIcon("hand", "icon-32"));
@@ -82,6 +84,11 @@ namespace Afterfall.Presentation.UI
             _stamina.Set(v.Stamina / v.MaxStamina, $"Stamina {v.Stamina:0}");
             _hunger.Set(v.Hunger / 100f, $"Food {v.Hunger:0}%{(v.Hunger < 20 ? "  STARVING" : "")}");
             _thirst.Set(v.Thirst / 100f, $"Water {v.Thirst:0}%{(v.Thirst < 20 ? "  THIRSTY" : "")}");
+            SurvivalConfig sc = _gc.Session.Content.Survival;
+            bool cold = SurvivalRules.IsCold(v, sc);
+            string trend = p.FeltTemperatureC < sc.ComfortTemperatureC ? " cooling" : v.Warmth < 99.5f ? " warming" : "";
+            _warmth.Set(v.Warmth / 100f, $"Warmth {v.Warmth:0}%{(v.Warmth <= 0f ? " FREEZING" : cold ? " COLD" : "")} · {p.FeltTemperatureC:0} °C{trend}");
+            _warmth.SetColor(cold ? ColdColor : WarmColor);
             float carried = _gc.Session.CarriedWeight;
             _carry.text = $"Carrying {carried:0.0} / {PlayerState.CarryMaxKg:0} kg{(carried > PlayerState.CarryComfortKg ? "  (encumbered)" : "")}";
             UiKit.SetClass(_carry, "warn", carried > PlayerState.CarryComfortKg);
@@ -96,7 +103,8 @@ namespace Afterfall.Presentation.UI
             ItemIcons.WarmUp(items, 4);
 
             var clock = _gc.Session.World.Clock;
-            _clock.text = $"{clock.FormatTime()}  {(clock.IsNight ? "(night)" : "(day)")}";
+            WeatherReadout weather = _gc.Session.WeatherNow;
+            _clock.text = $"{clock.FormatTime()}{(clock.IsNight ? " (night)" : "")}  ·  {WeatherTuning.Describe(weather.Kind)}{(weather.ColdSnap > 0.05f ? ", cold snap" : "")}  {weather.OutdoorC:0} °C";
 
             bool tactical = _gc.CameraRig.TacticalActive;
             bool windows = _ui.AnyWindowOpen;
@@ -181,6 +189,9 @@ namespace Afterfall.Presentation.UI
             }
         }
 
+        private static readonly Color WarmColor = new Color(0.9f, 0.55f, 0.3f);
+        private static readonly Color ColdColor = new Color(0.5f, 0.75f, 0.98f);
+
         private static void SetTone(VisualElement e, string tone) => UiKit.SetTone(e, tone);
 
         private string Warnings(SurvivalState v, float carried)
@@ -192,6 +203,11 @@ namespace Afterfall.Presentation.UI
             else if (v.Thirst < 20f) lines.Add("! Thirsty");
             if (v.Health < 30f && !v.IsDead) lines.Add("! Badly hurt — use a bandage");
             if (carried > PlayerState.CarryComfortKg) lines.Add("! Over-encumbered — moving slower");
+            if (v.Warmth <= 0f && !v.IsDead) lines.Add("! Freezing — you are losing health. Get to a fire or under a roof.");
+            else if (SurvivalRules.IsCold(v, _gc.Session.Content.Survival)) lines.Add("! Cold — food burns faster and you tire sooner");
+            WeatherForecast forecast = _gc.Session.Weather.Forecast();
+            if (forecast.StormInHours >= 0) lines.Add($"! A thunderstorm is coming (about {forecast.StormInHours:0.#} h): lightning hits exposed poles, lamps and generators");
+            if (forecast.ColdSnapInHours >= 0) lines.Add($"! A cold snap sets in within {forecast.ColdSnapInHours:0.#} h: build a fire, stock fuel, get under a roof");
             float heat = _gc.Session.World.Threat.Heat;
             if (heat > 25f) lines.Add($"! Your base is attracting attention (noise {heat:0}%)");
             if (_gc.Session.World.Threat.PendingRaidAt > _gc.Session.Now) lines.Add("!! A group of infected is approaching your base!");

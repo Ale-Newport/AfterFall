@@ -13,12 +13,13 @@ Field names are case-insensitive camelCase versions of the C# properties. Item a
 { "id": "iron_ingot", "name": "Iron Ingot", "description": "...", "category": "Processed",
   "maxStack": 30, "weight": 1.0, "icon": "IN", "color": "#B8BCC2",
   "burnSeconds": 0, "energyKJ": 0, "maxDurability": 0, "tags": [],
-  "consumable": { "hunger": 0, "thirst": 0, "health": 0, "stamina": 0, "returns": "" },
+  "consumable": { "hunger": 0, "thirst": 0, "health": 0, "stamina": 0, "warmth": 0, "returns": "" },
   "tool": { "type": "Axe|Pickaxe|Hammer|Knife|Weapon", "gatherPower": 2, "damage": 12, "staminaCost": 7, "cooldown": 0.85, "range": 1.8, "wearPerUse": 1 } }
 ```
 - `category` is one of: Natural, Salvaged, Processed, FoodMedicine, Tool, Construction, Mechanical, Electrical.
 - Durable items (`maxDurability > 0`) must have `maxStack: 1`.
-- `burnSeconds > 0` makes an item furnace fuel; `energyKJ > 0` makes it generator fuel.
+- `burnSeconds > 0` makes an item furnace fuel (a campfire burns it `burnTimeMultiplier` times longer); `energyKJ > 0` makes it generator fuel. Colonists only haul items tagged `fuel` to fires and generators.
+- `consumable.warmth` restores body warmth (hot food).
 - `icon` (2 letters) and `color` drive the procedural UI icon and the held-item colour.
 
 ## Recipes: `recipes.json`
@@ -26,7 +27,7 @@ Field names are case-insensitive camelCase versions of the C# properties. Item a
 { "id": "gears", "name": "Machine Gears", "inputs": ["iron_ingot:1"], "outputs": ["gear:2"],
   "station": "workshop", "requiredTech": "electricity", "duration": 6, "category": "Machining" }
 ```
-- `station: ""` makes a hand recipe. `"workbench"` needs a completed workbench within 5 m. Machine stations (`furnace`, `workshop`, `water_pump`) are run by machines and selected in the machine panel.
+- `station: ""` makes a hand recipe. `"workbench"` needs a completed workbench within 5 m; `"campfire"` needs a lit campfire within 5 m. Machine stations (`furnace`, `workshop`, `water_pump`) are run by machines and selected in the machine panel.
 - Every station must be provided by some building's `craftingStation` or `machine.station`.
 
 ## Buildings: `buildings.json`
@@ -39,7 +40,7 @@ Field names are case-insensitive camelCase versions of the C# properties. Item a
   "machine": { "station": "workshop", "inputSlots": 4, "outputSlots": 4, "fuelSlots": 0,
                "powerWatts": 500, "powerPriority": 2, "noiseRadius": 12, "autoTransferRange": 3.5 } }
 ```
-Optional components: `farm {seedItem, cropItem, yieldMin, yieldMax, seedReturnMin, seedReturnMax, growSeconds, waterPerSecond, irrigationRange}`, `storage {slots, maxWeight}`, `craftingStation`, `machine`, `generator {capacityWatts, fuelSlots, noiseRadius}`, `battery {capacityKJ, maxRateWatts}`, `powerNode {range, isRelay}`, `light {powerWatts, range, powerPriority}`. Flags: `isDoor`, `isBed`, `isDefensive`, `blocksMovement`, `buildable` (`false` for world loot props).
+Optional components: `farm {seedItem, cropItem, yieldMin, yieldMax, seedReturnMin, seedReturnMax, growSeconds, waterPerSecond, irrigationRange}`, `storage {slots, maxWeight}`, `craftingStation`, `machine`, `generator {capacityWatts, fuelSlots, noiseRadius}`, `battery {capacityKJ, maxRateWatts}`, `powerNode {range, isRelay}`, `light {powerWatts, range, powerPriority}`, `heater {fuelSlots, burnTimeMultiplier, warmthC, radius, lightRange}` (a fire: burns burnable fuel while switched on, warms people within `radius`; with a `craftingStation` it cooks only while lit), `lightningRod {radius}` (takes lightning strikes meant for structures within `radius`). Flags: `isDoor`, `isBed`, `isDefensive`, `blocksMovement`, `buildable` (`false` for world loot props).
 
 **Visuals:** `visual` selects a builder in `Presentation/World/StructureVisuals.cs`. Add a `case` there for a new look; unknown keys fall back to a coloured box.
 

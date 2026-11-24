@@ -35,7 +35,7 @@ namespace Afterfall.Presentation
                 case "shack": Shack(t, s, p.Variant); break;
                 case "barn": Barn(t, s); break;
                 case "tent": Tent(t, s); break;
-                case "firepit": Firepit(t); break;
+                case "firepit": break; // a real campfire structure stands here (NewGameFactory)
                 case "log_seat": LogSeat(t); break;
                 case "fence": Fence(t, s, place % 97); break;
                 case "sign": Sign(t, s); break;
@@ -2079,63 +2079,6 @@ namespace Afterfall.Presentation
                     }
                 }
             }
-        }
-
-        private static void Firepit(Transform t)
-        {
-            PropKit.Spawn(t, PropKit.Cached("prop:firepit", kit =>
-            {
-                MeshBuilder stone = kit[Mat(Surface.Rock, new Color(0.52f, 0.5f, 0.47f))];
-                for (int i = 0; i < 11; i++)
-                {
-                    float a = i * Mathf.PI * 2f / 11f + PropGeo.Hash(7, i) * 0.2f;
-                    float r = 0.56f + PropGeo.Hash(8, i) * 0.06f;
-                    var size = new Vector3(0.26f + PropGeo.Hash(9, i) * 0.1f, 0.24f + PropGeo.Hash(10, i) * 0.1f, 0.22f + PropGeo.Hash(11, i) * 0.08f);
-                    // Stones darken toward the fire where soot built up.
-                    float soot = 0.55f + PropGeo.Hash(12, i) * 0.25f;
-                    stone.Append(MeshFactory.PropStone(i), Matrix4x4.TRS(new Vector3(Mathf.Cos(a) * r, size.y * 0.3f, Mathf.Sin(a) * r), Quaternion.Euler(PropGeo.Hash(13, i) * 25f, -a * Mathf.Rad2Deg, PropGeo.Hash(14, i) * 20f), size),
-                        new Color(soot, soot * 0.98f, soot * 0.95f, 0.9f));
-                }
-                MeshBuilder ash = kit[Mat(Surface.Soil, new Color(0.3f, 0.29f, 0.28f))];
-                ash.Color = Tone(0.55f, 0.8f);
-                ash.Cylinder(new Vector3(0f, -0.02f, 0f), new Vector3(0f, 0.025f, 0f), 0.62f, 0.55f, 16);
-                ash.Color = Tone(1.2f, 0.9f);
-                ash.Lathe(new[] { new Vector2(0.48f, 0.02f), new Vector2(0.35f, 0.05f), new Vector2(0.15f, 0.075f), new Vector2(0f, 0.08f) }, 14);
-                MeshBuilder charred = kit[Mat(Surface.Bark, new Color(0.11f, 0.1f, 0.09f))];
-                charred.Color = Tone(1f);
-                for (int i = 0; i < 5; i++)
-                {
-                    float a = i * 1.37f + 0.4f;
-                    var dir = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
-                    Vector3 outer = dir * (0.42f + PropGeo.Hash(15, i) * 0.1f) + Vector3.up * 0.07f;
-                    Vector3 inner = -dir * 0.05f + Vector3.up * (0.14f + (i % 2) * 0.06f);
-                    charred.Cylinder(outer, inner, 0.055f, 0.035f, 7, false);
-                }
-                MeshBuilder ends = kit[Mat(Surface.Soil, new Color(0.56f, 0.54f, 0.5f))];
-                ends.Color = Tone(1f);
-                for (int i = 0; i < 3; i++)
-                {
-                    float a = i * 2.1f;
-                    ends.Sphere(new Vector3(Mathf.Cos(a) * 0.12f, 0.12f, Mathf.Sin(a) * 0.12f), new Vector3(0.05f, 0.03f, 0.05f), 0, false);
-                }
-                // Cooking tripod with a blackened pot.
-                MeshBuilder sticks = kit[Mat(Surface.Wood, new Color(0.44f, 0.35f, 0.25f))];
-                sticks.Color = Tone(0.9f);
-                Vector3 apex = new Vector3(0f, 1.25f, 0f);
-                for (int i = 0; i < 3; i++)
-                {
-                    float a = i * Mathf.PI * 2f / 3f + 0.5f;
-                    Vector3 foot = new Vector3(Mathf.Cos(a) * 0.82f, 0f, Mathf.Sin(a) * 0.82f);
-                    PropGeo.Rod(sticks, foot, apex + (apex - foot).normalized * 0.12f, 0.022f, 6);
-                }
-                MeshBuilder iron = kit[DarkMetal];
-                iron.Color = Tone(1f);
-                PropGeo.Rod(iron, apex, new Vector3(0f, 0.62f, 0f), 0.006f, 4);
-                iron.Matrix = Matrix4x4.Translate(new Vector3(0f, 0.36f, 0f));
-                iron.Lathe(new[] { new Vector2(0f, 0f), new Vector2(0.1f, 0.01f), new Vector2(0.15f, 0.08f), new Vector2(0.15f, 0.2f), new Vector2(0.165f, 0.22f), new Vector2(0.14f, 0.22f), new Vector2(0.13f, 0.06f), new Vector2(0f, 0.05f) }, 14);
-                iron.Matrix = Matrix4x4.identity;
-                PropGeo.Rope(iron, new Vector3(-0.15f, 0.58f, 0f), new Vector3(0.15f, 0.58f, 0f), 0.005f, -0.08f, 5);
-            }));
         }
 
         private static void LogSeat(Transform t)

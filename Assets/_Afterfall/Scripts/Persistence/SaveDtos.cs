@@ -67,6 +67,14 @@ namespace Afterfall.Persistence
         public string Status { get; set; } = "";
     }
 
+    public sealed class HeaterDto
+    {
+        public InventoryDto Fuel { get; set; }
+        public float BurnRemaining { get; set; }
+        public bool Lit { get; set; }
+        public string Status { get; set; } = "";
+    }
+
     public sealed class PowerDto
     {
         public bool Powered { get; set; }
@@ -94,6 +102,7 @@ namespace Afterfall.Persistence
         public GeneratorDto Generator { get; set; }
         public double? BatteryStoredJoules { get; set; }
         public Afterfall.Domain.Farming.CropState Crop { get; set; }
+        public HeaterDto Heater { get; set; }
         public PowerDto Power { get; set; }
     }
 
@@ -169,6 +178,7 @@ namespace Afterfall.Persistence
         public Vec3 MoveTarget { get; set; }
         public bool HasMoveTarget { get; set; }
         public float Morale { get; set; }
+        public double NextAssignAt { get; set; }
         public List<string> RecentFailures { get; set; } = new List<string>();
     }
 
@@ -208,7 +218,9 @@ namespace Afterfall.Persistence
         public ulong ZombieRngState { get; set; }
         public ulong ThreatRngState { get; set; }
         public ulong FarmRngState { get; set; }
+        public ulong WeatherRngState { get; set; }
         public Dictionary<string, double> TickPhases { get; set; }
+        public double ColonyNextPlanAt { get; set; }
         public PlayerDto Player { get; set; }
         public List<StructureDto> Structures { get; set; } = new List<StructureDto>();
         public List<long[]> PowerLinks { get; set; } = new List<long[]>();
@@ -225,6 +237,10 @@ namespace Afterfall.Persistence
 
         public List<string> DiscoveredPois { get; set; } = new List<string>();
         public ThreatState Threat { get; set; }
+
+        /// <summary>Null in saves made before weather existed: the weather then starts afresh.</summary>
+        public Afterfall.Domain.Weather.WeatherState Weather { get; set; }
+
         public PlaythroughMetrics Metrics { get; set; }
     }
 

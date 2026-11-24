@@ -6,6 +6,7 @@ using Afterfall.Domain.Colony;
 using Afterfall.Domain.Construction;
 using Afterfall.Domain.Items;
 using Afterfall.Domain.Technology;
+using Afterfall.Domain.Weather;
 
 namespace Afterfall.Domain.World
 {
@@ -84,6 +85,7 @@ namespace Afterfall.Domain.World
             ZombieRng = new DeterministicRandom((ulong)(uint)seed ^ 0xA5A5A5A5UL);
             ThreatRng = new DeterministicRandom((ulong)(uint)seed * 31UL + 7UL);
             FarmRng = new DeterministicRandom((ulong)(uint)seed * 977UL + 13UL);
+            WeatherRng = new DeterministicRandom((ulong)(uint)seed * 6364136223846793005UL + 1442695040888963407UL);
             Exploration = new ExplorationState(WorldLayout.WorldSize);
         }
 
@@ -103,9 +105,14 @@ namespace Afterfall.Domain.World
         public DeterministicRandom ThreatRng { get; }
         /// <summary>Farming: crop yields and returned seed.</summary>
         public DeterministicRandom FarmRng { get; }
+        /// <summary>Weather: fronts, cold snaps and lightning.</summary>
+        public DeterministicRandom WeatherRng { get; }
 
         /// <summary>Each simulation system's progress toward its next fixed-rate tick, by system name (saved).</summary>
         public Dictionary<string, double> TickPhases { get; } = new Dictionary<string, double>(StringComparer.Ordinal);
+
+        /// <summary>Simulation time of the colony's next job-planning pass (saved for the same reason as the tick phases).</summary>
+        public double ColonyNextPlanAt { get; set; }
 
         public PlayerState Player { get; set; }
         public Dictionary<EntityId, Structure> Structures { get; } = new Dictionary<EntityId, Structure>();
@@ -118,6 +125,7 @@ namespace Afterfall.Domain.World
         public TechnologyState Tech { get; } = new TechnologyState();
         public ExplorationState Exploration { get; }
         public ThreatState Threat { get; } = new ThreatState();
+        public WeatherState Weather { get; } = new WeatherState();
         public PlaythroughMetrics Metrics { get; } = new PlaythroughMetrics();
 
         /// <summary>Static world layout regenerated from the seed (not persisted).</summary>
@@ -178,6 +186,7 @@ namespace Afterfall.Domain.World
                 RegisterInventory(s.Machine.Fuel, s.Id);
             }
             if (s.Generator != null) RegisterInventory(s.Generator.Fuel, s.Id);
+            if (s.Heater != null) RegisterInventory(s.Heater.Fuel, s.Id);
         }
 
         public void RemoveStructure(EntityId id)
@@ -191,6 +200,7 @@ namespace Afterfall.Domain.World
                 UnregisterInventory(s.Machine.Fuel);
             }
             if (s.Generator != null) UnregisterInventory(s.Generator.Fuel);
+            if (s.Heater != null) UnregisterInventory(s.Heater.Fuel);
             Structures.Remove(id);
             _sortedStructureIds = null;
             int removed = PowerLinks.RemoveAll(l => l.Involves(id));

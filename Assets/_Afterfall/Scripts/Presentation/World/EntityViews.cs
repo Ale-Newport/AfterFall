@@ -101,7 +101,7 @@ namespace Afterfall.Presentation
         private Material _soilMat;
         private Light _light, _fireLight;
         private Material _fireMat, _lampMat;
-        private Vector3 _indicatorScale = Vector3.one;
+        private Vector3 _indicatorScale = Vector3.one, _fireScale = Vector3.one;
         private float _vibe;
 
         public bool HoldToInteract => !BuiltComplete;
@@ -126,13 +126,14 @@ namespace Afterfall.Presentation
             {
                 _fireMat = MaterialLibrary.EmissiveInstance(new Color(0.1f, 0.08f, 0.07f), Color.black);
                 _fire.GetComponent<Renderer>().sharedMaterial = _fireMat;
-                // Firelight spilling out of the mouth onto the ground in front.
+                _fireScale = _fire.localScale;
+                // Firelight spilling out of the furnace mouth onto the ground in front, or rising from a campfire.
                 var fgo = new GameObject("FireLight");
                 fgo.transform.SetParent(_fire, false);
-                fgo.transform.localPosition = new Vector3(0f, 0.25f, 0.8f);
+                fgo.transform.localPosition = Def.Heater != null ? new Vector3(0f, 0.7f, 0f) : new Vector3(0f, 0.25f, 0.8f);
                 _fireLight = fgo.AddComponent<Light>();
                 _fireLight.type = LightType.Point;
-                _fireLight.range = 4.5f;
+                _fireLight.range = Def.Heater?.LightRange ?? 4.5f;
                 _fireLight.intensity = 0f;
                 _fireLight.color = new Color(1f, 0.55f, 0.22f);
                 _fireLight.shadows = LightShadows.None;
@@ -173,6 +174,16 @@ namespace Afterfall.Presentation
                 _vibe += dt * 40f;
                 float k = s.Generator.Running && s.Generator.OutputWatts > 1f ? 0.012f : 0f;
                 _engine.localPosition = new Vector3(Mathf.Sin(_vibe) * k, _engine.localPosition.y, Mathf.Cos(_vibe * 1.3f) * k);
+            }
+            if (_fireMat != null && s.Heater != null)
+            {
+                // Flames dance and the light flickers while the fire burns; a dead fire leaves dark embers.
+                bool lit = s.Heater.Lit;
+                float n = Mathf.PerlinNoise(Time.time * 5f, Id.Value * 0.37f);
+                float flicker = lit ? 2.4f + n * 1.6f : 0f;
+                MaterialLibrary.SetEmission(_fireMat, new Color(1f, 0.42f, 0.08f) * flicker);
+                _fire.localScale = lit ? Vector3.Scale(_fireScale, new Vector3(1f + (n - 0.5f) * 0.12f, 0.85f + n * 0.35f, 1f + (0.5f - n) * 0.12f)) : Vector3.Scale(_fireScale, new Vector3(1f, 0.15f, 1f));
+                if (_fireLight != null) _fireLight.intensity = lit ? 1.1f + n * 0.9f : Mathf.MoveTowards(_fireLight.intensity, 0f, dt * 2f);
             }
             if (_fireMat != null && s.Machine != null)
             {
@@ -221,8 +232,8 @@ namespace Afterfall.Presentation
                 return $"[Hold E] Deliver & build {Def.Name} — needs {string.Join(", ", parts)}";
             }
             string own = s.PlayerBuilt ? "  · [Hold X] Demolish" : "";
-            if (s.PlayerBuilt && s.Health < Def.MaxHealth - 0.5f && IsPassive())
-                return $"[E] Repair {Def.Name} ({s.Health:0}/{Def.MaxHealth:0}) — {RepairCostText(gc, s)}{own}";
+            if (NeedsRepair(s))
+                return $"[E] Repair {Def.Name} ({s.Health:0}/{Def.MaxHealth:0}){(Def.IsBroken(s.Health) ? " — BROKEN" : "")} — {RepairCostText(gc, s)}{own}";
             if (s.Crop != null && Def.Farm != null)
             {
                 string crop = gc.Session.Content.Items.NameOf(Def.Farm.CropItem);
@@ -235,12 +246,14 @@ namespace Afterfall.Presentation
             if (!s.PlayerBuilt && s.Storage != null) return $"[E] Search {Def.Name}{(s.Searched ? (s.Storage.IsEmpty ? " (empty)" : " (searched)") : "")}";
             if (s.Storage != null) return $"[E] Open {Def.Name}{own}";
             if (s.Machine != null) return $"[E] Operate {Def.Name} — {UI.UiKit.StatusText(s.Machine)}{own}";
+            if (s.Heater != null) return $"[E] Tend {Def.Name} — {s.Heater.Status}{own}";
             if (s.Generator != null) return $"[E] Generator — {s.Generator.Status}{own}";
             if (!string.IsNullOrEmpty(Def.CraftingStation)) return $"[E] Use {Def.Name}{own}";
             if (Def.IsBed) return (gc.Session.Player.SpawnStructureId == s.Id ? $"{Def.Name} (your respawn point)" : $"[E] Rest — set respawn point") + own;
             if (Def.Light != null) return $"[E] Switch {(s.Enabled ? "off" : "on")} {Def.Name} — {s.Power?.Reason}{own}";
             if (s.Battery != null) return $"[E] {Def.Name} — {s.Battery.StoredJoules / 1000:0}/{Def.Battery.CapacityKJ:0} kJ{own}";
             if (Def.PowerNode != null) return $"{Def.Name} — grid {s.Power?.NetworkId}{own}";
+            if (Def.LightningRod != null) return $"{Def.Name} — guards structures within {Def.LightningRod.Radius:0} m from lightning{own}";
             return $"{Def.Name} ({s.Health:0}/{Def.MaxHealth:0}){own}";
         }
 
@@ -252,7 +265,7 @@ namespace Afterfall.Presentation
                 InteractHeld(gc, 0.25f);
                 return;
             }
-            if (s.PlayerBuilt && s.Health < Def.MaxHealth - 0.5f && IsPassive())
+            if (NeedsRepair(s))
             {
                 OpResult rep = gc.Session.Repair(s.Id);
                 gc.Toast(rep.Message, rep.Ok ? Severity.Success : Severity.Warning);
@@ -265,7 +278,7 @@ namespace Afterfall.Presentation
                 return;
             }
             if (s.Storage != null) gc.Ui.OpenContainer(s.Storage.Id, Def.Name);
-            else if (s.Machine != null || s.Generator != null || s.Battery != null) gc.Ui.OpenMachine(s.Id);
+            else if (s.Machine != null || s.Generator != null || s.Battery != null || s.Heater != null) gc.Ui.OpenMachine(s.Id);
             else if (!string.IsNullOrEmpty(Def.CraftingStation)) gc.Ui.OpenInventory(true);
             else if (Def.IsBed)
             {
@@ -279,8 +292,11 @@ namespace Afterfall.Presentation
             }
         }
 
-        /// <summary>Pieces with no other use (walls, barricades, foundations) are repaired with E.</summary>
-        private bool IsPassive() => Def.Farm == null && Def.Storage == null && Def.Machine == null && Def.Generator == null && Def.Battery == null && Def.Light == null && !Def.IsBed && string.IsNullOrEmpty(Def.CraftingStation);
+        /// <summary>E repairs pieces with no other use (walls, barricades, foundations) and anything broken.</summary>
+        private bool NeedsRepair(Structure s) => s.PlayerBuilt && s.Health < Def.MaxHealth - 0.5f && (IsPassive() || Def.IsBroken(s.Health));
+
+        /// <summary>Pieces with no other use (walls, barricades, foundations).</summary>
+        private bool IsPassive() => Def.Farm == null && Def.Storage == null && Def.Machine == null && Def.Generator == null && Def.Battery == null && Def.Light == null && Def.Heater == null && !Def.IsBed && string.IsNullOrEmpty(Def.CraftingStation);
 
         private static string RepairCostText(GameController gc, Structure s)
         {

@@ -97,6 +97,7 @@ namespace Afterfall.Presentation
             CameraRig = CameraRig.Create(this, Player.transform, Settings);
             CameraRig.transform.SetParent(transform, true);
             gameObject.AddComponent<DayNightCycle>().Initialize(this);
+            gameObject.AddComponent<WeatherView>().Initialize(this);
             gameObject.AddComponent<GroundCover>().Initialize(this);
             Build = gameObject.AddComponent<BuildController>();
             Build.Initialize(this);

@@ -50,7 +50,15 @@ namespace Afterfall.Presentation
             if (_gc?.Session == null) return;
             SimulationClock clock = _gc.Session.World.Clock;
             Camera cam = _gc.CameraRig != null ? _gc.CameraRig.Camera : null;
-            Apply((float)clock.TimeOfDay01, clock.Daylight01, _sun, _moon, cam);
+            Afterfall.Domain.Weather.WeatherReadout w = _gc.Session.WeatherNow;
+            var weather = new WeatherLook { Cloud = w.Cloud, Rain = w.Rain, Storm = w.Storm, Flash = WeatherView.Flash };
+            Apply((float)clock.TimeOfDay01, clock.Daylight01, _sun, _moon, cam, weather);
+        }
+
+        /// <summary>Weather for <see cref="Apply"/>: cloud, rain and storm 0–1 and a lightning flash 0–1 (default = clear).</summary>
+        public struct WeatherLook
+        {
+            public float Cloud, Rain, Storm, Flash;
         }
 
         /// <summary>
@@ -59,12 +67,15 @@ namespace Afterfall.Presentation
         /// the sun's elevation at that time so sky, light and shadows agree; <paramref name="daylight"/>
         /// (the clock's gameplay daylight) is accepted for compatibility. Shared with the model gallery.
         /// </summary>
-        public static void Apply(float timeOfDay01, float daylight, Light sun, Light moon, Camera cam)
+        public static void Apply(float timeOfDay01, float daylight, Light sun, Light moon, Camera cam, WeatherLook weather = default)
         {
             Vector3 toSun = SkyPalette.SunDirection(timeOfDay01);
             Vector3 toMoon = SkyPalette.MoonDirection(timeOfDay01);
             float elevation = Mathf.Asin(Mathf.Clamp(toSun.y, -1f, 1f)) * Mathf.Rad2Deg;
             SkyLook look = SkyPalette.Evaluate(elevation);
+            if (weather.Cloud > 0f || weather.Flash > 0f) look = SkyPalette.ApplyWeather(look, weather.Cloud, weather.Rain, weather.Storm, weather.Flash);
+            SkyRig.CloudCover = Mathf.Lerp(0.42f, 0.97f, Mathf.Clamp01((weather.Cloud - 0.15f) / 0.85f));
+            SkyRig.CloudDrift = 1f + 3f * weather.Storm;
 
             sun.transform.rotation = Quaternion.LookRotation(-AboveHorizon(toSun));
             sun.color = look.SunLight;

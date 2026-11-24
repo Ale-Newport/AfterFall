@@ -71,12 +71,12 @@ namespace Afterfall.Domain.AI
         /// game, assumed clear in pure simulations). Very close targets are sensed regardless
         /// of facing — but never through walls.
         /// </summary>
-        public static bool CanSee(ZombieState z, ZombieArchetype a, Vec3 target, float daylight01, bool crouching, bool sprinting, bool lineOfSightClear)
+        public static bool CanSee(ZombieState z, ZombieArchetype a, Vec3 target, float daylight01, bool crouching, bool sprinting, bool lineOfSightClear, float weatherFactor = 1f)
         {
             if (!lineOfSightClear) return false;
             float d = Vec3.Distance(z.Position, target);
             if (d <= a.ProximitySense) return true;
-            if (d > EffectiveSightRange(a, daylight01, crouching, sprinting)) return false;
+            if (d > EffectiveSightRange(a, daylight01, crouching, sprinting) * weatherFactor) return false;
             return InViewCone(z.Position, z.Yaw, target, a.SightFovDegrees);
         }
 

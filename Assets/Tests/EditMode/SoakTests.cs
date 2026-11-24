@@ -100,6 +100,36 @@ namespace Afterfall.Tests
             }
         }
 
+        [Test]
+        public void ALoadedGame_WithColonistsTendingAFire_PlaysOnIdentically()
+        {
+            // Regression: the colony planner's 2 s beat and each colonist's next-assignment time were not
+            // saved, so after a load jobs were planned half a second apart from the unsaved game.
+            GameSession a = TestSupport.NewSession(5151);
+            Vec3 p = a.Player.Position;
+            TestSupport.Build(a.World, "bed", new Vec3(p.X - 3, p.Y, p.Z));
+            TestSupport.Build(a.World, "bed", new Vec3(p.X - 3, p.Y, p.Z + 3));
+            Structure crate = TestSupport.Build(a.World, "storage_crate", new Vec3(p.X + 3, p.Y, p.Z));
+            crate.Storage.TryAdd("wood", 20);
+            crate.Storage.TryAdd("canned_food", 6);
+            Structure fire = a.World.Structures.Values.First(st => st.Heater != null);
+            fire.Enabled = true;
+            foreach (ColonistState c in a.World.Colonists.Values.Take(2).ToList())
+            {
+                c.Position = new Vec3(p.X + 1, p.Y, p.Z + 1);
+                Assert.IsTrue(a.Recruit(c.Id).Ok);
+            }
+            TestSupport.Run(a, 120, 0.1);
+            GameSession b = Reload(a);
+            for (int i = 0; i < 5; i++)
+            {
+                TestSupport.Run(a, 60, 0.1);
+                TestSupport.Run(b, 60, 0.1);
+                Assert.AreEqual(Strip(SaveSerializer.Serialize(a.World, "soak", 0)), Strip(SaveSerializer.Serialize(b.World, "soak", 0)), $"the two copies diverged after {(i + 1) * 60} s");
+            }
+            Assert.IsTrue(a.World.Jobs.Values.Any(j => j.TargetStructure == fire.Id), "colonists fed the campfire");
+        }
+
         /// <summary>Drops the envelope (timestamps, checksum) so only the world payload is compared.</summary>
         private static string Strip(string save) => Newtonsoft.Json.Linq.JObject.Parse(save)["payload"]["World"].ToString();
     }

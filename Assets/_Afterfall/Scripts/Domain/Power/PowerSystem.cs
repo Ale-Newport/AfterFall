@@ -75,7 +75,16 @@ namespace Afterfall.Domain.Power
             foreach (EntityId id in _world.SortedStructureIds())
             {
                 Structure s = _world.Structures[id];
-                if (s.Power != null && s.IsComplete) nodes.Add(id);
+                if (s.Power == null || !s.IsComplete) continue;
+                if (_content.Building(s.DefId)?.IsBroken(s.Health) == true)
+                {
+                    // A broken pole no longer relays and a broken machine, lamp or generator drops off its grid.
+                    MarkBroken(s);
+                    continue;
+                }
+                // Balancing writes the reason for consumers each tick; poles and other nodes start clean.
+                s.Power.Reason = "";
+                nodes.Add(id);
             }
             var parent = new Dictionary<EntityId, EntityId>();
             foreach (EntityId id in nodes) parent[id] = id;
@@ -116,6 +125,22 @@ namespace Afterfall.Domain.Power
             _bus?.Publish(new PowerNetworkChanged(_networks.Count));
         }
 
+        private static void MarkBroken(Structure s)
+        {
+            const string reason = "Broken — repair it with a hammer";
+            s.Power.NetworkId = 0;
+            s.Power.Powered = false;
+            s.Power.DemandWatts = 0f;
+            s.Power.Reason = reason;
+            if (s.Generator != null)
+            {
+                s.Generator.Running = false;
+                s.Generator.OutputWatts = 0f;
+                s.Generator.Status = reason;
+            }
+            if (s.Battery != null) s.Battery.FlowWatts = 0f;
+        }
+
         private struct Consumer
         {
             public Structure S;
@@ -135,9 +160,10 @@ namespace Afterfall.Domain.Power
                 if (!_world.Structures.TryGetValue(id, out Structure s)) continue;
                 BuildingDefinition def = _content.Building(s.DefId);
                 if (def == null) continue;
-                bool operational = s.Health > 0f && s.Enabled;
+                bool broken = def.IsBroken(s.Health);
+                bool operational = !broken && s.Enabled;
                 if (s.Generator != null && def.Generator != null && operational && HasFuel(s.Generator)) generators.Add(s);
-                if (s.Battery != null && def.Battery != null && s.Health > 0f) batteries.Add(s);
+                if (s.Battery != null && def.Battery != null && !broken) batteries.Add(s);
 
                 float demand = 0f;
                 int priority = 3;
@@ -156,7 +182,7 @@ namespace Afterfall.Domain.Power
                 else if (def.Machine != null || def.Light != null)
                 {
                     s.Power.Powered = false;
-                    s.Power.Reason = !s.Enabled ? "Switched off" : def.Light != null ? "Off (daylight)" : "Not requested";
+                    s.Power.Reason = broken ? "Broken — repair it with a hammer" : !s.Enabled ? "Switched off" : def.Light != null ? "Off (daylight)" : "Not requested";
                 }
             }
 
@@ -216,7 +242,7 @@ namespace Afterfall.Domain.Power
                 if (!_world.Structures.TryGetValue(id, out Structure s) || s.Generator == null || generators.Contains(s)) continue;
                 s.Generator.Running = false;
                 s.Generator.OutputWatts = 0f;
-                s.Generator.Status = s.Health <= 0f ? "Damaged" : !s.Enabled ? "Switched off" : "Out of fuel";
+                s.Generator.Status = _content.Building(s.DefId)?.IsBroken(s.Health) == true ? "Broken — repair it with a hammer" : !s.Enabled ? "Switched off" : "Out of fuel";
             }
 
             double stored = 0, capacity = 0;

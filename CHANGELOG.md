@@ -4,6 +4,19 @@ All notable changes, grouped by release and milestone. Dates are UTC. The projec
 
 ## [Unreleased]
 
+### Added
+- **Weather.** Fronts of clear sky, cloud, rain and thunderstorms roll over the valley, decided ahead from a saved random stream, so a seed and a save always bring the same weather. The sky greys and darkens, fog thickens, rain falls around the camera and is heard (muffled under a roof), and storms add wind and lightning with thunder that arrives at the speed of sound.
+- **Storms and lightning.** A storm is foretold about 1.5 game hours before it breaks. Lightning seeks out exposed poles, lamps and generators: a strike takes half a structure's health and a second breaks it, dropping it off its grid until it is repaired with a hammer. Lightning never destroys anything. A new **Lightning Rod** (Electrification) takes every strike meant for structures within 18 m. Thunder is a noise the infected hear; rain and storms shorten how far they see and hear.
+- **Cold snaps and body warmth.** Every two or three days, never on the first night, a foretold cold snap drops the temperature by up to 18 °C overnight. A new Warmth vital follows the felt temperature: shelter under a roof or inside a building and heat from fires warm you; being cold drains food faster and slows stamina, and freezing costs health. The HUD shows warmth, the felt and outdoor temperature, the sky and any warning; the strategic panel shows the weather and what is coming.
+- **Campfire** (Survival Basics: 4 logs, 6 stones): burns logs or charcoal (a log lasts about an hour of game time), warms everyone within 5 m, lights the night and cooks a **Baked Potato** that also warms you. The start camp's cold fire pit is now a real campfire you can light. Colonists keep a lit fire fed from storage and, when cold, walk to the nearest fire (or a bed under a roof) to warm up.
+- Rain waters planter beds in the open.
+
+### Changed
+- A machine, generator, battery, lamp or pole at or below 30 % health is broken: it stops and leaves its grid until repaired. Broken equipment can be repaired from its prompt or panel.
+
+### Fixed
+- A loaded game with colonists could plan their jobs half a second apart from the unsaved game: the colony planner's beat and each colonist's next assignment time were not saved. They are now (regression test included).
+
 ### Removed
 - Local AI-assistant configuration and promotional drafts are no longer tracked (they stay on the maintainer's machine and are git-ignored), along with the obsolete pre-overhaul screenshots in `docs/screenshots` (replaced by `docs/media`).
 

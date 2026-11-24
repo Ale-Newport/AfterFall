@@ -17,7 +17,8 @@ AFTERFALL is **simulation-first**: the game is a deterministic C# simulation tha
             ├────────────────────────────────────────────────────────┤
             │ Afterfall.Domain  items · crafting · technology ·      │
             │   construction · industry · power · survival · AI ·    │
-            │   threats · world (state + generator) · content        │
+            │   threats · weather · world (state + generator) ·      │
+            │   content                                              │
             ├───────────────────────────┬────────────────────────────┤
             │ Afterfall.Persistence     │ Afterfall.Core             │
             │  DTOs, mapper, serializer,│  EntityId, Vec3, RNG,      │
@@ -39,7 +40,7 @@ AFTERFALL is **simulation-first**: the game is a deterministic C# simulation tha
 
 | System | Rate | Responsibility |
 |---|---|---|
-| PlayerSystem | 10 Hz | needs, stamina, crafting queue, fog of war, POI discovery, item-acquisition knowledge, death |
+| PlayerSystem | 10 Hz | needs, stamina, body warmth (felt temperature from weather, shelter and fires), crafting queue, fog of war, POI discovery, item-acquisition knowledge, death |
 | PowerSystem | 4 Hz | rebuilds networks only when `PowerTopologyVersion` changes; balances supply and demand with priority shedding, batteries and fuel |
 | MachineSystem | 4 Hz | machine state machines: inputs, fuel, power, outputs, automation pull/push |
 | ColonySystem | 4 Hz | job planning (every 2 s), assignment, physical execution, needs, fleeing |
@@ -47,11 +48,17 @@ AFTERFALL is **simulation-first**: the game is a deterministic C# simulation tha
 | ZombieSystem | 10 Hz | perception (player and colonists) → `ZombieBrain` → adapter (NavMesh in game, straight-line headless); breaching of blocking barriers |
 | ThreatDirector | 0.5 Hz | heat from noise and industry, population, fair spawns, announced raids, dusk warning |
 | ResourceRespawnSystem | 0.2 Hz | regrows renewable nodes out of view |
+| WeatherSystem | 1 Hz | fronts (clear, overcast, rain, thunderstorm) rolled ahead from `WeatherRng`, storm and cold-snap warnings, lightning strikes on exposed conductors (lightning rods take them), rain watering planter beds in the open |
+| HeaterSystem | 2 Hz | campfires burn fuel while switched on (faster in the rain when exposed) |
 
 3. Presentation: `PlayerCharacter` reports its physical transform, `WorldSync` reconciles views when `WorldState.Version` changes, and views animate machine and light state. Zombie views write NavMesh positions back.
 4. The UI reads state and turns events (`Notification`, `PlayerDamaged`, `SaveCompleted`, …) into toasts and feedback.
 
-Power runs before machines in each tick, so machines see this tick's allocation. A machine requests power for the next tick, which can cause a single-tick "Starting…" state.
+Power runs before machines in each tick, so machines see this tick's allocation.
+
+**Weather and climate.** `WeatherState` (saved) holds the current and previous front, the next one (rolled in advance so it can be foretold), the scheduled cold snap and the warnings already given. `WeatherReadout.Of(world)` derives cloud, rain, storm, cold-snap intensity and the outdoor temperature from it and the clock; nothing derived is stored. `Climate.At` adds shelter (a finished roof overhead or the inside of a valley building: +10 °C, no rain or wind) and the strongest heat source (a lit campfire, or a furnace while it burns). Rain and storms shorten the infected's sight and hearing.
+
+**Broken components.** A machine, generator, battery, lamp or pole at or below 30 % health is broken (`BuildingDefinition.IsBroken`): it leaves its grid (the topology is rebuilt when a component breaks or is repaired) and reports "Broken — repair it with a hammer". A lightning strike takes half a structure's health, so the second one breaks it; lightning never destroys a structure. A machine requests power for the next tick, which can cause a single-tick "Starting…" state.
 
 ## Entity model
 
@@ -61,8 +68,9 @@ Power runs before machines in each tick, so machines see this tick's allocation.
 - `PowerLinks`: cables between structure ids.
 - `ResourceNodes`, `Drops` (ground containers, including the player's belongings after death), `Zombies`.
 - `Colonists` (`ColonistState`: needs, carry inventory, skills, work priorities, current job, home bed, recent failures) and `Jobs` (`Job`: type, priority, owner, state, haul data including live reservation tokens).
-- Structures may also carry a `CropState` (planter beds).
-- `Tech` (unlocked techs and trigger counters), `Exploration` (revealed cells, discovered POIs), `Threat`, `Metrics`.
+- Structures may also carry a `CropState` (planter beds) or a `HeaterState` (campfires: fuel inventory, burn time left).
+- `Tech` (unlocked techs and trigger counters), `Exploration` (revealed cells, discovered POIs), `Threat`, `Weather`, `Metrics`.
+- Every random stream (`SessionRng`, `ZombieRng`, `ThreatRng`, `FarmRng`, `WeatherRng`), each system's tick phase, the colony planner's next pass and each colonist's next assignment time are saved, so a loaded game continues exactly like the unsaved one.
 - `Layout` (`WorldLayout`): terrain heights, roads, POIs, props, spawn points. It is **regenerated from the seed** and not saved.
 
 Every inventory has its own `EntityId` and is registered in `WorldState` with its owner, so commands address inventories by id and range checks use the owner's position.

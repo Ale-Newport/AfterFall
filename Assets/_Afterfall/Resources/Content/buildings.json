@@ -144,6 +144,34 @@
     "requiredTech": "survival"
   },
   {
+    "id": "campfire",
+    "name": "Campfire",
+    "description": "A ring of stones around burning logs. Warms everyone nearby, lights the night and cooks food. Keep it fed with logs or charcoal; rain makes it burn faster.",
+    "category": "Crafting",
+    "cost": [
+      "wood:4",
+      "stone:6"
+    ],
+    "buildSeconds": 3,
+    "maxHealth": 120,
+    "sizeX": 1.4,
+    "sizeY": 0.6,
+    "sizeZ": 1.4,
+    "visual": "campfire",
+    "color": "#7A6A58",
+    "craftingStation": "campfire",
+    "heater": {
+      "fuelSlots": 2,
+      "burnTimeMultiplier": 8,
+      "warmthC": 22,
+      "radius": 5,
+      "lightRange": 9
+    },
+    "blocksMovement": false,
+    "maxSlopeDegrees": 25,
+    "requiredTech": "survival"
+  },
+  {
     "id": "bed",
     "name": "Bedroll",
     "description": "Sleep here to set your respawn point.",
@@ -400,6 +428,30 @@
     "powerNode": {
       "range": 6
     },
+    "requiredTech": "electricity"
+  },
+  {
+    "id": "lightning_rod",
+    "name": "Lightning Rod",
+    "description": "A tall grounded mast. In a storm it takes the strikes meant for poles, lamps and generators within 18 m.",
+    "category": "Power",
+    "cost": [
+      "metal_pipe:2",
+      "copper_wire:4",
+      "scrap_metal:2"
+    ],
+    "buildSeconds": 4,
+    "maxHealth": 250,
+    "sizeX": 0.3,
+    "sizeY": 7,
+    "sizeZ": 0.3,
+    "visual": "lightning_rod",
+    "color": "#8A8F94",
+    "lightningRod": {
+      "radius": 18
+    },
+    "blocksMovement": false,
+    "maxSlopeDegrees": 30,
     "requiredTech": "electricity"
   },
   {

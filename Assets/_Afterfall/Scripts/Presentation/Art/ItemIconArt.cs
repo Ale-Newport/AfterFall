@@ -32,6 +32,7 @@ namespace Afterfall.Presentation.Art
             // Food and medicine (ItemIconArt.Supplies.cs)
             ["berries"] = Berries,
             ["potato"] = Potatoes,
+            ["baked_potato"] = BakedPotato,
             ["canned_food"] = CannedBeans,
             ["snack_bar"] = SnackBar,
             ["water_bottle"] = WaterBottle,

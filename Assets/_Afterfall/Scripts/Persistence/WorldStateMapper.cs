@@ -8,6 +8,7 @@ using Afterfall.Domain.Content;
 using Afterfall.Domain.Industry;
 using Afterfall.Domain.Items;
 using Afterfall.Domain.Power;
+using Afterfall.Domain.Weather;
 using Afterfall.Domain.World;
 
 namespace Afterfall.Persistence
@@ -32,9 +33,12 @@ namespace Afterfall.Persistence
                 ZombieRngState = w.ZombieRng.State,
                 ThreatRngState = w.ThreatRng.State,
                 FarmRngState = w.FarmRng.State,
+                WeatherRngState = w.WeatherRng.State,
                 TickPhases = new Dictionary<string, double>(w.TickPhases),
+                ColonyNextPlanAt = w.ColonyNextPlanAt,
                 Player = ToDto(w.Player),
                 Threat = w.Threat,
+                Weather = w.Weather,
                 Metrics = w.Metrics,
                 ExploredCells = PackBits(w.Exploration.Revealed)
             };
@@ -59,7 +63,7 @@ namespace Afterfall.Persistence
                 {
                     Id = c.Id.Value, Name = c.Name, Recruited = c.Recruited, Position = c.Position, Yaw = c.Yaw, Vitals = c.Vitals, Carry = ToDto(c.Carry),
                     CurrentJob = c.CurrentJob.Value, Activity = c.Activity.ToString(), Status = c.Status, HomeBed = c.HomeBed.Value,
-                    MoveTarget = c.MoveTarget, HasMoveTarget = c.HasMoveTarget, Morale = c.Morale, RecentFailures = new List<string>(c.RecentFailures)
+                    MoveTarget = c.MoveTarget, HasMoveTarget = c.HasMoveTarget, Morale = c.Morale, NextAssignAt = c.NextAssignAt, RecentFailures = new List<string>(c.RecentFailures)
                 };
                 foreach (KeyValuePair<JobType, float> kv in c.Skills) cd.Skills[kv.Key.ToString()] = kv.Value;
                 foreach (KeyValuePair<JobType, int> kv in c.Work.Priorities) cd.Work[kv.Key.ToString()] = kv.Value;
@@ -142,6 +146,7 @@ namespace Afterfall.Persistence
             }
             if (s.Battery != null) dto.BatteryStoredJoules = s.Battery.StoredJoules;
             if (s.Crop != null) dto.Crop = new Afterfall.Domain.Farming.CropState { SeedId = s.Crop.SeedId, Growth = s.Crop.Growth, Water = s.Crop.Water, Irrigated = s.Crop.Irrigated };
+            if (s.Heater != null) dto.Heater = new HeaterDto { Fuel = ToDto(s.Heater.Fuel), BurnRemaining = s.Heater.BurnRemaining, Lit = s.Heater.Lit, Status = s.Heater.Status };
             if (s.Power != null) dto.Power = new PowerDto { Powered = s.Power.Powered, Reason = s.Power.Reason, DemandWatts = s.Power.DemandWatts };
             return dto;
         }
@@ -172,7 +177,9 @@ namespace Afterfall.Persistence
             if (dto.ZombieRngState != 0) w.ZombieRng.State = dto.ZombieRngState;
             if (dto.ThreatRngState != 0) w.ThreatRng.State = dto.ThreatRngState;
             if (dto.FarmRngState != 0) w.FarmRng.State = dto.FarmRngState;
+            if (dto.WeatherRngState != 0) w.WeatherRng.State = dto.WeatherRngState;
             foreach (KeyValuePair<string, double> kv in dto.TickPhases ?? new Dictionary<string, double>()) w.TickPhases[kv.Key] = kv.Value;
+            w.ColonyNextPlanAt = dto.ColonyNextPlanAt;
             w.Layout = WorldGenerator.Generate(dto.Seed);
 
             if (dto.Player != null)
@@ -235,7 +242,8 @@ namespace Afterfall.Persistence
                         ["input"] = sd.Machine?.Input?.Id ?? 0,
                         ["output"] = sd.Machine?.Output?.Id ?? 0,
                         ["fuel"] = sd.Machine?.Fuel?.Id ?? 0,
-                        ["generator_fuel"] = sd.Generator?.Fuel?.Id ?? 0
+                        ["generator_fuel"] = sd.Generator?.Fuel?.Id ?? 0,
+                        ["heater_fuel"] = sd.Heater?.Fuel?.Id ?? 0
                     };
                     StructureFactory.InitializeComponents(content, s, role => ids.TryGetValue(role, out long v) && v > 0 ? new EntityId(v) : w.Ids.Allocate());
                     Fill(s.Storage, sd.Storage, content, warnings);
@@ -270,6 +278,13 @@ namespace Afterfall.Persistence
                         s.Crop.Growth = sd.Crop.Growth;
                         s.Crop.Water = sd.Crop.Water;
                         s.Crop.Irrigated = sd.Crop.Irrigated;
+                    }
+                    if (s.Heater != null && sd.Heater != null)
+                    {
+                        Fill(s.Heater.Fuel, sd.Heater.Fuel, content, warnings);
+                        s.Heater.BurnRemaining = Math.Max(0f, sd.Heater.BurnRemaining);
+                        s.Heater.Lit = sd.Heater.Lit;
+                        s.Heater.Status = sd.Heater.Status ?? "";
                     }
                     if (s.Power != null && sd.Power != null)
                     {
@@ -326,7 +341,7 @@ namespace Afterfall.Persistence
                     Id = new EntityId(cd.Id), Name = cd.Name ?? "", Recruited = cd.Recruited, Position = cd.Position, Yaw = cd.Yaw,
                     Vitals = cd.Vitals ?? new Domain.Survival.SurvivalState(), CurrentJob = new EntityId(cd.CurrentJob),
                     Activity = Enum.TryParse(cd.Activity, out ColonistActivity act) ? act : ColonistActivity.Idle, Status = cd.Status ?? "",
-                    HomeBed = new EntityId(cd.HomeBed), MoveTarget = cd.MoveTarget, HasMoveTarget = cd.HasMoveTarget, Morale = cd.Morale
+                    HomeBed = new EntityId(cd.HomeBed), MoveTarget = cd.MoveTarget, HasMoveTarget = cd.HasMoveTarget, Morale = cd.Morale, NextAssignAt = cd.NextAssignAt
                 };
                 c.Carry = FromDto(cd.Carry, content, null, warnings) ?? new Inventory(w.Ids.Allocate(), content.Items, ColonySystem.CarrySlots, ColonySystem.CarryKg, null, c.Name + "'s pack");
                 foreach (KeyValuePair<string, float> kv in cd.Skills ?? new Dictionary<string, float>())
@@ -359,6 +374,7 @@ namespace Afterfall.Persistence
             UnpackBits(dto.ExploredCells, w.Exploration.Revealed);
             foreach (string poi in dto.DiscoveredPois) w.Exploration.DiscoveredPois.Add(poi);
             if (dto.Threat != null) CopyThreat(dto.Threat, w.Threat);
+            if (dto.Weather != null) CopyWeather(dto.Weather, w.Weather);
             if (dto.Metrics != null) CopyMetrics(dto.Metrics, w.Metrics);
             return w;
         }
@@ -466,6 +482,22 @@ namespace Afterfall.Persistence
             to.PendingRaidOrigin = from.PendingRaidOrigin;
             to.LastRaidAt = from.LastRaidAt;
             to.LastSpawnAt = from.LastSpawnAt;
+        }
+
+        private static void CopyWeather(WeatherState from, WeatherState to)
+        {
+            to.Kind = from.Kind;
+            to.PreviousKind = from.PreviousKind;
+            to.StartedAt = from.StartedAt;
+            to.EndsAt = from.EndsAt;
+            to.NextKind = from.NextKind;
+            to.ColdSnapStartAt = from.ColdSnapStartAt;
+            to.ColdSnapEndAt = from.ColdSnapEndAt;
+            to.StormWarnedFor = from.StormWarnedFor;
+            to.ColdSnapWarnedFor = from.ColdSnapWarnedFor;
+            to.ColdSnapAnnounced = from.ColdSnapAnnounced;
+            to.NextStrikeAt = from.NextStrikeAt;
+            to.Strikes = from.Strikes;
         }
 
         private static void CopyMetrics(PlaythroughMetrics from, PlaythroughMetrics to)

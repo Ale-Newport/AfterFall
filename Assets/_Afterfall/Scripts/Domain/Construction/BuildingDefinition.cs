@@ -92,6 +92,29 @@ namespace Afterfall.Domain.Construction
         public int PowerPriority { get; set; } = 4;
     }
 
+    /// <summary>A fire that burns fuel to keep people warm (campfire, stove).</summary>
+    public sealed class HeaterSpec
+    {
+        public int FuelSlots { get; set; } = 2;
+
+        /// <summary>A fuel item burns this many times longer than in a furnace (slow, low fire).</summary>
+        public float BurnTimeMultiplier { get; set; } = 8f;
+
+        /// <summary>Degrees of warmth at the fire; full within half the radius, fading to none at its edge.</summary>
+        public float WarmthC { get; set; } = 22f;
+
+        public float Radius { get; set; } = 5f;
+
+        /// <summary>Reach of the firelight at night (presentation).</summary>
+        public float LightRange { get; set; } = 8f;
+    }
+
+    /// <summary>A grounded mast that takes lightning strikes meant for nearby structures.</summary>
+    public sealed class LightningRodSpec
+    {
+        public float Radius { get; set; } = 18f;
+    }
+
     /// <summary>A crop plot: plant a seed item, keep it watered, harvest the crop item.</summary>
     public sealed class FarmSpec
     {
@@ -154,6 +177,8 @@ namespace Afterfall.Domain.Construction
         public PowerNodeSpec PowerNode { get; set; }
         public LightSpec Light { get; set; }
         public FarmSpec Farm { get; set; }
+        public HeaterSpec Heater { get; set; }
+        public LightningRodSpec LightningRod { get; set; }
 
         public bool IsDoor { get; set; }
 
@@ -172,6 +197,17 @@ namespace Afterfall.Domain.Construction
         /// <summary>Presentation key that selects the procedural model builder.</summary>
         public string Visual { get; set; } = "box";
         public string Color { get; set; } = "#9A8F7A";
+
+        /// <summary>
+        /// Below this fraction of its health a working structure (machine, generator, lamp, battery)
+        /// is broken and stops until repaired.
+        /// </summary>
+        public const float BrokenHealthFraction = 0.3f;
+
+        public bool IsBroken(float health) => health <= MaxHealth * BrokenHealthFraction;
+
+        /// <summary>Tall conductors that draw lightning when they stand in the open.</summary>
+        public bool AttractsLightning => PowerNode != null || Generator != null || Light != null || LightningRod != null;
 
         public bool IsPowerComponent => Generator != null || Battery != null || PowerNode != null || Light != null || (Machine != null && Machine.PowerWatts > 0);
 

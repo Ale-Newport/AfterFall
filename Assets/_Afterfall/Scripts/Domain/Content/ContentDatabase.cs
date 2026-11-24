@@ -134,6 +134,9 @@ namespace Afterfall.Domain.Content
                     errors.Add($"Building {b.Id}: farm references unknown seed or crop item.");
                 if (b.Machine != null && db.RecipesForStation(b.Machine.Station).Count == 0)
                     errors.Add($"Building {b.Id}: machine station '{b.Machine.Station}' has no recipes.");
+                if (b.Heater != null && (b.Heater.FuelSlots < 1 || b.Heater.BurnTimeMultiplier <= 0f || b.Heater.Radius <= 0f))
+                    errors.Add($"Building {b.Id}: a heater needs fuel slots, a positive burn time multiplier and a positive radius.");
+                if (b.LightningRod != null && b.LightningRod.Radius <= 0f) errors.Add($"Building {b.Id}: a lightning rod needs a positive radius.");
             }
 
             foreach (TechDefinition t in db.Techs.Values)

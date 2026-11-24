@@ -79,7 +79,7 @@ namespace Afterfall.Domain.Farming
         {
             var list = new List<Structure>();
             foreach (Structure s in _world.Structures.Values)
-                if (s.Machine != null && s.IsComplete && s.Enabled && s.Health > 0f && _content.Building(s.DefId)?.Machine?.Station == "water_pump" && PumpHasPower(s))
+                if (s.Machine != null && s.IsComplete && s.Enabled && _content.Building(s.DefId)?.Machine?.Station == "water_pump" && !_content.Building(s.DefId).IsBroken(s.Health) && PumpHasPower(s))
                     list.Add(s);
             return list;
         }
