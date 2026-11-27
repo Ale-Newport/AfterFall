@@ -30,6 +30,9 @@ namespace Afterfall.Presentation
         private float _faceAimUntil;
 
         public HumanoidRig Rig { get; private set; }
+
+        /// <summary>Creative/debug free flight; while active it moves this body instead of the controller.</summary>
+        public FreeFlight Flight { get; private set; }
         public bool IsCrouching => _crouching;
         public bool IsSprinting { get; private set; }
         public float HorizontalSpeed { get; private set; }
@@ -69,12 +72,19 @@ namespace Afterfall.Presentation
             p._cc = cc;
             p._yaw = yaw;
             p.Rig = HumanoidRig.Create(go.transform, SurvivorPalette, false);
+            p.Flight = go.AddComponent<FreeFlight>();
+            p.Flight.Initialize(gc, cc);
             Shapes.SetLayerRecursive(p.Rig.gameObject, Layers.Character);
             return p;
         }
 
         public void Teleport(Vector3 position)
         {
+            if (Flight != null && Flight.Active)
+            {
+                Flight.MoveTo(position);
+                return;
+            }
             _cc.enabled = false;
             transform.position = position;
             _cc.enabled = true;
@@ -87,7 +97,7 @@ namespace Afterfall.Presentation
 
         private void Update()
         {
-            if (_gc?.Session == null) return;
+            if (_gc?.Session == null || Flight.Active) return;
             float dt = Time.deltaTime;
             PlayerState state = _gc.Session.Player;
             bool dead = state.Vitals.IsDead;

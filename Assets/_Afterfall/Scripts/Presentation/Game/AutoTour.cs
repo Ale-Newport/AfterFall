@@ -28,7 +28,7 @@ namespace Afterfall.Presentation
     /// <para>Building materials are granted rather than gathered (counted in the report); placement,
     /// construction, machines, power, colonists and farming run through the normal game commands.</para>
     /// </summary>
-    public sealed class AutoTour : MonoBehaviour
+    public sealed partial class AutoTour : MonoBehaviour
     {
         public const string Flag = "-afterfall-tour";
 
@@ -120,6 +120,14 @@ namespace Afterfall.Presentation
             Line($"NavMesh ready: {gc.NavReady} after {Time.realtimeSinceStartup - t0:0.0} s");
             yield return Seconds(2f);
             yield return Capture("02_start_camp");
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), OnlyExpansionFlag) >= 0)
+            {
+                // Quick iteration: only the world-expansion scenes.
+                yield return ExpansionScenes(gc);
+                Check(SaveFolderSnapshot() == playerSaves, $"The tour left the player's save folder untouched ({GameBootstrap.SaveDirectory})");
+                Finish();
+                yield break;
+            }
             yield return MeasureFrames("start camp", 5f);
             LogRendering();
             SkipTo(gc, 12.5);
@@ -266,6 +274,7 @@ namespace Afterfall.Presentation
             _boot.Saves.Store.Delete("tour_test");
             yield return Seconds(1.5f);
             yield return Capture("26_after_reload");
+            if (_boot.Game != null && _boot.Game.Running) yield return ExpansionScenes(_boot.Game);
             Check(SaveFolderSnapshot() == playerSaves, $"The tour left the player's save folder untouched ({GameBootstrap.SaveDirectory})");
             Finish();
         }
@@ -1128,7 +1137,9 @@ namespace Afterfall.Presentation
                 Check(fire.Heater.Lit && s.Player.FeltTemperatureC > 10f, $"The campfire burns ({fire.Heater.Status}) and warms the survivor to {s.Player.FeltTemperatureC:0} °C");
                 Grant(bag, "potato", 1);
                 OpResult cook = s.Craft("bake_potato");
-                yield return Seconds(7f);
+                // The recipe takes 6 s of game time; wait for it rather than for a fixed real time.
+                float bake = Time.realtimeSinceStartup + P(14f);
+                while (Time.realtimeSinceStartup < bake && bag.Count("baked_potato") == 0) yield return null;
                 Check(cook.Ok && bag.Count("baked_potato") > 0, $"A potato bakes over the fire ({cook.Message})");
                 SkipTo(gc, 21.0);
                 StandAndLook(gc, fire.Position.ToUnity() + new Vector3(-4f, 0f, -3f), fire.Position.ToUnity());

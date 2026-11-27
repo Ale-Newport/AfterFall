@@ -261,6 +261,7 @@ namespace Afterfall.Presentation.UI
                 return;
             }
             Game.Session.MarkSearched(inventoryId);
+            Game.LastContainer = inventoryId;
             OpenWindow(new ContainerWindow(this, Game, inventoryId, title));
         }
 
@@ -270,6 +271,12 @@ namespace Afterfall.Presentation.UI
         {
             if (_window is BuildMenuWindow) CloseWindow();
             else OpenWindow(new BuildMenuWindow(this, Game));
+        }
+
+        public void ToggleCreativePanel()
+        {
+            if (_window is CreativePanel) CloseWindow();
+            else OpenWindow(new CreativePanel(this, Game));
         }
 
         public void OpenPause() => OpenWindow(new PauseWindow(this, Game));

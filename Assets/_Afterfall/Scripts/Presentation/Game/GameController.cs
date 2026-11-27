@@ -203,7 +203,11 @@ namespace Afterfall.Presentation
                 Build.Cancel();
                 Ui.ToggleBuildMenu();
             }
-            if (i.ToggleTactical.WasPressedThisFrame() && !Ui.WindowOpen) SetTactical(!CameraRig.TacticalActive);
+            if (i.ToggleTactical.WasPressedThisFrame() && !Ui.WindowOpen)
+            {
+                if (Player.Flight.Active) ToastThrottled("Land first (F7) to use the strategic view.", Severity.Warning);
+                else SetTactical(!CameraRig.TacticalActive);
+            }
             if (i.QuickSave.WasPressedThisFrame()) Save(SaveService.QuickSlot);
             if (i.QuickLoad.WasPressedThisFrame()) App.LoadGame(SaveService.QuickSlot);
             if (i.DebugOverlay.WasPressedThisFrame())
@@ -212,6 +216,8 @@ namespace Afterfall.Presentation
                 Settings.Save();
             }
             if (i.Help.WasPressedThisFrame() && !menuWindow) Ui.OpenHelp();
+            if (i.CreativePanel.WasPressedThisFrame() && !menuWindow) Ui.ToggleCreativePanel();
+            if (i.FreeFlight.WasPressedThisFrame() && !menuWindow && !Ui.WindowOpen && !CameraRig.TacticalActive) ToggleFlight();
 
             if (!GameplayInputActive) return;
             for (int h = 0; h < i.Hotbar.Length; h++)
@@ -410,6 +416,87 @@ namespace Afterfall.Presentation
         {
             CurrentSlot = slot;
             App.Saves.Save(Session, slot, Playtime, out _);
+        }
+
+        // ------------------------------------------------------------------ creative: flight and teleport
+
+        public void ToggleFlight()
+        {
+            Player.Flight.Toggle(out string message);
+            if (!string.IsNullOrEmpty(message)) Toast(message, Player.Flight.Active || message == "Landed." ? Severity.Info : Severity.Warning);
+        }
+
+        /// <summary>The inventory of the last container the player opened (target for spawning into a container).</summary>
+        public EntityId LastContainer { get; set; }
+
+        /// <summary>
+        /// True when the world around a point is ready to stand in. The whole map is built at
+        /// load today; sector streaming will answer this per sector, and teleports already wait on it.
+        /// </summary>
+        public bool IsWorldReadyAt(Vector3 position) => Running;
+
+        /// <summary>
+        /// Teleports the survivor (developer tools): waits until the destination is ready, then lands
+        /// on safe ground near it (a building's floor, never its roof). While flying, the flight
+        /// camera moves there instead, 25 m above the ground.
+        /// </summary>
+        public void TeleportTo(Vector3 target, string label, bool recordHistory = true)
+        {
+            StartCoroutine(TeleportRoutine(target, label, recordHistory));
+        }
+
+        /// <summary>Set while a teleport waits for its destination (the tour waits on it).</summary>
+        public bool Teleporting { get; private set; }
+
+        private IEnumerator TeleportRoutine(Vector3 target, string label, bool recordHistory)
+        {
+            if (recordHistory)
+            {
+                OpResult ok = Session.Creative.BeginTeleport(target.ToSim());
+                if (!ok.Ok)
+                {
+                    Toast(ok.Message, Severity.Warning);
+                    yield break;
+                }
+            }
+            Teleporting = true;
+            float timeout = Time.realtimeSinceStartup + 30f;
+            while (!IsWorldReadyAt(target) && Time.realtimeSinceStartup < timeout) yield return null;
+            if (!IsWorldReadyAt(target))
+            {
+                Teleporting = false;
+                Toast("The destination did not finish loading; teleport cancelled.", Severity.Warning);
+                yield break;
+            }
+            float ground = GroundHeight(target);
+            if (Player.Flight.Active)
+            {
+                Player.Flight.MoveTo(new Vector3(target.x, Mathf.Max(target.y, ground) + 25f, target.z));
+                Teleporting = false;
+                Toast($"Flew to {label}.", Severity.Info);
+                yield break;
+            }
+            if (!SafeGround.TryFind(this, target, ground + 300f, 40f, out Vector3 spot))
+            {
+                Teleporting = false;
+                Toast($"No safe ground near {label}.", Severity.Warning);
+                yield break;
+            }
+            Player.Teleport(spot);
+            Session.ReportPlayerTransform(spot.ToSim(), Session.Player.Yaw, new Afterfall.Domain.World.PlayerActivity());
+            Teleporting = false;
+            Toast($"Teleported to {label}.", Severity.Info);
+        }
+
+        /// <summary>Returns to where the last teleport started.</summary>
+        public void TeleportBack()
+        {
+            if (!Session.Creative.TryPopPrevious(out Vec3 back))
+            {
+                Toast("No earlier location to return to.", Severity.Warning);
+                return;
+            }
+            TeleportTo(back.ToUnity(), "your previous location", false);
         }
 
         public void OnRespawned()

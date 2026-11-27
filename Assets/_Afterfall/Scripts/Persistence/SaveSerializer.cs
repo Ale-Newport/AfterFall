@@ -69,7 +69,8 @@ namespace Afterfall.Persistence
                     PlaytimeSeconds = playtimeSeconds,
                     Difficulty = world.Settings.Preset.ToString(),
                     Seed = world.Seed,
-                    GameVersion = GameVersion
+                    GameVersion = GameVersion,
+                    Mode = world.Settings.ModeLabel()
                 },
                 World = WorldStateMapper.ToDto(world)
             };

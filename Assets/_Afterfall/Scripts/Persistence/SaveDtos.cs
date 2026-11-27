@@ -22,6 +22,26 @@ namespace Afterfall.Persistence
         public string Difficulty { get; set; } = "";
         public int Seed { get; set; }
         public string GameVersion { get; set; } = "";
+
+        /// <summary>"Survival", "Creative" or "Survival · developer tools" (empty in older saves).</summary>
+        public string Mode { get; set; } = "";
+    }
+
+    public sealed class MapMarkerDto
+    {
+        public long Id { get; set; }
+        public string Name { get; set; } = "";
+        public Vec3 Position { get; set; }
+        public string Kind { get; set; } = "";
+    }
+
+    /// <summary>The player's map annotations. Null in saves made before the map existed.</summary>
+    public sealed class NavigationDto
+    {
+        public List<MapMarkerDto> Markers { get; set; } = new List<MapMarkerDto>();
+        public bool HasWaypoint { get; set; }
+        public Vec3 Waypoint { get; set; }
+        public string WaypointLabel { get; set; } = "";
     }
 
     public sealed class SlotDto
@@ -254,6 +274,8 @@ namespace Afterfall.Persistence
         public Afterfall.Domain.Weather.WeatherState Weather { get; set; }
 
         public PlaythroughMetrics Metrics { get; set; }
+
+        public NavigationDto Navigation { get; set; }
     }
 
     public sealed class SaveFile

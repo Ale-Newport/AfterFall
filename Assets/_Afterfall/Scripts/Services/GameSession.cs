@@ -65,6 +65,7 @@ namespace Afterfall.Services
             Zombies.SightFactor = () => WeatherReadout.Of(World).SightFactor;
             Zombies.HearingFactor = () => WeatherReadout.Of(World).HearingFactor;
             _playerSystem = new PlayerSystem(this);
+            Creative = new CreativeTools(this);
 
             Zombies.PlayerHit += (z, dmg) => DamagePlayer(dmg, "the infected");
             Zombies.Construction = Construction;
@@ -99,6 +100,9 @@ namespace Afterfall.Services
         public Afterfall.Domain.Farming.FarmingSystem Farming { get; }
         public WeatherSystem Weather { get; }
         public HeaterSystem Heaters { get; }
+
+        /// <summary>Creative and developer commands (item spawning, teleports, modes).</summary>
+        public CreativeTools Creative { get; }
 
         /// <summary>The weather right now (derived from the saved state and the clock).</summary>
         public WeatherReadout WeatherNow => WeatherReadout.Of(World);
@@ -300,6 +304,7 @@ namespace Afterfall.Services
         public void DamagePlayer(float amount, string source)
         {
             if (Player == null || Player.Vitals.IsDead) return;
+            if (World.Settings.IsCreative() && World.Settings.CreativeInvulnerable) return;
             Events.Publish(new PlayerDamaged(amount, source));
             if (SurvivalRules.Damage(Player.Vitals, amount)) HandleDeath(source);
         }
@@ -412,7 +417,7 @@ namespace Afterfall.Services
                 bad.Reasons.Add("Unknown building.");
                 return bad;
             }
-            return PlacementRules.Evaluate(def, probe, World.Tech, Tech, Player.Inventory);
+            return PlacementRules.Evaluate(def, probe, World.Tech, Tech, Player.Inventory, World.Settings.IsCreative());
         }
 
         public OpResult PlaceBlueprint(string defId, Vec3 position, float yaw, PlacementProbe probe, out Structure structure)
@@ -447,6 +452,35 @@ namespace Afterfall.Services
             if (Vec3.Distance(s.Position, Player.Position) > InteractRange + FootprintRadius(s)) return OpResult.Fail("too_far", "Move closer.");
             if (!HasTool(ToolType.Hammer)) return OpResult.Fail("tool_required", "Repairing requires a hammer.");
             return Construction.Repair(s, Player.Inventory);
+        }
+
+        // ================================================================== map
+
+        /// <summary>Sets the single active waypoint the minimap and HUD point to.</summary>
+        public OpResult SetWaypoint(Vec3 position, string label)
+        {
+            if (!World.Layout.IsInsideMap(position.X, position.Z)) return OpResult.Fail("outside", "That is outside the map.");
+            Vec3 ground = World.Layout.Ground(position.X, position.Z);
+            World.Navigation.SetWaypoint(ground, label);
+            return OpResult.Success($"Waypoint set: {World.Navigation.WaypointLabel}, {MapGeometry.Distance(Vec3.DistanceXZ(Player.Position, ground))} away.");
+        }
+
+        public OpResult ClearWaypoint()
+        {
+            if (!World.Navigation.HasWaypoint) return OpResult.Fail("none", "No waypoint is set.");
+            World.Navigation.ClearWaypoint();
+            return OpResult.Success("Waypoint removed.");
+        }
+
+        public OpResult AddMapMarker(string name, Vec3 position)
+        {
+            if (!World.Layout.IsInsideMap(position.X, position.Z)) return OpResult.Fail("outside", "That is outside the map.");
+            return World.Navigation.AddMarker(World.Ids.Allocate(), name, World.Layout.Ground(position.X, position.Z), MarkerKind.Custom, out _);
+        }
+
+        public OpResult RemoveMapMarker(EntityId id)
+        {
+            return World.Navigation.RemoveMarker(id) ? OpResult.Success("Marker removed.") : OpResult.Fail("missing", "No such marker.");
         }
 
         public OpResult SetSpawnPoint(EntityId bedId)

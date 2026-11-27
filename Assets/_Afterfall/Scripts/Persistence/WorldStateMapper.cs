@@ -87,6 +87,10 @@ namespace Afterfall.Persistence
             foreach (KeyValuePair<string, int> kv in w.Tech.Progress) dto.TechProgress[kv.Key] = kv.Value;
             dto.DiscoveredPois.AddRange(w.Exploration.DiscoveredPois);
             dto.DiscoveredPois.Sort(StringComparer.Ordinal);
+            MapNavigation nav = w.Navigation;
+            dto.Navigation = new NavigationDto { HasWaypoint = nav.HasWaypoint, Waypoint = nav.Waypoint, WaypointLabel = nav.WaypointLabel };
+            foreach (MapMarker m in nav.Markers)
+                dto.Navigation.Markers.Add(new MapMarkerDto { Id = m.Id.Value, Name = m.Name, Position = m.Position, Kind = m.Kind.ToString() });
             return dto;
         }
 
@@ -391,6 +395,21 @@ namespace Afterfall.Persistence
             if (dto.Threat != null) CopyThreat(dto.Threat, w.Threat);
             if (dto.Weather != null) CopyWeather(dto.Weather, w.Weather);
             if (dto.Metrics != null) CopyMetrics(dto.Metrics, w.Metrics);
+            if (dto.Navigation != null)
+            {
+                var markers = new List<MapMarker>();
+                foreach (MapMarkerDto md in dto.Navigation.Markers ?? new List<MapMarkerDto>())
+                {
+                    var m = new MapMarker
+                    {
+                        Id = new EntityId(md.Id), Name = md.Name ?? "", Position = md.Position,
+                        Kind = Enum.TryParse(md.Kind, out MarkerKind kind) ? kind : MarkerKind.Custom
+                    };
+                    markers.Add(m);
+                    w.Ids.EnsureAbove(m.Id);
+                }
+                w.Navigation.Restore(markers, dto.Navigation.HasWaypoint, dto.Navigation.Waypoint, dto.Navigation.WaypointLabel);
+            }
             return w;
         }
 

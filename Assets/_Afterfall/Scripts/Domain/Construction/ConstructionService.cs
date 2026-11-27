@@ -43,13 +43,15 @@ namespace Afterfall.Domain.Construction
         /// <summary>
         /// Evaluates every rule and reports all reasons a placement is invalid. Missing
         /// materials do not block placing a blueprint (materials are delivered later) but
-        /// are reported so the UI can show them.
+        /// are reported so the UI can show them. In creative mode technology requirements and
+        /// materials do not apply; every physical rule (ground, slope, water, support,
+        /// obstacles, distance) still does.
         /// </summary>
-        public static PlacementResult Evaluate(BuildingDefinition def, PlacementProbe probe, TechnologyState tech, TechnologyService techService, Inventory builder)
+        public static PlacementResult Evaluate(BuildingDefinition def, PlacementProbe probe, TechnologyState tech, TechnologyService techService, Inventory builder, bool creative = false)
         {
             var r = new PlacementResult();
             if (!def.Buildable) r.Reasons.Add($"{def.Name} cannot be built.");
-            if (!tech.IsUnlocked(def.RequiredTech))
+            if (!creative && !tech.IsUnlocked(def.RequiredTech))
                 r.Reasons.Add(techService != null ? techService.DescribeRequirements(def.RequiredTech) : $"Requires technology {def.RequiredTech}.");
             if (!probe.InsideMap) r.Reasons.Add("Outside the playable area.");
             if (probe.Distance > probe.MaxDistance) r.Reasons.Add($"Too far away ({probe.Distance:0} m > {probe.MaxDistance:0} m).");
@@ -62,7 +64,7 @@ namespace Afterfall.Domain.Construction
                 else if (probe.SlopeDegrees > def.MaxSlopeDegrees) r.Reasons.Add($"Ground too steep ({probe.SlopeDegrees:0}° > {def.MaxSlopeDegrees:0}°).");
             }
             if (probe.Blocked) r.Reasons.Add(string.IsNullOrEmpty(probe.BlockedBy) ? "Blocked by an obstacle." : $"Blocked by {probe.BlockedBy}.");
-            if (builder != null) r.MissingMaterials.AddRange(builder.Missing(def.Cost));
+            if (builder != null && !creative) r.MissingMaterials.AddRange(builder.Missing(def.Cost));
             return r;
         }
     }
@@ -155,17 +157,27 @@ namespace Afterfall.Domain.Construction
             _tech = tech;
         }
 
+        /// <summary>Creative mode: no costs, no build time, no technology requirements, and anything can be removed.</summary>
+        public bool Creative => _world.Settings != null && _world.Settings.IsCreative();
+
         public OpResult PlaceBlueprint(string defId, Vec3 position, float yaw, PlacementProbe probe, Inventory builder, out Structure structure)
         {
             structure = null;
             BuildingDefinition def = _content.Building(defId);
             if (def == null) return OpResult.Fail("unknown", $"Unknown building '{defId}'.");
-            PlacementResult check = PlacementRules.Evaluate(def, probe ?? new PlacementProbe(), _world.Tech, _tech, builder);
+            bool creative = Creative;
+            PlacementResult check = PlacementRules.Evaluate(def, probe ?? new PlacementProbe(), _world.Tech, _tech, builder, creative);
             if (!check.Valid) return OpResult.Fail("invalid_placement", string.Join(" ", check.Reasons));
 
             structure = StructureFactory.Create(_world, def, position, yaw, StructureState.Blueprint);
             _world.AddStructure(structure);
             _bus?.Publish(new BuildingPlaced(structure.Id, def.Id));
+            if (creative)
+            {
+                // Creative construction is free and instant: the blueprint completes on the spot.
+                Complete(structure);
+                return OpResult.Success($"{def.Name} built.");
+            }
             return OpResult.Success($"{def.Name} blueprint placed.");
         }
 
@@ -272,10 +284,12 @@ namespace Afterfall.Domain.Construction
         {
             if (s == null) return OpResult.Fail("invalid", "Nothing to demolish.");
             if (!s.IsComplete) return CancelBlueprint(s, refundTo);
-            if (!s.PlayerBuilt) return OpResult.Fail("not_owned", "You can only demolish your own structures.");
+            bool creative = Creative;
+            if (!s.PlayerBuilt && !creative) return OpResult.Fail("not_owned", "You can only demolish your own structures.");
             BuildingDefinition def = _content.Building(s.DefId);
             var refund = new List<ItemAmount>();
-            foreach (ItemAmount a in def.Cost)
+            // Creative removal refunds nothing: it cost nothing.
+            foreach (ItemAmount a in creative ? new List<ItemAmount>() : def.Cost)
             {
                 int q = (int)Math.Floor(a.Quantity * DemolishRefundFraction);
                 if (q > 0) refund.Add(new ItemAmount(a.ItemId, q));

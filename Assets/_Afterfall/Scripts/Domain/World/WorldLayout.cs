@@ -195,12 +195,18 @@ namespace Afterfall.Domain.World
         public List<ContainerSeed> Containers { get; } = new List<ContainerSeed>();
         public List<SurvivorSeed> Survivors { get; } = new List<SurvivorSeed>();
 
+        /// <summary>Side length of this layout's square map in metres.</summary>
+        public float Size => Height != null ? Height.Size : WorldSize;
+
+        /// <summary>Highest terrain height the height field can hold.</summary>
+        public float MaxHeight => Height != null ? Height.MaxHeight : MaxTerrainHeight;
+
         public float HeightAt(float x, float z) => Height.Sample(x, z);
         public Vec3 Ground(float x, float z) => new Vec3(x, Height.Sample(x, z), z);
         public bool IsWater(float x, float z) => Height.Sample(x, z) < WaterLevel + 0.15f;
 
         public bool IsInsideMap(float x, float z, float margin = 0f) =>
-            x >= margin && z >= margin && x <= WorldSize - margin && z <= WorldSize - margin;
+            x >= margin && z >= margin && x <= Size - margin && z <= Size - margin;
 
         public float DistanceToRoad(float x, float z)
         {

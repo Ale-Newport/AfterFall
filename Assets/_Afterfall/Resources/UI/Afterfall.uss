@@ -212,3 +212,20 @@
     background-color: rgba(10, 11, 10, 0.95); border-color: rgb(170, 155, 110); border-width: 1px;
     border-radius: 4px; padding: 6px 8px; color: rgb(236, 230, 214);
 }
+
+/* Creative & developer panel (F6) */
+.creative .creative-page { margin-top: 6px; }
+.creative-mode { margin-left: 12px; color: rgb(140, 200, 230); font-size: 15px; -unity-font-style: bold; }
+.creative-locked { background-color: rgba(70, 50, 20, 0.6); border-radius: 5px; padding: 6px; margin-top: 4px; }
+.wrap-row { flex-wrap: wrap; }
+.creative-list { flex-grow: 1; min-width: 480px; background-color: rgba(0, 0, 0, 0.25); border-radius: 4px; }
+.creative-row { height: 34px; padding-left: 6px; padding-right: 6px; border-bottom-width: 1px; border-bottom-color: rgba(90, 86, 72, 0.3); }
+.creative-id { width: 170px; font-size: 13px; }
+.creative-cat { width: 190px; font-size: 13px; -unity-text-align: middle-right; }
+.creative-detail { width: 400px; margin-left: 10px; }
+.creative-detail .btn { margin-top: 4px; }
+.creative-col { width: 560px; margin-right: 14px; }
+.creative-destinations { flex-grow: 1; max-height: 560px; }
+.creative-tab { margin-left: 6px; padding: 3px 14px; font-size: 16px; }
+.creative-list .unity-collection-view__item--selected { background-color: rgba(120, 96, 44, 0.85); }
+.creative-list .unity-collection-view__item--selected Label { color: rgb(255, 244, 214); }

@@ -89,11 +89,14 @@ The first Unity run failed 7 save tests that pass on .NET. Unity's Mono formats 
 - checks that Mara sleeps at night, then dies, respawns and recovers the belongings;
 - opens the pause menu and the F3 overlay;
 - saves and reloads, checking structures, colonists, the crop, the recipe, power links and battery charge;
-- checks that the player's own save folder was not touched (the tour saves into `<dir>/Saves`).
+- checks that the player's own save folder was not touched (the tour saves into `<dir>/Saves`);
+- then runs the world-expansion scenes (`AutoTour.Expansion.cs`) in the reloaded game: the creative panel's locked state, enabling developer tools, searching and spawning items into the backpack, the ground and a container, a free flight of more than 200 m without body animation, landing on safe ground, a teleport to the quarry and back, creative building, the diagnostics overlay and the Creative save label (see CREATIVE_DEBUG_MODE.md).
 
 Before the game starts it also shows the New Game, Load Game, Settings and Controls screens.
 
 It writes a PNG for each step and `tour-report.txt`, then quits. The report has load times, frame times, a line per check and every error logged. A check that does not hold starts with `FAIL`. Building materials are granted, and the report lists them. Everything else goes through the normal game commands.
+
+`-afterfall-tour-expansion` skips the settlement chapters and runs only the expansion scenes after the new game loads (about a minute), for quick iteration on new features.
 
 `tools/run-unity-checks.sh tour` prints the report and exits non-zero on any `FAIL` line or logged error. `-afterfall-tour-diag` adds:
 - lighting comparisons and a scan for large shadow casters;

@@ -104,7 +104,9 @@ namespace Afterfall.Presentation.UI
 
             var clock = _gc.Session.World.Clock;
             WeatherReadout weather = _gc.Session.WeatherNow;
-            _clock.text = $"{clock.FormatTime()}{(clock.IsNight ? " (night)" : "")}  ·  {WeatherTuning.Describe(weather.Kind)}{(weather.ColdSnap > 0.05f ? ", cold snap" : "")}  {weather.OutdoorC:0} °C";
+            GameSettings gs = _gc.Session.World.Settings;
+            string tag = gs.IsCreative() ? "CREATIVE  ·  " : gs.DeveloperTools ? "DEV TOOLS  ·  " : "";
+            _clock.text = $"{tag}{clock.FormatTime()}{(clock.IsNight ? " (night)" : "")}  ·  {WeatherTuning.Describe(weather.Kind)}{(weather.ColdSnap > 0.05f ? ", cold snap" : "")}  {weather.OutdoorC:0} °C";
 
             bool tactical = _gc.CameraRig.TacticalActive;
             bool windows = _ui.AnyWindowOpen;
@@ -122,7 +124,8 @@ namespace Afterfall.Presentation.UI
             _prompt.text = prompt ?? "";
             UiKit.Show(_prompt, !string.IsNullOrEmpty(prompt));
 
-            if (_gc.Build.IsPlacing) _mode.text = (tactical ? "STRATEGIC VIEW · " : "") + "BUILD MODE";
+            if (_gc.Player.Flight.Active) _mode.text = $"FREE FLIGHT · {_gc.Player.Flight.CurrentSpeed:0} m/s (cruise {_gc.Player.Flight.Speed:0}) · WASD · Space/Ctrl · Shift boost · wheel speed · F7 land";
+            else if (_gc.Build.IsPlacing) _mode.text = (tactical ? "STRATEGIC VIEW · " : "") + "BUILD MODE";
             else if (tactical) _mode.text = "STRATEGIC VIEW — Tab to return · LMB select · WASD pan · Q/E rotate · wheel zoom";
             else _mode.text = "";
             UiKit.Show(_mode, _mode.text.Length > 0);

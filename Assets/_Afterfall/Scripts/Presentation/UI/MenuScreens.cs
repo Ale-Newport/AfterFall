@@ -66,14 +66,31 @@ namespace Afterfall.Presentation.UI
             foreach (DifficultyPreset p in new[] { DifficultyPreset.Exploration, DifficultyPreset.Survival, DifficultyPreset.Hardcore })
                 buttons[p] = row.Put(UiKit.Btn(p.ToString(), () => Select(p)));
             col.Add(desc);
+            GameMode mode = GameMode.Survival;
+            var modeButtons = new Dictionary<GameMode, Button>();
+            var modeDesc = UiKit.Text("", "muted");
+            void SelectMode(GameMode m)
+            {
+                mode = m;
+                foreach (var kv in modeButtons) UiKit.SetClass(kv.Value, "btn--selected", kv.Key == m);
+                modeDesc.text = m == GameMode.Creative
+                    ? "Creative — free, instant building with every blueprint, no harm, item and teleport tools (F6) and free flight (F7). Saves are marked Creative."
+                    : "Survival — every rule applies. Developer tools can be enabled later (F6), which marks the save.";
+            }
+            var modeRow = col.Put(UiKit.Div("row"));
+            modeRow.Add(UiKit.Text("Mode", "muted"));
+            foreach (GameMode m in new[] { GameMode.Survival, GameMode.Creative })
+                modeButtons[m] = modeRow.Put(UiKit.Btn(m.ToString(), () => SelectMode(m)));
+            col.Add(modeDesc);
             var seedField = col.Put(new TextField("World seed") { value = UnityEngine.Random.Range(1, 99999).ToString() });
             Select(DifficultyPreset.Survival);
+            SelectMode(GameMode.Survival);
             var actions = col.Put(UiKit.Div("row"));
             actions.Add(UiKit.Btn("Back", () => ui.ShowMainMenu()));
             actions.Add(UiKit.Btn("Start", () =>
             {
                 int seed = int.TryParse(seedField.value, out int v) ? v : seedField.value.GetHashCode();
-                ui.App.StartNewGame(chosen, seed);
+                ui.App.StartNewGame(chosen, seed, mode);
             }, "btn--primary"));
             var wrap = UiKit.Div("col");
             wrap.style.alignItems = Align.Center;
@@ -94,7 +111,7 @@ namespace Afterfall.Presentation.UI
             {
                 SaveSlotInfo slot = s;
                 var row = list.Put(UiKit.Div("list-item"));
-                string info = s.Readable ? $"{s.Header.Slot} — day {s.Header.Day} ({s.Header.TimeOfDay}) · {s.Header.Difficulty} · seed {s.Header.Seed} · {s.LastWriteUtc.ToLocalTime():g}" : $"{s.Slot} — unreadable header (a backup may still load)";
+                string info = s.Readable ? $"{s.Header.Slot} — day {s.Header.Day} ({s.Header.TimeOfDay}) · {s.Header.Difficulty}{(string.IsNullOrEmpty(s.Header.Mode) || s.Header.Mode == "Survival" ? "" : " · " + s.Header.Mode)} · seed {s.Header.Seed} · {s.LastWriteUtc.ToLocalTime():g}" : $"{s.Slot} — unreadable header (a backup may still load)";
                 row.Add(UiKit.Text(info, "grow", "wrap"));
                 row.Add(UiKit.Btn("Load", () => ui.App.LoadGame(slot.Slot), "btn--small", "btn--primary"));
                 row.Add(UiKit.Btn("Delete", () =>
@@ -280,7 +297,9 @@ namespace Afterfall.Presentation.UI
                 "I backpack & crafting · B construction\n" +
                 "R rotate blueprint · RMB cancel placement\n" +
                 "Tab strategic view (WASD pan, Q/E rotate, wheel zoom, LMB select)\n" +
-                "F5 quick save · F9 quick load · F3 performance · Esc menu", "wrap", "grow"));
+                "F5 quick save · F9 quick load · F3 diagnostics · Esc menu\n" +
+                "F6 creative & developer panel · F7 free flight (Creative or developer tools)\n" +
+                "In flight: WASD along the view · Space up · Ctrl/C down · Shift boost · wheel speed", "wrap", "grow"));
             cols.Add(UiKit.Text(
                 "Getting started\n" +
                 "1. Loot the supply crate at your camp. Gather fiber, branches and stones by hand.\n" +

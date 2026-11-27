@@ -125,7 +125,7 @@ namespace Afterfall.Domain.AI
             double now = _world.Clock.ElapsedSeconds;
             Noise.Expire(now);
             PlayerState player = _world.Player;
-            bool alive = player != null && !player.Vitals.IsDead;
+            bool alive = player != null && !player.Vitals.IsDead && !player.Activity.Flying;
             float daylight = _world.Clock.Daylight01;
             float sightFactor = SightFactor?.Invoke() ?? 1f;
             float hearingFactor = HearingFactor?.Invoke() ?? 1f;

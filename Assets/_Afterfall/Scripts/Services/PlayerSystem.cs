@@ -52,6 +52,11 @@ namespace Afterfall.Services
             p.FeltTemperatureC = climate.TemperatureC;
             p.Sheltered = climate.Sheltered;
             loss += SurvivalRules.TickWarmth(p.Vitals, _session.Content.Survival, climate.TemperatureC, dt, w.Clock.SecondsPerGameHour);
+            if (w.Settings.IsCreative() && w.Settings.CreativeInvulnerable)
+            {
+                KeepTopped(p.Vitals);
+                loss = 0f;
+            }
             if (loss > 0f && p.Vitals.IsDead)
             {
                 _deathHandled = true;
@@ -72,12 +77,23 @@ namespace Afterfall.Services
             RecordAcquisitions(p.Inventory);
 
             _sinceReveal += dt;
-            if (_sinceReveal >= 0.5)
+            // Free flight is a camera: discovery happens on the ground, so flying never reveals the map.
+            if (_sinceReveal >= 0.5 && !p.Activity.Flying)
             {
                 _sinceReveal = 0;
                 w.Exploration.Reveal(p.Position, GameSession.RevealRadius);
                 DiscoverPois(w, p);
             }
+        }
+
+        /// <summary>Creative mode: the survivor never goes hungry, thirsty, cold, tired or hurt.</summary>
+        private static void KeepTopped(Afterfall.Domain.Survival.SurvivalState v)
+        {
+            v.Health = v.MaxHealth;
+            v.Stamina = v.MaxStamina;
+            v.Hunger = 100f;
+            v.Thirst = 100f;
+            v.Warmth = 100f;
         }
 
         private void RecordAcquisitions(Inventory inv)

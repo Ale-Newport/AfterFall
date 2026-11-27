@@ -11,6 +11,9 @@ namespace Afterfall.Domain.World
         public bool Moving;
         public bool Sprinting;
         public bool Crouching;
+
+        /// <summary>Free flight (creative/debug camera): no footstep noise, no map discovery, and the infected cannot perceive the survivor.</summary>
+        public bool Flying;
     }
 
     public sealed class PlayerState

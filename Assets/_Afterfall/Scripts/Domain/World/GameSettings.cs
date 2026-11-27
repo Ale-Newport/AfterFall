@@ -8,6 +8,16 @@ namespace Afterfall.Domain.World
     }
 
     /// <summary>
+    /// Survival keeps every rule. Creative lifts resource costs, build times and technology
+    /// requirements, keeps the survivor unharmed and unlocks the creative panel and free flight.
+    /// </summary>
+    public enum GameMode
+    {
+        Survival,
+        Creative
+    }
+
+    /// <summary>
     /// Independently configurable difficulty parameters. Presets are starting points;
     /// each value can be changed on its own.
     /// </summary>
@@ -38,6 +48,33 @@ namespace Afterfall.Domain.World
 
         /// <summary>Real minutes per in-game day.</summary>
         public float DayLengthMinutes { get; set; } = 48f;
+
+        /// <summary>Survival or Creative. Saves written before modes existed load as Survival.</summary>
+        public GameMode Mode { get; set; } = GameMode.Survival;
+
+        /// <summary>
+        /// Set for good once developer tools (spawning, teleporting, flight, switching to Creative)
+        /// are enabled in a game, so such saves stay distinguishable from untouched survival runs.
+        /// </summary>
+        public bool DeveloperTools { get; set; }
+
+        /// <summary>Creative mode keeps the survivor fed, warm and unharmed (on by default).</summary>
+        public bool CreativeInvulnerable { get; set; } = true;
+
+        /// <summary>
+        /// Which world generator built the layout. 1 is the original 512 m valley; saves written
+        /// before this field existed load as 1, so their ground never moves under them.
+        /// </summary>
+        public int WorldVersion { get; set; } = 1;
+
+        // Methods rather than properties, so the save serializer does not write them.
+        public bool IsCreative() => Mode == GameMode.Creative;
+
+        /// <summary>Spawning, teleporting and flight are available (Creative, or developer tools enabled).</summary>
+        public bool ToolsEnabled() => Mode == GameMode.Creative || DeveloperTools;
+
+        /// <summary>Player-facing summary such as "Survival", "Creative" or "Survival · developer tools".</summary>
+        public string ModeLabel() => Mode == GameMode.Creative ? "Creative" : DeveloperTools ? "Survival · developer tools" : "Survival";
 
         public static GameSettings FromPreset(DifficultyPreset preset)
         {

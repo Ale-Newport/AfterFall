@@ -20,6 +20,8 @@ namespace Afterfall.Presentation
         private float _yaw, _pitch = 12f;
         private float _distance = 4.2f;
         private float _shake;
+        private bool _flight;
+        private float _savedDistance;
 
         public Camera Camera => _camera;
         public Transform ViewTransform => _camera.transform;
@@ -107,11 +109,48 @@ namespace Afterfall.Presentation
             _thirdPerson.Priority = on ? 0 : 10;
         }
 
+        /// <summary>
+        /// Free flight: the camera sits at the (hidden) body with no shoulder offset, no collision
+        /// and a full vertical look range, so it behaves like a spectator camera.
+        /// </summary>
+        public void SetFlight(bool on)
+        {
+            if (on == _flight) return;
+            _flight = on;
+            CinemachineThirdPersonFollow.ObstacleSettings obstacles = _follow.AvoidObstacles;
+            obstacles.Enabled = !on;
+            _follow.AvoidObstacles = obstacles;
+            LensSettings lens = _thirdPerson.Lens;
+            lens.FarClipPlane = on ? FlightFarClip : 650f;
+            _thirdPerson.Lens = lens;
+            if (on)
+            {
+                _savedDistance = _distance;
+                _distance = 0.01f;
+                _follow.ShoulderOffset = Vector3.zero;
+                _follow.VerticalArmLength = 0f;
+                _follow.Damping = Vector3.zero;
+            }
+            else
+            {
+                _distance = _savedDistance > 0f ? _savedDistance : 4.2f;
+                _follow.ShoulderOffset = new Vector3(0.55f, 0.2f, 0f);
+                _follow.VerticalArmLength = 0.25f;
+                _follow.Damping = new Vector3(0.1f, 0.25f, 0.3f);
+                _pitch = Mathf.Clamp(_pitch, -40f, 70f);
+            }
+        }
+
+        public bool Flying => _flight;
+
+        /// <summary>From the air the whole region should be visible.</summary>
+        public const float FlightFarClip = 2500f;
+
         /// <summary>Points the shoulder camera (used by the scripted tour).</summary>
         public void Look(float yaw, float pitch)
         {
             _yaw = yaw;
-            _pitch = Mathf.Clamp(pitch, -40f, 70f);
+            _pitch = _flight ? Mathf.Clamp(pitch, -85f, 85f) : Mathf.Clamp(pitch, -40f, 70f);
         }
 
         public void Shake(float amount)
@@ -123,19 +162,27 @@ namespace Afterfall.Presentation
         {
             if (_gc?.Player == null) return;
             float dt = Time.deltaTime;
-            Vector3 anchor = _gc.Player.transform.position + Vector3.up * (_gc.Player.IsCrouching ? 1.15f : 1.6f);
-            _target.position = Vector3.Lerp(_target.position, anchor, 1f - Mathf.Exp(-20f * dt));
+            if (_flight)
+            {
+                // The flight body is the camera point; follow it exactly, whatever the speed.
+                _target.position = _gc.Player.transform.position;
+            }
+            else
+            {
+                Vector3 anchor = _gc.Player.transform.position + Vector3.up * (_gc.Player.IsCrouching ? 1.15f : 1.6f);
+                _target.position = Vector3.Lerp(_target.position, anchor, 1f - Mathf.Exp(-20f * dt));
+            }
 
             if (!TacticalActive && _gc.LookInputActive && Mouse.current != null)
             {
                 Vector2 look = _gc.Input.Look.ReadValue<Vector2>() * (0.09f * _gc.Settings.MouseSensitivity);
                 _yaw += look.x;
                 _pitch += _gc.Settings.InvertY ? look.y : -look.y;
-                _pitch = Mathf.Clamp(_pitch, -40f, 70f);
+                _pitch = _flight ? Mathf.Clamp(_pitch, -85f, 85f) : Mathf.Clamp(_pitch, -40f, 70f);
                 float zoom = _gc.Input.Zoom.ReadValue<float>();
-                if (Mathf.Abs(zoom) > 0.01f && !_gc.Build.IsPlacing) _distance = Mathf.Clamp(_distance - Mathf.Sign(zoom) * 0.6f, 1.8f, 9f);
+                if (Mathf.Abs(zoom) > 0.01f && !_gc.Build.IsPlacing && !_flight) _distance = Mathf.Clamp(_distance - Mathf.Sign(zoom) * 0.6f, 1.8f, 9f);
             }
-            _follow.CameraDistance = Mathf.Lerp(_follow.CameraDistance, _distance, 1f - Mathf.Exp(-10f * dt));
+            _follow.CameraDistance = _flight ? _distance : Mathf.Lerp(_follow.CameraDistance, _distance, 1f - Mathf.Exp(-10f * dt));
 
             Quaternion rot = Quaternion.Euler(_pitch, _yaw, 0);
             if (_shake > 0f)

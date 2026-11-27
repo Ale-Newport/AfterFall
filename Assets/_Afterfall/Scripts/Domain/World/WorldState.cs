@@ -131,6 +131,9 @@ namespace Afterfall.Domain.World
         public WeatherState Weather { get; } = new WeatherState();
         public PlaythroughMetrics Metrics { get; } = new PlaythroughMetrics();
 
+        /// <summary>The player's map markers, bookmarks and waypoint.</summary>
+        public MapNavigation Navigation { get; } = new MapNavigation();
+
         /// <summary>Static world layout regenerated from the seed (not persisted).</summary>
         public WorldLayout Layout { get; set; }
 
