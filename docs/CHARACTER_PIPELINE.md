@@ -1,38 +1,60 @@
 # Character pipeline
 
-Status: **planned, not started in the game.** The survivor, colonists and infected are still the procedural characters described below. This document records the current system, the licensing research behind the replacement, the pipeline chosen, and what is waiting on a decision from the project owner.
+The survivor, the colonists and the infected are **skinned human models made from MakeHuman's CC0 assets**, animated by the game's procedural rig. The sculpted procedural bodies remain as a fallback when the models are missing.
 
-## Today: procedural humanoids
-`HumanoidRig` (Presentation/Player) and `MeshFactory.Characters` build every person in code: lofted, rigid low-poly body parts (one mesh per material per bone) on a joint hierarchy (pelvis, chest, head, upper arms, forearms, thighs, shins, feet), with hair styles, outfits, headwear and palettes for variety. Animation is procedural: two-bone IK plants the feet while walking, running and crouching; arm swing, breathing, attacks, flinches, the death fall and the seated pose (vehicles) are blended in code. Nothing is skinned, there is no Mecanim avatar, and the look is stylised, not photorealistic.
+## Why MakeHuman
+The repository is public on GitHub under the MIT license, so every committed asset must allow redistribution. That rules out the usual sources of realistic people:
 
-## Why the replacement is constrained
-The repository is **public** on GitHub under the MIT license, and AFTERFALL's rules forbid committing assets whose license does not allow redistribution. That rules out the usual sources of realistic people:
+| Source | Can it be committed here? |
+|---|---|
+| MakeHuman system assets (base mesh, proxies, skins, eyes, brows, lashes, hair, clothes, rigs) through the MPFB Blender extension | **Yes.** MPFB's LICENSE.md puts all of its data and assets (base mesh, proxies, targets, rigs and weights, textures, clothes) under CC0 1.0, and the MakeHuman team claims nothing over exported models. MPFB's code is GPL-3.0, but it is only a tool here: none of it ships. |
+| CMU motion capture | Yes, with credit (not used yet; see below) |
+| Mixamo, Unity Asset Store, Fab, CGTrader | No: their licenses forbid redistributing the files, and a public repository is redistribution |
+| Bandai Namco motion dataset | No: non-commercial, no derivatives |
+| Poly Haven, Kenney, Quaternius | Poly Haven has no people; the others are stylised low-poly |
 
-| Source | What it offers | Can it be committed here? |
-|---|---|---|
-| MakeHuman / MPFB2 (Blender add-on) system assets | Parametric realistic humans: base mesh, skins, eyes, eyebrows, hair, clothes, proxies; game-engine rig | **Yes.** The MakeHuman system assets are CC0, and so are characters exported from them. MPFB2's code is GPL, but it is only a tool here: none of it ships. Community assets on the MakeHuman asset site carry their own licenses (some CC-BY, some not) and must be checked one by one. |
-| CMU Graphics Lab Motion Capture Database | Thousands of motion-capture clips (walking, running, crouching, fighting, falling) | **Yes**, with acknowledgement: the data is free for any use, and the lab asks to be credited. Clips need retargeting (they come as BVH/ASF-AMC). |
-| Mixamo (Adobe) | Rigged characters and animations | **No.** Free to use inside a game, but the raw character and animation files may not be redistributed; a public repository is redistribution. |
-| Unity Asset Store, Fab (Epic), CGTrader, TurboSquid | Realistic characters, zombies and animation packs | **No** for the public repository (their licenses forbid redistributing source assets). Usable only in a private repository or kept out of Git, which this project does not do. |
-| Bandai Namco Research motion dataset | High-quality stylised motion | **No.** CC BY-NC-ND: non-commercial and no derivatives. |
-| Poly Haven, Kenney, Quaternius | CC0 models | Poly Haven has no people. Kenney and Quaternius characters are CC0 but low-poly and stylised: not the photorealistic look asked for. |
+## The models
+| Model | Used for | Body | Outfit | Triangles |
+|---|---|---|---|---|
+| `survivor_m` | The survivor (and male survivors whose variant picks it) | male_generic proxy, middle-aged | Work overalls over a T-shirt | 31 k |
+| `survivor_f` | Female survivors | female_generic proxy | Vest, striped shirt and jeans | 31 k |
+| `colonist_m` | Survivors you can recruit | male_generic proxy, older | Striped shirt and jeans | 26 k |
+| `colonist_f` | Survivors you can recruit | female_generic proxy | Striped dress | 29 k |
+| `infected_m1`, `infected_m2`, `infected_f1` | The infected | low-poly proxies (male1591, female1605) | A suit; jeans and a shirt; a vest and jeans | 16–26 k |
 
-Generative or "AI-made" human models were not considered: their provenance cannot be recorded in ASSET_LICENSES.md with confidence.
+Each has the 53-bone MPFB **game-engine** rig (pelvis, spine_01–03, neck, head, clavicles, arms, hands with fingers, thighs, calves, feet, toes), eyes, eyebrows, eyelashes, hair and shoes. Skin under the clothes is deleted. Textures are shared between models and capped at 1024 px (52 MB in all, in Git LFS).
 
-## Chosen pipeline (MPFB2 → Blender → Unity Humanoid)
-1. **Make characters in Blender with MPFB2** using only CC0 system assets: a set of base adults (varied age, build and skin tone), each with its own clothes, hair and eyes. Use the *game engine* rig, which has the bone layout Unity's Humanoid avatar expects (hips, spine, chest, neck, head, shoulders, arms, hands, legs, feet, toes).
-2. **Reduce for real time**: the MPFB2 proxy meshes (a lower-polygon body), a target of about 15–25 k triangles per character for the survivor and colonists, 8–12 k for the infected (they come in numbers), 2 LODs. Bake skin, clothes and hair to one or two texture sets (albedo, normal, mask) at 2048² (1024² for the infected).
-3. **The infected** are made from the same humans: a damaged skin texture variant (pallor, veins, wounds and dried blood painted in Blender or synthesised in `TextureSynth`), torn clothing variants, and a different animation set (lurching walk, lunge, attack, stagger).
-4. **Export FBX** (binary, Y-up, scale 1, deform bones only, no leaf bones) into `Assets/_Afterfall/Characters/<name>/` with Git LFS, and set the import to **Humanoid** with an avatar created from the model.
-5. **Animation**: retarget CMU clips (walk, run, crouch-walk, idle variants, turning, falling, getting up, sitting in a vehicle) to the Humanoid avatar; Mecanim handles retargeting between characters. Locomotion becomes a blend tree driven by the same speed and crouch values `HumanoidRig.Animate` receives today; foot IK stays (Unity's Humanoid IK). Attack, flinch and death are layered states.
-6. **Appearance system**: `CharacterAppearance` data (body, skin tone, hair, outfit, wear and dirt, infected stage) saved with each colonist and the survivor instead of today's palette, and materials varied with property blocks or vertex colours, never one material per instance.
-7. **Swap in behind the same interface**: `HumanoidRig`'s public calls (Animate, SetSeated, PlaySwing, SetDead, Flash) stay, so the player, colonists, infected and vehicles do not change. The procedural rig remains as a fallback.
-8. **Record** every exported character and clip in `docs/ASSET_LICENSES.md` and `docs/ASSET_PROVENANCE.md` before committing: the MPFB2 and asset versions, the assets used, the CMU clip numbers and the acknowledgement text.
+**The infected** use the same pipeline: older skins tinted grey-green and clammy, grimy clothes, and the glowing eyes the procedural infected had.
 
-## Waiting on the owner
-Downloading is not done without permission. The next step needs:
-- the **MPFB2** Blender add-on (about 46 MB) and the **MakeHuman CC0 system asset packs** (about 280 MB, unpacked into Blender's MPFB2 data folder, outside this repository);
-- **CMU motion capture** clips, chosen individually (a few MB);
-- Blender itself (installed locally; check with `blender --version`).
+## Building them (tools/characters)
+`characters.json` lists each character: MakeHuman phenotype (gender, age, muscle, weight, proportions, height, ethnic mix), body proxy, skin, hair, brows, lashes and clothes. `build_characters.py` runs in Blender 4.5 with the MPFB extension (installed from extensions.blender.org, with the MakeHuman system asset pack):
 
-Once those are approved and installed, the steps above can run here, and the scripted tour gets a character scene (walk, run, crouch, sit in a vehicle, attack, die, infected variants) with screenshots for review.
+```bash
+/Applications/Blender.app/Contents/MacOS/Blender -b --python tools/characters/build_characters.py -- tools/characters/characters.json Assets/_Afterfall/Resources/Characters
+```
+
+For each character it:
+- refuses any asset that is not in MPFB's CC0 system asset index, and the six outfits that print the MakeHuman logo (male_casualsuit02/04/06, female_casualsuit01/02, female_sportsuit01);
+- builds the human with MPFB (game-engine rig, no subdivision), deletes the hidden skin and removes the base mesh (the proxy is the body);
+- writes `<name>.fbx` (armature and meshes, no animation) and `<name>.json`: each mesh part with its kind (skin, cloth, hair, lashes, eyes), albedo and normal map, and triangle count;
+- writes each texture once to `Textures/`, downscaled with macOS's `sips`.
+
+Unity imports them with `Editor/CharacterImport.cs`: generic rig, no animation, no materials, normal maps flagged, 1024 px maximum.
+
+## In the game
+- `CharacterModels` picks a model for a palette (the survivor's look, a colonist's or an infected's variant), loads its manifest and builds shared materials from three URP Lit material assets in `Resources/Materials`: `AfterfallCharacter` (opaque), `AfterfallCharacterNormal` (with a normal map) and `AfterfallCharacterCutout` (alpha-cut, double-sided, for hair and lashes). Shipping these as assets keeps their shader variants in builds.
+- `HumanoidRig` builds its procedural joints as before, but invisible, and `SkinnedBody` binds the model to them at rest:
+  - it turns the model upright and towards +Z, scales it so its legs are as long as the procedural legs (so the procedural foot IK still plants its feet), and sets it on the ground;
+  - arm and leg bones are re-aimed along the procedural limbs (the model stands in an A-pose);
+  - each frame, every bone takes its driver joint's change of rotation since rest: spine_02 halfway between pelvis and chest, the neck halfway between chest and head, hands with the forearms, the pelvis following the procedural pelvis.
+- So **every existing animation works unchanged**: walking, running, crouching, jumping, the infected's shamble and claw attack, tool swings, flinches, the death fall and sitting in a vehicle.
+- Held tools hang from a grip in the model's right palm. The survivor's backpack and satchel (sculpted, as before) hang on the model's chest.
+- `CharacterModels.Enabled = false` (or missing assets) falls back to the procedural bodies everywhere.
+
+Checked in the model gallery (`tools/gallery.sh characters`): the line-up, every character front and back, walking, action poses (death, crouch, jump, claw, tool swing) and held items.
+
+## Not done yet
+- **Motion capture.** Animation is still procedural. CMU motion capture would need its own download approval, retargeting to the game-engine rig (it maps to a Unity Humanoid avatar) and an Animator; the procedural rig would remain for vehicles and deaths.
+- **Faces**: no expressions or eye blinks (MPFB has expression targets).
+- **More variety**: a few more bodies and outfits per role; per-character colour variation of clothes; torn clothing and wounds for the infected.
+- **LODs**: one level today; the infected could use the proxy741 body far away.

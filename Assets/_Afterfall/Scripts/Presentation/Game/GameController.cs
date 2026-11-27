@@ -84,6 +84,7 @@ namespace Afterfall.Presentation
             TerrainTiles.Initialize(this, Session.World.Layout, Session.World.Seed, _worldRoot);
             // The ground around the survivor is built before play begins; the rest streams in.
             TerrainTiles.BuildAround(Session.Player.Position.ToUnity(), WorldBuilder.TileSize * 0.75f);
+            CharacterModels.Preload();
             WorldBuilder.BuildWater(Session.World.Layout, _worldRoot);
             WorldBuilder.BuildBoundary(Session.World.Layout, _worldRoot);
             yield return null;

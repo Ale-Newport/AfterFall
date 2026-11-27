@@ -1,0 +1,71 @@
+{
+  "name": "infected_m2",
+  "role": "infected",
+  "female": false,
+  "rig": "game_engine",
+  "bones": 53,
+  "parts": [
+    {
+      "mesh": "infected_m2_eyebrow005",
+      "kind": "lashes",
+      "albedo": "Textures/eyebrow005",
+      "normal": "",
+      "triangles": 192
+    },
+    {
+      "mesh": "infected_m2_eyelashes01",
+      "kind": "lashes",
+      "albedo": "Textures/eyelashes01",
+      "normal": "",
+      "triangles": 368
+    },
+    {
+      "mesh": "infected_m2_skin",
+      "kind": "skin",
+      "albedo": "Textures/old_darkskinned_male_diffuse",
+      "normal": "",
+      "triangles": 2060
+    },
+    {
+      "mesh": "infected_m2_eyes",
+      "kind": "eyes",
+      "albedo": "Textures/brown_eye",
+      "normal": "",
+      "triangles": 172
+    },
+    {
+      "mesh": "infected_m2_male_casualsuit01",
+      "kind": "cloth",
+      "albedo": "Textures/male_casualsuit01_diffuse",
+      "normal": "Textures/male_casualsuit01_normal",
+      "triangles": 16672
+    },
+    {
+      "mesh": "infected_m2_shoes04",
+      "kind": "cloth",
+      "albedo": "Textures/shoes04_diffuse",
+      "normal": "Textures/shoes04_normal",
+      "triangles": 3320
+    },
+    {
+      "mesh": "infected_m2_hair",
+      "kind": "hair",
+      "albedo": "Textures/short01_diffuse",
+      "normal": "",
+      "triangles": 3678
+    }
+  ],
+  "triangles": 26462,
+  "assets": {
+    "proxy": "male1591",
+    "skin": "old_african_male",
+    "hair": "short01",
+    "eyebrows": "eyebrow005",
+    "eyelashes": "eyelashes01",
+    "clothes": [
+      "male_casualsuit01",
+      "shoes04"
+    ]
+  },
+  "source": "MakeHuman system assets (CC0) via MPFB 2.0.17"
+}

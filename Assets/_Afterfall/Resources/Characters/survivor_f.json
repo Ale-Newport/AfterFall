@@ -1,0 +1,71 @@
+{
+  "name": "survivor_f",
+  "role": "survivor",
+  "female": true,
+  "rig": "game_engine",
+  "bones": 53,
+  "parts": [
+    {
+      "mesh": "survivor_f_eyebrow007",
+      "kind": "lashes",
+      "albedo": "Textures/eyebrow007",
+      "normal": "",
+      "triangles": 192
+    },
+    {
+      "mesh": "survivor_f_eyelashes02",
+      "kind": "lashes",
+      "albedo": "Textures/eyelashes02",
+      "normal": "",
+      "triangles": 368
+    },
+    {
+      "mesh": "survivor_f_eyes",
+      "kind": "eyes",
+      "albedo": "Textures/brown_eye",
+      "normal": "",
+      "triangles": 172
+    },
+    {
+      "mesh": "survivor_f_male_casualsuit05",
+      "kind": "cloth",
+      "albedo": "Textures/male_casualsuit05_diffuse",
+      "normal": "Textures/male_casualsuit05_normal",
+      "triangles": 5996
+    },
+    {
+      "mesh": "survivor_f_hair",
+      "kind": "hair",
+      "albedo": "Textures/ponytail01_diffuse",
+      "normal": "",
+      "triangles": 5352
+    },
+    {
+      "mesh": "survivor_f_shoes02",
+      "kind": "cloth",
+      "albedo": "Textures/shoes02_diffuse",
+      "normal": "",
+      "triangles": 3064
+    },
+    {
+      "mesh": "survivor_f_skin",
+      "kind": "skin",
+      "albedo": "Textures/young_lightskinned_female_diffuse",
+      "normal": "",
+      "triangles": 15948
+    }
+  ],
+  "triangles": 31092,
+  "assets": {
+    "proxy": "female_generic",
+    "skin": "young_caucasian_female",
+    "hair": "ponytail01",
+    "eyebrows": "eyebrow007",
+    "eyelashes": "eyelashes02",
+    "clothes": [
+      "male_casualsuit05",
+      "shoes02"
+    ]
+  },
+  "source": "MakeHuman system assets (CC0) via MPFB 2.0.17"
+}

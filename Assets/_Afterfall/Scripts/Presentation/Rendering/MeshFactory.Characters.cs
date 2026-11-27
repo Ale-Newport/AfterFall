@@ -85,6 +85,16 @@ namespace Afterfall.Presentation
             return m;
         }
 
+        /// <summary>Only the gear a palette carries on its chest (backpack, satchel), for the skinned models.</summary>
+        public static CharacterModel CharacterGear(HumanoidRig.Palette p)
+        {
+            string key = string.Join(":", "gear", Hex(p.Accent), Hex(p.Shirt), p.Female, p.Backpack, p.Satchel, p.Variant);
+            if (CharacterCache.TryGetValue(key, out CharacterModel m) && m.Alive) return m;
+            m = new CharacterSculptor(p, false, true).Build(key);
+            CharacterCache[key] = m;
+            return m;
+        }
+
         /// <summary>Model of a tool, weapon or carried item in the fist: grip at the origin, handle along +X, edge towards −Y.</summary>
         public static List<KeyValuePair<CharacterSurface, Mesh>> HeldItem(ItemDefinition item)
         {
@@ -702,8 +712,11 @@ namespace Afterfall.Presentation
         private Ring[] _torso, _pelvis;
         private float _hem;
 
-        public CharacterSculptor(HumanoidRig.Palette p, bool infected)
+        private readonly bool _gearOnly;
+
+        public CharacterSculptor(HumanoidRig.Palette p, bool infected, bool gearOnly = false)
         {
+            _gearOnly = gearOnly;
             _p = p;
             _inf = infected;
             _seed = 7919 * (p.Variant + 3) + (infected ? 104729 : 0) + (int)p.Outfit * 131 + (int)p.HairStyle * 17;
@@ -769,9 +782,11 @@ namespace Afterfall.Presentation
                 Forearm(sx);
             }
             Head();
+            // Gear only (for the skinned models): the body was sculpted only to size the straps.
+            if (_gearOnly) _bones.Clear();
             if (_p.Backpack) Backpack();
             if (_p.Satchel) Satchel();
-            if (_p.Bandana) Bandana();
+            if (_p.Bandana && !_gearOnly) Bandana();
 
             var model = new CharacterModel();
             foreach (var bone in _bones)

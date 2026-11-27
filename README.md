@@ -96,6 +96,7 @@ The simulation is deterministic and engine-independent: a furnace keeps smelting
 | Vehicles | A sedan, a pickup and a quad bike: keys, locks, abstract hotwiring, wheel physics, fuel, repairs, trunks, saved where you park them |
 | Map | World map (M) drawn from the world data, with fog of war, labels, a waypoint and custom markers; minimap and waypoint marker on the HUD |
 | Creative and debug | Creative mode, and developer tools for any game (F6): item browser and spawner over the whole catalogue, vehicle spawner, teleports, time and weather, diagnostics; free flight (F7) |
+| Characters | Skinned human models made from MakeHuman's CC0 assets (survivor, colonists and infected), animated procedurally |
 | Survivor | Third-person movement: walk, run, stamina-limited sprint, crouch, jump. Health, stamina, hunger, thirst, body warmth, carry weight, death and respawn with recoverable belongings |
 | Cameras | Cinemachine 3 shoulder camera with collision and zoom. Tab switches to a strategic view with pan, rotate and zoom |
 | Items | 37 items in 8 categories, with stacking, weight limits, durability, filters and a reservation-based transactional inventory |

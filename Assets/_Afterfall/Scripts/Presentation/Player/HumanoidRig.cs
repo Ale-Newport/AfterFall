@@ -107,7 +107,13 @@ namespace Afterfall.Presentation
         private readonly List<Renderer> _renderers = new List<Renderer>();
         private readonly List<Renderer> _heldRenderers = new List<Renderer>();
 
-        public Transform Hand => _hand;
+        private SkinnedBody _skin;
+
+        /// <summary>Where held items go: the skinned model's right palm, or the procedural fist.</summary>
+        public Transform Hand => _skin != null ? _skin.Grip : _hand;
+
+        /// <summary>The skinned MPFB model this rig drives, if any ("" when procedural).</summary>
+        public string ModelName { get; private set; } = "";
 
         public static HumanoidRig Create(Transform parent, Palette p, bool shambling)
         {
@@ -126,7 +132,9 @@ namespace Afterfall.Presentation
             _time = p.Variant * 1.7f;
             _hipX = CharacterLayout.HipX(p);
             float shoulderX = CharacterLayout.ShoulderX(p, shambling);
-            CharacterModel model = MeshFactory.Character(p, shambling);
+            // A skinned MPFB model when the assets are present; otherwise the sculpted procedural body.
+            bool skinned = CharacterModels.Enabled && CharacterModels.Available;
+            CharacterModel model = skinned ? null : MeshFactory.Character(p, shambling);
 
             _body = Bone("Body", transform, new Vector3(0f, CharacterLayout.PelvisY, 0f), model, "Pelvis");
             _legL = Bone("LegL", _body, new Vector3(-_hipX, CharacterLayout.HipY, 0f), model, "ThighL");
@@ -142,6 +150,14 @@ namespace Afterfall.Presentation
             _armR = Bone("ArmR", _chest, new Vector3(shoulderX, CharacterLayout.ShoulderY, CharacterLayout.ShoulderZ), model, "UpperArmR");
             _foreR = Bone("ForearmR", _armR, new Vector3(0f, -CharacterLayout.UpperArm, 0f), model, "ForearmR");
             _hand = Bone("Hand", _foreR, CharacterLayout.Grip, null, null);
+            if (skinned && !BindSkinned(p, shambling))
+            {
+                // The model could not be bound: dress the joints with the procedural body instead.
+                model = MeshFactory.Character(p, shambling);
+                foreach (var (t, part) in new[] { (_body, "Pelvis"), (_legL, "ThighL"), (_shinL, "ShinL"), (_footL, "FootL"), (_legR, "ThighR"), (_shinR, "ShinR"), (_footR, "FootR"),
+                             (_chest, "Chest"), (_head, "Head"), (_armL, "UpperArmL"), (_foreL, "ForearmL"), (_armR, "UpperArmR"), (_foreR, "ForearmR") })
+                    Dress(t, model, part);
+            }
             Animate(0f, false, true, 0f);
         }
 
@@ -150,13 +166,51 @@ namespace Afterfall.Presentation
             var t = new GameObject(name).transform;
             t.SetParent(parent, false);
             t.localPosition = localPos;
-            if (model == null) return t;
+            if (model != null) Dress(t, model, part);
+            return t;
+        }
+
+        private void Dress(Transform t, CharacterModel model, string part)
+        {
             foreach (var piece in model.PartsOf(part))
             {
                 GameObject go = Shapes.Mesh(t, part + piece.Key, piece.Value, Material(piece.Key), Vector3.zero, null, piece.Key != CharacterSurface.Gloss && piece.Key != CharacterSurface.Glow);
                 _renderers.Add(go.GetComponent<Renderer>());
             }
-            return t;
+        }
+
+        /// <summary>
+        /// Puts the skinned model for this palette on the (still resting) joints and hangs the
+        /// palette's backpack or satchel on its chest. False if the model is missing or unbindable.
+        /// </summary>
+        private bool BindSkinned(Palette p, bool shambling)
+        {
+            string name = CharacterModels.Pick(p, shambling);
+            var skinRenderers = new List<Renderer>();
+            GameObject go = CharacterModels.Instantiate(name, transform, shambling, skinRenderers);
+            if (go == null) return false;
+            var joints = new SkinnedBody.Joints
+            {
+                Body = _body, Chest = _chest, Head = _head, ArmL = _armL, ArmR = _armR, ForeL = _foreL, ForeR = _foreR,
+                LegL = _legL, LegR = _legR, ShinL = _shinL, ShinR = _shinR, FootL = _footL, FootR = _footR, Hand = _hand
+            };
+            SkinnedBody body = SkinnedBody.Bind(transform, go.transform, joints);
+            if (body == null)
+            {
+                Destroy(go);
+                return false;
+            }
+            _skin = body;
+            ModelName = name;
+            _renderers.AddRange(skinRenderers);
+            if (!shambling && (p.Backpack || p.Satchel))
+            {
+                var gear = new GameObject("Gear").transform;
+                gear.SetParent(_chest, false);
+                Dress(gear, MeshFactory.CharacterGear(p), "Chest");
+                gear.SetParent(body.Chest, true);
+            }
+            return true;
         }
 
         /// <summary>Shared material of a slot. Colour lives in the vertex colours, so every character shares these few materials.</summary>
@@ -191,7 +245,7 @@ namespace Afterfall.Presentation
             _heldRenderers.Clear();
             if (item == null) return;
             _held = new GameObject("Held_" + id).transform;
-            _held.SetParent(_hand, false);
+            _held.SetParent(Hand, false);
             // Models are built with the handle along +X and the edge towards −Y; the fist holds along its +Z.
             _held.localRotation = Quaternion.Euler(8f, 0f, 0f) * Quaternion.Euler(0f, -90f, 0f);
             foreach (var piece in MeshFactory.HeldItem(item))
@@ -304,6 +358,7 @@ namespace Afterfall.Presentation
             transform.localRotation = Quaternion.identity;
             transform.localPosition = root;
             Apply(pose);
+            _skin?.Sync();
         }
 
         private Pose Locomotion(float speed, float dt)
@@ -530,6 +585,7 @@ namespace Afterfall.Presentation
             _shinR.localRotation = Quaternion.Euler(knee * 0.6f + 22f * fall, 0f, 0f);
             _footL.localRotation = Quaternion.Euler(-thigh - knee + 30f * fall, 0f, 0f);
             _footR.localRotation = Quaternion.Euler(-thigh - knee + 40f * fall, 0f, 0f);
+            _skin?.Sync();
         }
     }
 }

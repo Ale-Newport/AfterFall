@@ -11,7 +11,7 @@ Phases and acceptance criteria are in WORLD_EXPANSION_ROADMAP.md; the starting p
 | 4 Vehicles | Done | `5e17fef` | `VehicleTests` (7); tour `VehicleScene`: key found, drive 100+ m, park, save and reload, hotwire, run down an infected, quad bike, creative spawn |
 | 5a Terrain tiles and the water model | Done | `a50bb29` | Valley unchanged in the tour; tiles stream |
 | 5b Greater Millbrook (world version 2, 2 km) | Done (see below) | this change | `RegionTests` (7); tour `RegionScene` |
-| 6 Realistic characters | Researched and planned; **blocked on approval to download** MPFB2 and the MakeHuman CC0 assets | — | CHARACTER_PIPELINE.md |
+| 6 Realistic characters | Done: seven skinned MakeHuman (CC0) models driven by the procedural rig; motion capture not yet | this change | Model gallery (`tools/gallery.sh characters`); full tour with skinned survivor, colonists and infected |
 | 7+ Larger regions (toward 30–60 km), more archetypes | Not started | — | — |
 
 ## Phase 5b details
@@ -26,4 +26,4 @@ Phases and acceptance criteria are in WORLD_EXPANSION_ROADMAP.md; the starting p
 - Beyond 260 m trees are not drawn (as in the valley), so from the air distant forests show only as the ground's forest floor.
 - The map overview is 1 m per pixel in the region; detail tiles are still to do.
 - Colonists far from the survivor (outside the NavMesh window) move in straight lines until the survivor comes back.
-- Characters are still the procedural ones.
+- Characters move with the procedural animation (no motion capture yet) and have no facial expressions.

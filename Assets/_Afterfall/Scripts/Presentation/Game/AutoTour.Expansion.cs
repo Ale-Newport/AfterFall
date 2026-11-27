@@ -99,7 +99,21 @@ namespace Afterfall.Presentation
         private IEnumerator PerfAttribution(GameController gc)
         {
             yield return Seconds(3f);
+            int skinned = FindObjectsByType<SkinnedMeshRenderer>(FindObjectsSortMode.None).Length;
+            Line($"Perf: {gc.Sync.Zombies.Count} infected views, {gc.Sync.Colonists.Count} survivor views, {skinned} skinned renderers");
             yield return MeasureFrames("start camp (all on)", 4f);
+            var zombies = new System.Collections.Generic.List<GameObject>();
+            foreach (var z in gc.Sync.Zombies.Values)
+                if (z != null && z.gameObject.activeSelf)
+                {
+                    z.gameObject.SetActive(false);
+                    zombies.Add(z.gameObject);
+                }
+            yield return MeasureFrames($"start camp ({zombies.Count} infected views off)", 4f);
+            foreach (GameObject z in zombies) z.SetActive(true);
+            foreach (SkinnedMeshRenderer r in FindObjectsByType<SkinnedMeshRenderer>(FindObjectsSortMode.None)) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            yield return MeasureFrames("start camp (skinned shadows off)", 4f);
+            foreach (SkinnedMeshRenderer r in FindObjectsByType<SkinnedMeshRenderer>(FindObjectsSortMode.None)) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
             gc.Ui.Hud.Minimap.Suspended = true;
             yield return MeasureFrames("start camp (minimap off)", 4f);
             GameObject apt = GameObject.Find("Prop_apartment");
@@ -116,6 +130,7 @@ namespace Afterfall.Presentation
             foreach (GameObject h in hidden) h.SetActive(true);
             if (apt != null) apt.SetActive(true);
             gc.Ui.Hud.Minimap.Suspended = false;
+            yield return MeasureFrames("start camp (all on again)", 4f);
         }
 
         // ================================================================== vehicles

@@ -1,0 +1,194 @@
+{
+  "_comment": "Characters built from MakeHuman CC0 system assets with MPFB (tools/characters/build_characters.py). Every asset named here is a makehuman_system asset released as CC0; see docs/ASSET_LICENSES.md. Outfits that print the MakeHuman logo (male_casualsuit02/04/06, female_casualsuit01/02, female_sportsuit01) are refused by the build script.",
+  "characters": [
+    {
+      "name": "survivor_m",
+      "role": "survivor",
+      "female": false,
+      "phenotype": {
+        "gender": 1.0,
+        "age": 0.5,
+        "muscle": 0.6,
+        "weight": 0.5,
+        "proportions": 0.55,
+        "height": 0.55,
+        "race": {
+          "asian": 0.1,
+          "caucasian": 0.8,
+          "african": 0.1
+        }
+      },
+      "proxy": "male_generic",
+      "skin": "middleage_caucasian_male",
+      "hair": "short02",
+      "eyebrows": "eyebrow001",
+      "eyelashes": "eyelashes01",
+      "clothes": [
+        "male_worksuit01",
+        "shoes06"
+      ]
+    },
+    {
+      "name": "survivor_f",
+      "role": "survivor",
+      "female": true,
+      "phenotype": {
+        "gender": 0.0,
+        "age": 0.45,
+        "muscle": 0.55,
+        "weight": 0.45,
+        "proportions": 0.55,
+        "height": 0.5,
+        "race": {
+          "asian": 0.1,
+          "caucasian": 0.7,
+          "african": 0.2
+        }
+      },
+      "proxy": "female_generic",
+      "skin": "young_caucasian_female",
+      "hair": "ponytail01",
+      "eyebrows": "eyebrow007",
+      "eyelashes": "eyelashes02",
+      "clothes": [
+        "male_casualsuit05",
+        "shoes02"
+      ]
+    },
+    {
+      "name": "colonist_m",
+      "role": "colonist",
+      "female": false,
+      "phenotype": {
+        "gender": 1.0,
+        "age": 0.65,
+        "muscle": 0.5,
+        "weight": 0.6,
+        "proportions": 0.5,
+        "height": 0.5,
+        "race": {
+          "asian": 0.05,
+          "caucasian": 0.1,
+          "african": 0.85
+        }
+      },
+      "proxy": "male_generic",
+      "skin": "middleage_african_male",
+      "hair": "short04",
+      "eyebrows": "eyebrow004",
+      "eyelashes": "eyelashes01",
+      "clothes": [
+        "male_casualsuit03",
+        "shoes01"
+      ]
+    },
+    {
+      "name": "colonist_f",
+      "role": "colonist",
+      "female": true,
+      "phenotype": {
+        "gender": 0.0,
+        "age": 0.4,
+        "muscle": 0.5,
+        "weight": 0.5,
+        "proportions": 0.5,
+        "height": 0.45,
+        "race": {
+          "asian": 0.85,
+          "caucasian": 0.1,
+          "african": 0.05
+        }
+      },
+      "proxy": "female_generic",
+      "skin": "young_asian_female",
+      "hair": "bob02",
+      "eyebrows": "eyebrow010",
+      "eyelashes": "eyelashes03",
+      "clothes": [
+        "female_elegantsuit01",
+        "shoes03"
+      ]
+    },
+    {
+      "name": "infected_m1",
+      "role": "infected",
+      "female": false,
+      "phenotype": {
+        "gender": 1.0,
+        "age": 0.55,
+        "muscle": 0.35,
+        "weight": 0.35,
+        "proportions": 0.5,
+        "height": 0.55,
+        "race": {
+          "asian": 0.2,
+          "caucasian": 0.6,
+          "african": 0.2
+        }
+      },
+      "proxy": "male1591",
+      "skin": "old_caucasian_male",
+      "hair": "short03",
+      "eyebrows": "eyebrow002",
+      "eyelashes": "eyelashes01",
+      "clothes": [
+        "male_elegantsuit01",
+        "shoes01"
+      ]
+    },
+    {
+      "name": "infected_m2",
+      "role": "infected",
+      "female": false,
+      "phenotype": {
+        "gender": 1.0,
+        "age": 0.75,
+        "muscle": 0.3,
+        "weight": 0.55,
+        "proportions": 0.45,
+        "height": 0.45,
+        "race": {
+          "asian": 0.1,
+          "caucasian": 0.3,
+          "african": 0.6
+        }
+      },
+      "proxy": "male1591",
+      "skin": "old_african_male",
+      "hair": "short01",
+      "eyebrows": "eyebrow005",
+      "eyelashes": "eyelashes01",
+      "clothes": [
+        "male_casualsuit01",
+        "shoes04"
+      ]
+    },
+    {
+      "name": "infected_f1",
+      "role": "infected",
+      "female": true,
+      "phenotype": {
+        "gender": 0.0,
+        "age": 0.5,
+        "muscle": 0.35,
+        "weight": 0.4,
+        "proportions": 0.5,
+        "height": 0.5,
+        "race": {
+          "asian": 0.3,
+          "caucasian": 0.6,
+          "african": 0.1
+        }
+      },
+      "proxy": "female1605",
+      "skin": "middleage_caucasian_female",
+      "hair": "long01",
+      "eyebrows": "eyebrow008",
+      "eyelashes": "eyelashes02",
+      "clothes": [
+        "male_casualsuit05",
+        "shoes05"
+      ]
+    }
+  ]
+}

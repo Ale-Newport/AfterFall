@@ -122,7 +122,7 @@ Details, phases and limitations: WORLD_EXPANSION_PROGRESS.md.
 - **Doors, keys and the three-storey apartment block** (Millbrook; also Ashford and Eastgate in the region). `DoorTests`.
 - **Vehicles**: sedan, pickup, quad bike; keys, hotwiring, fuel, repairs, trunks, persistence. `VehicleTests`.
 - **Greater Millbrook** (world version 2, 2 × 2 km, the new default): river and reservoir with bridges, Ashford, Eastgate, Pinecrest, farms, lodge, research station, rail; terrain tiles, node-view streaming and a NavMesh window. `RegionTests`.
-- **Characters**: researched and planned (CHARACTER_PIPELINE.md, ASSET_PROVENANCE.md); waiting for approval to download MPFB2 and the MakeHuman CC0 assets.
+- **Characters**: seven skinned human models made from MakeHuman's CC0 assets with MPFB (`tools/characters`), driven by the procedural rig through `SkinnedBody` (CHARACTER_PIPELINE.md, ASSET_PROVENANCE.md).
 - Tests: 211 headless and in Unity EditMode; the expansion tour (`-afterfall-tour-expansion`) covers every feature above in the macOS build.
 
 ## Gathering areas (session 6, 2026-11-24)
@@ -268,7 +268,7 @@ Bugs that only showed up in the engine, all fixed:
 - Not yet measured (needs playtests): time to first construction, time to first machine output, playtime without critical bugs.
 
 ## Next development tasks
-0. **World expansion follow-ups**: realistic characters once the MPFB2/MakeHuman download is approved (CHARACTER_PIPELINE.md); sector streaming of props and structure views for worlds beyond 2 km; far-distance tree impostors; map detail tiles; road-aware vehicle routing; vehicle sounds and headlights.
+0. **World expansion follow-ups**: motion capture and facial expressions for the characters (CHARACTER_PIPELINE.md); sector streaming of props and structure views for worlds beyond 2 km; far-distance tree impostors; map detail tiles; road-aware vehicle routing; vehicle sounds and headlights.
 1. **Playtest the acceptance scenario** ([#1](https://github.com/Ale-Newport/AfterFall/issues/1), docs/TESTING.md) by hand in the editor or the macOS build, including a session into days 2–3 for storms and a cold snap. Tune movement, camera, harvest and colonist pacing, day length, and weather balance. Record time to first construction and to first machine output.
 2. Storage designation in the strategic view (which crates take what); the Guard profession.
 3. Conveyors (automation level 3) between storage and machines.

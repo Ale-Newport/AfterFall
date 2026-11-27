@@ -1,0 +1,71 @@
+{
+  "name": "colonist_m",
+  "role": "colonist",
+  "female": false,
+  "rig": "game_engine",
+  "bones": 53,
+  "parts": [
+    {
+      "mesh": "colonist_m_skin",
+      "kind": "skin",
+      "albedo": "Textures/middleage_darkskinned_male_diffuse",
+      "normal": "",
+      "triangles": 15956
+    },
+    {
+      "mesh": "colonist_m_eyebrow004",
+      "kind": "lashes",
+      "albedo": "Textures/eyebrow004",
+      "normal": "",
+      "triangles": 192
+    },
+    {
+      "mesh": "colonist_m_eyelashes01",
+      "kind": "lashes",
+      "albedo": "Textures/eyelashes01",
+      "normal": "",
+      "triangles": 368
+    },
+    {
+      "mesh": "colonist_m_eyes",
+      "kind": "eyes",
+      "albedo": "Textures/brown_eye",
+      "normal": "",
+      "triangles": 172
+    },
+    {
+      "mesh": "colonist_m_male_casualsuit03",
+      "kind": "cloth",
+      "albedo": "Textures/male_casualsuit03_diffuse",
+      "normal": "Textures/male_casualsuit03_normal",
+      "triangles": 4800
+    },
+    {
+      "mesh": "colonist_m_shoes01",
+      "kind": "cloth",
+      "albedo": "Textures/shoes01_diffuse",
+      "normal": "Textures/shoes01_normal",
+      "triangles": 3320
+    },
+    {
+      "mesh": "colonist_m_hair",
+      "kind": "hair",
+      "albedo": "Textures/short04_diffuse",
+      "normal": "",
+      "triangles": 1050
+    }
+  ],
+  "triangles": 25858,
+  "assets": {
+    "proxy": "male_generic",
+    "skin": "middleage_african_male",
+    "hair": "short04",
+    "eyebrows": "eyebrow004",
+    "eyelashes": "eyelashes01",
+    "clothes": [
+      "male_casualsuit03",
+      "shoes01"
+    ]
+  },
+  "source": "MakeHuman system assets (CC0) via MPFB 2.0.17"
+}
