@@ -43,6 +43,9 @@ namespace Afterfall.Presentation
         public TacticalController Tactical { get; private set; }
         public Terrain Terrain { get; private set; }
         public AudioDirector Audio { get; private set; }
+
+        /// <summary>Map textures shared by the world map and the minimap.</summary>
+        public Afterfall.Presentation.UI.MapTextures Maps { get; private set; }
         public bool Running { get; private set; }
         public bool NavReady { get; private set; }
         public string CurrentSlot { get; set; } = "save1";
@@ -84,6 +87,7 @@ namespace Afterfall.Presentation
             Ui.ShowLoading("Growing the forest…");
             yield return null;
 
+            Maps = new Afterfall.Presentation.UI.MapTextures(Session.World);
             Sync = new GameObject("Entities").AddComponent<WorldSync>();
             Sync.transform.SetParent(_worldRoot, false);
             Sync.Initialize(this);
@@ -155,6 +159,7 @@ namespace Afterfall.Presentation
         {
             foreach (System.IDisposable s in _subscriptions) s.Dispose();
             _subscriptions.Clear();
+            Maps?.Dispose();
             if (_surface != null) _surface.RemoveData();
         }
 
@@ -173,6 +178,7 @@ namespace Afterfall.Presentation
             }
             UpdateCursor();
             UpdateInteraction();
+            Maps?.Update();
 
             if (!Session.Paused && !IsDead)
             {
@@ -218,6 +224,9 @@ namespace Afterfall.Presentation
             if (i.Help.WasPressedThisFrame() && !menuWindow) Ui.OpenHelp();
             if (i.CreativePanel.WasPressedThisFrame() && !menuWindow) Ui.ToggleCreativePanel();
             if (i.FreeFlight.WasPressedThisFrame() && !menuWindow && !Ui.WindowOpen && !CameraRig.TacticalActive) ToggleFlight();
+            if (i.WorldMap.WasPressedThisFrame() && !menuWindow) Ui.ToggleWorldMap();
+            if (i.MinimapZoomIn.WasPressedThisFrame()) Ui.ZoomMinimap(-1);
+            if (i.MinimapZoomOut.WasPressedThisFrame()) Ui.ZoomMinimap(1);
 
             if (!GameplayInputActive) return;
             for (int h = 0; h < i.Hotbar.Length; h++)

@@ -20,7 +20,7 @@ namespace Afterfall.Presentation
         public readonly InputActionMap Tactical;
 
         // Global
-        public readonly InputAction Pause, Inventory, ToggleTactical, QuickSave, QuickLoad, DebugOverlay, Help, Build, CreativePanel, FreeFlight, WorldMap;
+        public readonly InputAction Pause, Inventory, ToggleTactical, QuickSave, QuickLoad, DebugOverlay, Help, Build, CreativePanel, FreeFlight, WorldMap, MinimapZoomIn, MinimapZoomOut;
 
         // Player (third person)
         public readonly InputAction Move, Look, Zoom, Jump, Sprint, Crouch, Interact, Primary, Secondary, Rotate, Drop, Deconstruct;
@@ -48,6 +48,8 @@ namespace Afterfall.Presentation
             WorldMap = Button(Global, "World Map", "<Keyboard>/m");
             CreativePanel = Button(Global, "Creative Panel", "<Keyboard>/f6");
             FreeFlight = Button(Global, "Free Flight", "<Keyboard>/f7");
+            MinimapZoomIn = Button(Global, "Minimap Zoom In", "<Keyboard>/equals");
+            MinimapZoomOut = Button(Global, "Minimap Zoom Out", "<Keyboard>/minus");
 
             Move = Player.AddAction("Move", InputActionType.Value);
             Move.AddCompositeBinding("2DVector").With("Up", "<Keyboard>/w").With("Down", "<Keyboard>/s").With("Left", "<Keyboard>/a").With("Right", "<Keyboard>/d");

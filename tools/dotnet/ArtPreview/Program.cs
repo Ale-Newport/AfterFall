@@ -3,6 +3,7 @@
 //   dotnet run -c Release --project tools/dotnet/ArtPreview -- textures <outdir> [filter]
 //   dotnet run -c Release --project tools/dotnet/ArtPreview -- icons <outdir> [filter]
 //   dotnet run -c Release --project tools/dotnet/ArtPreview -- all <outdir>
+//   dotnet run -c Release --project tools/dotnet/ArtPreview -- map <outdir> [seed]
 //
 // textures: for every Surface declared in the Art sources, <key>_lit.png (2x2 tiles, lit, mid-grey tint: check
 //           seams and relief), <key>_albedo.png and <key>_normal.png.
@@ -31,6 +32,7 @@ internal static class Program
         Directory.CreateDirectory(outDir);
         if (mode == "textures" || mode == "all") Textures(outDir, filter);
         if (mode == "icons" || mode == "all") Icons(outDir, filter);
+        if (mode == "map" || mode == "all") Map(outDir, filter);
         Console.WriteLine("Wrote previews to " + outDir);
         return 0;
     }
@@ -170,6 +172,23 @@ internal static class Program
         string dir = AppContext.BaseDirectory;
         while (dir != null && !Directory.Exists(Path.Combine(dir, "Assets/_Afterfall"))) dir = Path.GetDirectoryName(dir);
         return dir ?? Directory.GetCurrentDirectory();
+    }
+
+    /// <summary>The world map as the game draws it (map.png, north up) for a seed.</summary>
+    private static void Map(string outDir, string seedText)
+    {
+        int seed = int.TryParse(seedText, out int s) ? s : 20261107;
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var layout = Afterfall.Domain.World.WorldGenerator.Generate(seed);
+        var features = Afterfall.Domain.World.MapFeatures.Build(layout);
+        long gen = sw.ElapsedMilliseconds;
+        const int res = 1024;
+        byte[] px = Afterfall.Domain.World.MapRasterizer.Render(layout, features, 0f, 0f, layout.Size, layout.Size, res, res);
+        long draw = sw.ElapsedMilliseconds - gen;
+        var flipped = new byte[px.Length];
+        for (int y = 0; y < res; y++) Array.Copy(px, y * res * 4, flipped, (res - 1 - y) * res * 4, res * 4);
+        Png.Write(Path.Combine(outDir, "map.png"), res, res, flipped);
+        Console.WriteLine($"map: seed {seed}, {layout.Size:0} m, layout {gen} ms, raster {res}x{res} in {draw} ms");
     }
 
     private static float LinearToSrgb(float v) => v <= 0.0031308f ? v * 12.92f : 1.055f * MathF.Pow(v, 1f / 2.4f) - 0.055f;

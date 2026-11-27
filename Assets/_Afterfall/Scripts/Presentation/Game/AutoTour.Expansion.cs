@@ -21,7 +21,68 @@ namespace Afterfall.Presentation
             gc.Session.Threats.SpawningEnabled = false;
             gc.Session.Weather.Hold(Afterfall.Domain.Weather.WeatherKind.Clear);
             SkipTo(gc, 11.0);
+            yield return MapScene(gc);
             yield return CreativeScene(gc);
+        }
+
+        private IEnumerator MapScene(GameController gc)
+        {
+            GameSession s = gc.Session;
+            WorldState w = s.World;
+            Line("— World map and minimap —");
+            float wait = Time.realtimeSinceStartup + P(20f);
+            while (!gc.Maps.Ready && Time.realtimeSinceStartup < wait) yield return null;
+            Check(gc.Maps.Ready, $"The map was drawn from the world layout ({gc.Maps.OverviewSize}×{gc.Maps.OverviewSize} px for {w.Layout.Size:0} m)");
+            gc.Ui.ToggleWorldMap();
+            yield return Seconds(0.5f);
+            var map = gc.Ui.CurrentWindow as WorldMapWindow;
+            if (map == null)
+            {
+                Line("FAIL: M did not open the world map");
+                yield break;
+            }
+            map.Focus(w.Layout.Size * 0.5f, w.Layout.Size * 0.5f, 1e6f);
+            yield return Seconds(0.5f);
+            var symbols = new System.Collections.Generic.List<MapSymbol>();
+            MapSymbols.Collect(gc, false, symbols);
+            int pois = symbols.Count(x => x.Kind == MapSymbolKind.Poi);
+            int discovered = w.Layout.Pois.Count(p => w.Exploration.DiscoveredPois.Contains(p.Id));
+            Check(pois == discovered && pois < w.Layout.Pois.Count, $"Survival shows only discovered places on the map ({pois} of {w.Layout.Pois.Count}); unexplored land is under fog ({w.Exploration.RevealedFraction * 100f:0}% explored)");
+            yield return Capture("40_world_map");
+
+            PoiInfo target = w.Layout.Poi("workshop");
+            OpResult set = map.SetWaypointAt(target.Center.X, target.Center.Z);
+            Check(set.Ok && w.Navigation.HasWaypoint && Vector2.Distance(new Vector2(w.Navigation.Waypoint.X, w.Navigation.Waypoint.Z), new Vector2(target.Center.X, target.Center.Z)) < 0.5f,
+                $"Clicked the map to set a waypoint at the distant workshop: {set.Message}");
+            map.PlaceMarker(260f, 300f);
+            Check(w.Navigation.Markers.Any(m => m.Kind == MarkerKind.Custom), "Right-click placed a custom marker");
+            Vector3 me = gc.Player.transform.position;
+            map.Focus(me.x, me.z, 0.35f);
+            yield return Seconds(0.5f);
+            map.View.WorldToScreen(me.x, me.z, out float sx, out float sy);
+            Check(Mathf.Abs(sx - map.View.Width * 0.5f) < 1f && Mathf.Abs(sy - map.View.Height * 0.5f) < 1f, $"The player marker sits at the survivor's position on the map ({sx:0}, {sy:0} in a {map.View.Width:0}×{map.View.Height:0} view)");
+            yield return Capture("41_world_map_zoomed");
+            gc.Ui.CloseWindow();
+
+            // Face the waypoint and walk toward it: the minimap, its distance and the on-screen marker follow.
+            Vector3 to = w.Navigation.Waypoint.ToUnity() - gc.Player.transform.position;
+            gc.CameraRig.Look(Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg, 6f);
+            yield return Seconds(0.6f);
+            Check(gc.Ui.Hud != null && gc.Ui.Hud.Waypoint.OnScreen, "Facing the waypoint, its marker is drawn over it on screen");
+            float before = Vec3.DistanceXZ(s.Player.Position, w.Navigation.Waypoint);
+            gc.Player.SetScriptedMove(Vector2.up, false);
+            yield return Seconds(5f);
+            gc.Player.SetScriptedMove(Vector2.zero, false);
+            float after = Vec3.DistanceXZ(s.Player.Position, w.Navigation.Waypoint);
+            Check(after < before - 12f, $"Walking toward the waypoint: {before:0} m → {after:0} m");
+            yield return Capture("42_minimap_and_waypoint");
+            gc.CameraRig.Look(Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg + 150f, 6f);
+            yield return Seconds(0.6f);
+            Check(!gc.Ui.Hud.Waypoint.OnScreen, "Facing away, the waypoint marker is pinned to the screen edge");
+            gc.Settings.MinimapRotate = true;
+            yield return Seconds(0.5f);
+            yield return Capture("43_minimap_rotating");
+            gc.Settings.MinimapRotate = false;
         }
 
         private IEnumerator CreativeScene(GameController gc)
@@ -131,8 +192,9 @@ namespace Afterfall.Presentation
             gc.Player.Flight.SetScriptedInput(Vector3.zero, false);
             float flown = Vector2.Distance(new Vector2(start.x, start.z), new Vector2(gc.Player.transform.position.x, gc.Player.transform.position.z));
             float seconds = Time.realtimeSinceStartup - flightStart;
+            float remaining = Vector2.Distance(new Vector2(gc.Player.transform.position.x, gc.Player.transform.position.z), new Vector2(workshop.Center.X, workshop.Center.Z));
             frames.Sort();
-            Check(flown > 200f, $"Flew {flown:0} m toward Hartley's Workshop in {seconds:0.0} s (top speed {maxSpeed:0} m/s); frames median {(frames.Count > 0 ? frames[frames.Count / 2] : 0):0.0} ms, worst {(frames.Count > 0 ? frames[frames.Count - 1] : 0):0.0} ms");
+            Check(remaining < 40f && flown > 150f, $"Flew {flown:0} m to within {remaining:0} m of Hartley's Workshop in {seconds:0.0} s (top speed {maxSpeed:0} m/s); frames median {(frames.Count > 0 ? frames[frames.Count / 2] : 0):0.0} ms, worst {(frames.Count > 0 ? frames[frames.Count - 1] : 0):0.0} ms");
             Check(s.Player.Activity.Flying, "The simulation knows the survivor is flying");
             Check(workshopKnown || !s.World.Exploration.IsRevealed(workshop.Center.X, workshop.Center.Z), "Flying over unexplored land does not reveal it");
             Check(!gc.Player.Rig.gameObject.activeSelf, "Still no body animation in flight");

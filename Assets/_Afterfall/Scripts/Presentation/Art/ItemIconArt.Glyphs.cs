@@ -65,6 +65,53 @@ namespace Afterfall.Presentation.Art
                         l.Circle(50f, 50f, 3.5f, new Rgba(0.75f, 0.2f, 0.15f));
                     }, 2.4f, 0f);
                     break;
+                case "map_player":
+                    // An arrowhead pointing up (north on a north-up map); the UI rotates it to the heading.
+                    Part(art, l => l.Polygon(Paint.Shaded(new Rgba(1f, 0.62f, 0.18f), 30f, 10f, 70f, 90f, 0.25f), 50f, 8f, 82f, 88f, 50f, 70f, 18f, 88f), 3f, 0f);
+                    break;
+                case "map_waypoint":
+                    Part(art, l =>
+                    {
+                        l.Polygon(Paint.Shaded(new Rgba(1f, 0.84f, 0.3f), 20f, 10f, 80f, 90f, 0.3f), 50f, 8f, 88f, 50f, 50f, 92f, 12f, 50f);
+                        l.Circle(50f, 50f, 10f, new Rgba(0.45f, 0.28f, 0.05f));
+                    }, 3f, 0f);
+                    break;
+                case "map_marker":
+                    Part(art, l =>
+                    {
+                        Paint red = Paint.Shaded(new Rgba(0.92f, 0.3f, 0.24f), 25f, 12f, 75f, 70f, 0.3f);
+                        l.Polygon(red, 30f, 50f, 70f, 50f, 50f, 94f);
+                        l.Circle(50f, 38f, 26f, red);
+                        l.Circle(50f, 38f, 10f, new Rgba(0.98f, 0.94f, 0.86f));
+                    }, 3f, 0f);
+                    break;
+                case "map_bookmark":
+                    Part(art, l =>
+                    {
+                        var pts = new float[20];
+                        for (int i = 0; i < 10; i++)
+                        {
+                            float a = -MathF.PI / 2f + i * MathF.PI / 5f;
+                            float r = i % 2 == 0 ? 42f : 18f;
+                            pts[i * 2] = 50f + MathF.Cos(a) * r;
+                            pts[i * 2 + 1] = 52f + MathF.Sin(a) * r;
+                        }
+                        l.Polygon(Paint.Shaded(new Rgba(0.4f, 0.82f, 0.95f), 15f, 10f, 85f, 90f, 0.3f), pts);
+                    }, 3f, 0f);
+                    break;
+                case "map_settlement":
+                    Part(art, l =>
+                    {
+                        Paint wall = Paint.Shaded(new Rgba(0.55f, 0.85f, 0.45f), 20f, 40f, 80f, 90f, 0.25f);
+                        l.RoundRect(50f, 66f, 56f, 40f, 3f, 0f, wall);
+                        l.Polygon(Paint.Shaded(new Rgba(0.35f, 0.6f, 0.28f), 15f, 10f, 85f, 50f, 0.25f), 50f, 12f, 88f, 48f, 12f, 48f);
+                        l.RoundRect(50f, 74f, 14f, 24f, 2f, 0f, new Rgba(0.2f, 0.3f, 0.15f));
+                    }, 3f, 0f);
+                    break;
+                case "map_dot":
+                    // White so the UI can tint it per kind.
+                    Part(art, l => l.Circle(50f, 50f, 30f, new Rgba(1f, 1f, 1f)), 3f, 0f);
+                    break;
                 default:
                     Part(art, l => l.Circle(50f, 50f, 20f, Paint.Shaded(bone, 30f, 30f, 70f, 70f, 0.25f)), 2f, 0f);
                     break;

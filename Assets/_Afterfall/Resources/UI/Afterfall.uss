@@ -170,7 +170,7 @@
 .hud-equipped { font-size: 14px; color: rgb(220, 214, 196); margin-top: 4px; }
 .hud-hand { margin-top: 2px; }
 .hud-hand > .hud-equipped { margin-top: 0; margin-left: 6px; }
-.hud-craft { position: absolute; right: 18px; bottom: 100px; width: 280px; }
+.hud-craft { position: absolute; right: 18px; bottom: 300px; width: 280px; }
 .hud-placement { position: absolute; left: 50%; bottom: 100px; width: 520px; margin-left: -260px; }
 .hud-warning { position: absolute; left: 18px; top: 14px; width: 420px; }
 
@@ -229,3 +229,43 @@
 .creative-tab { margin-left: 6px; padding: 3px 14px; font-size: 16px; }
 .creative-list .unity-collection-view__item--selected { background-color: rgba(120, 96, 44, 0.85); }
 .creative-list .unity-collection-view__item--selected Label { color: rgb(255, 244, 214); }
+
+/* World map (M) */
+.map-window { left: 2%; right: 2%; top: 3%; bottom: 4%; padding: 8px; }
+.map-viewport { overflow: hidden; background-color: rgb(46, 48, 44); border-radius: 6px; border-width: 1px; border-color: rgba(170, 155, 110, 0.6); }
+.map-layer { position: absolute; left: 0; top: 0; -unity-background-scale-mode: stretch-to-fill; }
+.map-side { width: 360px; margin-right: 10px; }
+.map-markers { max-height: 220px; }
+.map-legend { margin-top: 8px; }
+.map-sym { position: absolute; width: 0; height: 0; overflow: visible; }
+.map-sym-icon { position: absolute; -unity-background-scale-mode: scale-to-fit; }
+.map-sym-label {
+    position: absolute; translate: -50% 0; white-space: nowrap; font-size: 13px; padding: 0 4px; margin-top: 1px;
+    color: rgb(40, 34, 26); background-color: rgba(250, 244, 226, 0.82); border-radius: 3px; -unity-font-style: bold;
+}
+.map-sym-label--town { font-size: 16px; }
+
+/* Minimap (HUD, bottom right) */
+.minimap { position: absolute; right: 18px; bottom: 18px; width: 220px; height: 268px; }
+.minimap-disc {
+    position: absolute; left: 0; top: 0; width: 220px; height: 220px; overflow: hidden;
+    border-radius: 110px; border-width: 3px; border-color: rgba(30, 28, 22, 0.95);
+    background-color: rgb(46, 48, 44);
+}
+.minimap-north {
+    position: absolute; width: 16px; height: 20px; font-size: 14px; -unity-font-style: bold; -unity-text-align: middle-center;
+    color: rgb(250, 230, 170); background-color: rgba(30, 28, 22, 0.95); border-radius: 8px;
+}
+.minimap-info {
+    position: absolute; left: 0; right: 0; top: 226px; font-size: 14px; -unity-text-align: upper-center; white-space: normal;
+    color: rgb(240, 230, 200); background-color: rgba(18, 20, 18, 0.75); border-radius: 4px; padding: 2px 6px;
+}
+
+/* Waypoint marker over the world */
+.waypoint { position: absolute; width: 0; height: 0; overflow: visible; }
+.waypoint-icon { position: absolute; left: -14px; top: -14px; width: 28px; height: 28px; -unity-background-scale-mode: scale-to-fit; }
+.waypoint-arrow { position: absolute; left: -15px; top: -15px; width: 30px; height: 30px; -unity-background-scale-mode: scale-to-fit; -unity-background-image-tint-color: rgb(255, 214, 90); }
+.waypoint-label {
+    position: absolute; top: 16px; translate: -50% 0; white-space: nowrap; font-size: 14px; -unity-font-style: bold;
+    color: rgb(255, 236, 170); text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95); background-color: rgba(0, 0, 0, 0.35); border-radius: 3px; padding: 0 4px;
+}

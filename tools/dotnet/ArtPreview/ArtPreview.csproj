@@ -16,4 +16,8 @@
     <Compile Include="../../../Assets/_Afterfall/Scripts/Presentation/Art/**/*.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The map is drawn from the engine-independent world layout. -->
+    <ProjectReference Include="../AfterfallSim/AfterfallSim.csproj" />
+  </ItemGroup>
 </Project>

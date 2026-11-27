@@ -298,6 +298,7 @@ namespace Afterfall.Presentation.UI
                 "R rotate blueprint · RMB cancel placement\n" +
                 "Tab strategic view (WASD pan, Q/E rotate, wheel zoom, LMB select)\n" +
                 "F5 quick save · F9 quick load · F3 diagnostics · Esc menu\n" +
+                "M world map (LMB waypoint, RMB marker, drag pan, wheel zoom) · = / - minimap zoom\n" +
                 "F6 creative & developer panel · F7 free flight (Creative or developer tools)\n" +
                 "In flight: WASD along the view · Space up · Ctrl/C down · Shift boost · wheel speed", "wrap", "grow"));
             cols.Add(UiKit.Text(

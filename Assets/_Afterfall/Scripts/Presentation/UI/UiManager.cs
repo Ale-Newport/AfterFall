@@ -273,6 +273,17 @@ namespace Afterfall.Presentation.UI
             else OpenWindow(new BuildMenuWindow(this, Game));
         }
 
+        public void ToggleWorldMap()
+        {
+            if (_window is WorldMapWindow) CloseWindow();
+            else OpenWindow(new WorldMapWindow(this, Game));
+        }
+
+        public void ZoomMinimap(int steps) => _hud?.Minimap.Zoom(steps);
+
+        /// <summary>The HUD (minimap, waypoint marker) while a game is attached.</summary>
+        public HudView Hud => _hud;
+
         public void ToggleCreativePanel()
         {
             if (_window is CreativePanel) CloseWindow();

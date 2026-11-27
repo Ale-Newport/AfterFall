@@ -39,6 +39,9 @@ namespace Afterfall.Presentation
         /// <summary>Which sections the F3 diagnostics overlay shows (<see cref="DiagnosticSection"/> flags).</summary>
         public int DiagnosticSections = (int)DiagnosticSection.Default;
 
+        /// <summary>Minimap turns with the camera (false: north stays up).</summary>
+        public bool MinimapRotate;
+
         public static AppSettings Load()
         {
             var s = new AppSettings
@@ -53,7 +56,8 @@ namespace Afterfall.Presentation
                 Captions = PlayerPrefs.GetInt(Prefix + "captions", 1) == 1,
                 CreativeFavorites = PlayerPrefs.GetString(Prefix + "creativeFavorites", ""),
                 CreativeRecent = PlayerPrefs.GetString(Prefix + "creativeRecent", ""),
-                DiagnosticSections = PlayerPrefs.GetInt(Prefix + "diagnostics", (int)DiagnosticSection.Default)
+                DiagnosticSections = PlayerPrefs.GetInt(Prefix + "diagnostics", (int)DiagnosticSection.Default),
+                MinimapRotate = PlayerPrefs.GetInt(Prefix + "minimapRotate", 0) == 1
             };
             s.Clamp();
             return s;
@@ -73,6 +77,7 @@ namespace Afterfall.Presentation
             PlayerPrefs.SetString(Prefix + "creativeFavorites", CreativeFavorites ?? "");
             PlayerPrefs.SetString(Prefix + "creativeRecent", CreativeRecent ?? "");
             PlayerPrefs.SetInt(Prefix + "diagnostics", DiagnosticSections);
+            PlayerPrefs.SetInt(Prefix + "minimapRotate", MinimapRotate ? 1 : 0);
             PlayerPrefs.Save();
         }
 

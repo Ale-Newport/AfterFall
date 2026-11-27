@@ -29,6 +29,9 @@ namespace Afterfall.Presentation
         private float _yaw;
         private float _faceAimUntil;
 
+        private Vector2 _scriptedMove;
+        private bool _scriptedSprint;
+
         public HumanoidRig Rig { get; private set; }
 
         /// <summary>Creative/debug free flight; while active it moves this body instead of the controller.</summary>
@@ -92,6 +95,13 @@ namespace Afterfall.Presentation
             _verticalSpeed = 0f;
         }
 
+        /// <summary>Walks without a keyboard (the scripted tour): the same input the Move action gives, camera-relative.</summary>
+        public void SetScriptedMove(Vector2 move, bool sprint)
+        {
+            _scriptedMove = move;
+            _scriptedSprint = sprint;
+        }
+
         /// <summary>Turn the body toward the camera aim for a moment (attacking, harvesting).</summary>
         public void FaceAim(float seconds = 0.6f) => _faceAimUntil = Time.time + seconds;
 
@@ -113,6 +123,11 @@ namespace Afterfall.Presentation
                 wantSprint = input.Sprint.IsPressed();
                 jump = input.Jump.WasPressedThisFrame();
                 if (input.Crouch.WasPressedThisFrame()) ToggleCrouch();
+            }
+            if (!dead && _scriptedMove.sqrMagnitude > 0f)
+            {
+                move = _scriptedMove;
+                wantSprint = _scriptedSprint;
             }
             if (move.sqrMagnitude > 1f) move.Normalize();
 

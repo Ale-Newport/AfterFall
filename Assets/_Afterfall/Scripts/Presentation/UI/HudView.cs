@@ -25,6 +25,9 @@ namespace Afterfall.Presentation.UI
 
         public VisualElement Root { get; }
 
+        public Minimap Minimap { get; }
+        public WaypointIndicator Waypoint { get; }
+
         public HudView(UiManager ui, GameController gc)
         {
             _ui = ui;
@@ -47,6 +50,10 @@ namespace Afterfall.Presentation.UI
             _mode = Root.Put(UiKit.Text("", "hud-mode"));
             _warnings = Root.Put(UiKit.Text("", "hud-warning", "warn"));
             _crosshair = Root.Put(UiKit.Div("hud-crosshair"));
+            Waypoint = new WaypointIndicator(gc);
+            Root.Add(Waypoint.Root);
+            Minimap = new Minimap(gc);
+            Root.Add(Minimap.Root);
             _prompt = Root.Put(UiKit.Text("", "hud-prompt"));
             _caption = Root.Put(UiKit.Text("", "hud-caption"));
 
@@ -114,6 +121,8 @@ namespace Afterfall.Presentation.UI
             _gc.Ui.SetToastsBesidePanel(tactical);
             UiKit.Show(_vitals, true);
             UiKit.Show(_crosshair, !tactical && !windows && !v.IsDead);
+            Minimap.Refresh(!tactical && !v.IsDead);
+            Waypoint.Refresh(!tactical && !windows && !v.IsDead);
             for (int i = 0; i < _hotbar.Length; i++)
             {
                 _hotbar[i].Set(p.Inventory.GetSlot(i), items);
