@@ -409,7 +409,7 @@ namespace Afterfall.Domain.Construction
                 while (remaining > 0)
                 {
                     int q = Math.Min(max, remaining);
-                    result.Add(new ItemStack(s.ItemId, q, s.Durability));
+                    result.Add(new ItemStack(s.ItemId, q, s.Durability, s.Tag));
                     remaining -= q;
                 }
             }

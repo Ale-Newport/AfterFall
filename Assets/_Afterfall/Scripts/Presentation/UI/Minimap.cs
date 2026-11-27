@@ -78,8 +78,12 @@ namespace Afterfall.Presentation.UI
 
         public void Zoom(int steps) => _zoom = Mathf.Clamp(_zoom + steps, 0, Zooms.Length - 1);
 
+        /// <summary>Stops updating and hides the minimap (performance measurements).</summary>
+        public bool Suspended { get; set; }
+
         public void Refresh(bool visible)
         {
+            if (Suspended) visible = false;
             UiKit.Show(Root, visible);
             if (!visible) return;
             MapTextures maps = _gc.Maps;
@@ -133,6 +137,8 @@ namespace Afterfall.Presentation.UI
 
             MapNavigation nav = w.Navigation;
             string place = w.Layout.PoiAt(me.x, me.z) is PoiInfo poi && w.Exploration.DiscoveredPois.Contains(poi.Id) ? poi.Name : "";
+            PlanRoom room = w.Layout.RoomAt(me.ToSim(), out PlacedPlan building);
+            if (room != null) place = $"{building.Plan.Name} — {room.Name}";
             string waypoint = nav.HasWaypoint
                 ? $"{nav.WaypointLabel} · {MapGeometry.Distance(Vec3.DistanceXZ(new Vec3(me.x, 0f, me.z), nav.Waypoint))}\u00A0{MapGeometry.Cardinal(MapGeometry.Bearing(new Vec3(me.x, 0f, me.z), nav.Waypoint))}"
                 : "";

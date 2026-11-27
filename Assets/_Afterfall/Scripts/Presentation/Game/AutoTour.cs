@@ -120,6 +120,7 @@ namespace Afterfall.Presentation
             Line($"NavMesh ready: {gc.NavReady} after {Time.realtimeSinceStartup - t0:0.0} s");
             yield return Seconds(2f);
             yield return Capture("02_start_camp");
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-afterfall-tour-perf") >= 0) yield return PerfAttribution(gc);
             if (Array.IndexOf(Environment.GetCommandLineArgs(), OnlyExpansionFlag) >= 0)
             {
                 // Quick iteration: only the world-expansion scenes.

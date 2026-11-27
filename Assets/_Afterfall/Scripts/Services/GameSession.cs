@@ -492,11 +492,42 @@ namespace Afterfall.Services
             return OpResult.Success("Respawn point set. You will wake up here.");
         }
 
+        /// <summary>Opens or closes a door within reach (a locked one opens only with its key, which unlocks it).</summary>
         public OpResult ToggleDoor(EntityId id)
         {
-            if (!World.Structures.TryGetValue(id, out Structure s) || Content.Building(s.DefId)?.IsDoor != true) return OpResult.Fail("not_door", "");
-            s.DoorOpen = !s.DoorOpen;
-            return OpResult.Success(s.DoorOpen ? "Door opened." : "Door closed.");
+            if (Player.Vitals.IsDead) return OpResult.Fail("dead", DeadReason);
+            if (!World.Structures.TryGetValue(id, out Structure s)) return OpResult.Fail("missing", "Nothing there.");
+            BuildingDefinition def = Content.Building(s.DefId);
+            if (Vec3.Distance(s.Position, Player.Position) > InteractRange + 1f) return OpResult.Fail("too_far", "Move closer.");
+            OpResult r = DoorRules.Toggle(s, def, Player.Inventory);
+            if (r.Ok) EmitNoise(s.Position, 4f, "door");
+            return r;
+        }
+
+        /// <summary>Locks or unlocks a door within reach with its key.</summary>
+        public OpResult SetDoorLocked(EntityId id, bool locked)
+        {
+            if (Player.Vitals.IsDead) return OpResult.Fail("dead", DeadReason);
+            if (!World.Structures.TryGetValue(id, out Structure s)) return OpResult.Fail("missing", "Nothing there.");
+            if (Vec3.Distance(s.Position, Player.Position) > InteractRange + 1f) return OpResult.Fail("too_far", "Move closer.");
+            return DoorRules.SetLocked(s, Content.Building(s.DefId), Player.Inventory, locked);
+        }
+
+        /// <summary>A colonist opens an unlocked door in their way (presentation calls this when one blocks their path).</summary>
+        public OpResult OpenDoorForColonist(EntityId colonistId, EntityId doorId)
+        {
+            if (!World.Colonists.TryGetValue(colonistId, out var c) || !World.Structures.TryGetValue(doorId, out Structure s)) return OpResult.Fail("missing", "");
+            if (Vec3.DistanceXZ(c.Position, s.Position) > 3.5f) return OpResult.Fail("too_far", "");
+            return DoorRules.OpenForColonist(s, Content.Building(s.DefId));
+        }
+
+        /// <summary>Closes a door that a colonist opened once nobody is passing (presentation decides when).</summary>
+        public void CloseDoorBehind(EntityId doorId)
+        {
+            if (!World.Structures.TryGetValue(doorId, out Structure s)) return;
+            BuildingDefinition def = Content.Building(s.DefId);
+            if (!DoorRules.IsDoor(s, def) || !s.DoorOpen || DoorRules.IsBroken(s, def)) return;
+            s.DoorOpen = false;
         }
 
         // ================================================================== inventories & machines

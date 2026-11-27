@@ -50,6 +50,9 @@ namespace Afterfall.Persistence
         public string ItemId { get; set; } = "";
         public int Quantity { get; set; }
         public int Durability { get; set; }
+
+        /// <summary>Per-item data (which lock a key opens); null for ordinary items.</summary>
+        public string Tag { get; set; }
     }
 
     public sealed class InventoryDto
@@ -116,6 +119,9 @@ namespace Afterfall.Persistence
         public string PoiId { get; set; } = "";
         public bool Searched { get; set; }
         public bool DoorOpen { get; set; }
+        public bool DoorLocked { get; set; }
+        public string LockId { get; set; } = "";
+        public string SeedKey { get; set; } = "";
         public bool Enabled { get; set; } = true;
         public InventoryDto Storage { get; set; }
         public MachineDto Machine { get; set; }

@@ -71,6 +71,8 @@ namespace Afterfall.Services
                 world.AddStructure(fire);
             }
 
+            WorldSeeding.EnsureFixtures(world, content);
+
             var session = new GameSession(content, world);
             session.Tech.Evaluate();
 

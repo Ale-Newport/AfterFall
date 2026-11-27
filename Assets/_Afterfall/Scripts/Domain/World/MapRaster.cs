@@ -202,15 +202,19 @@ namespace Afterfall.Domain.World
         private static readonly Rgb BuildingEdge = new Rgb(84, 64, 56);
         private static readonly Rgb CanopyFill = new Rgb(186, 176, 164);
 
-        /// <summary>Renders the world rectangle [x0,x1]×[z0,z1] into a <paramref name="width"/>×<paramref name="height"/> RGBA image.</summary>
-        public static byte[] Render(WorldLayout layout, MapFeatures features, float x0, float z0, float x1, float z1, int width, int height)
+        /// <summary>
+        /// Renders the world rectangle [x0,x1]×[z0,z1] into a <paramref name="width"/>×<paramref name="height"/> RGBA image.
+        /// With <paramref name="parallel"/> off it uses only the calling thread (the game renders on one
+        /// low-priority thread so it never competes with the frame).
+        /// </summary>
+        public static byte[] Render(WorldLayout layout, MapFeatures features, float x0, float z0, float x1, float z1, int width, int height, bool parallel = true)
         {
             var px = new byte[width * height * 4];
             float sx = (x1 - x0) / width, sz = (z1 - z0) / height;
             float water = layout.WaterLevel;
             float maxH = layout.MaxHeight;
 
-            Parallel.For(0, height, row =>
+            void Row(int row)
             {
                 float wz = z0 + (row + 0.5f) * sz;
                 for (int col = 0; col < width; col++)
@@ -223,7 +227,10 @@ namespace Afterfall.Domain.World
                     px[o + 2] = Byte(c.B);
                     px[o + 3] = 255;
                 }
-            });
+            }
+            if (parallel) Parallel.For(0, height, Row);
+            else
+                for (int row = 0; row < height; row++) Row(row);
 
             float pixel = Math.Max(sx, sz);
             foreach (MapFeatures.Footprint b in features.Buildings) DrawFootprint(px, width, height, x0, z0, sx, sz, b, pixel);

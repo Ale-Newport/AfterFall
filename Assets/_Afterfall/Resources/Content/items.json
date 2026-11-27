@@ -483,5 +483,15 @@
       "thirst": 0,
       "warmth": 22
     }
+  },
+  {
+    "id": "key",
+    "name": "Key",
+    "description": "Opens one particular lock; the label says which.",
+    "category": "Salvaged",
+    "maxStack": 1,
+    "weight": 0.02,
+    "icon": "KY",
+    "color": "#C8A040"
   }
 ]

@@ -62,6 +62,7 @@ namespace Afterfall.Services
             try
             {
                 WorldState world = SaveSerializer.Deserialize(_store.ReadMain(slot), content, result.Warnings);
+                WorldSeeding.EnsureFixtures(world, content);
                 result.Session = new GameSession(content, world);
                 return result;
             }
@@ -76,6 +77,7 @@ namespace Afterfall.Services
                 try
                 {
                     WorldState world = SaveSerializer.Deserialize(backup, content, result.Warnings);
+                    WorldSeeding.EnsureFixtures(world, content);
                     result.Session = new GameSession(content, world);
                     result.RecoveredFromBackup = true;
                     result.Warnings.Add("Main save was damaged (" + ex.Message + "); loaded the previous backup.");

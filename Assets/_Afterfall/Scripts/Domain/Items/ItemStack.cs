@@ -13,18 +13,28 @@ namespace Afterfall.Domain.Items
         /// <summary>Remaining durability for durable items (MaxStack 1); 0 for others.</summary>
         public int Durability;
 
-        public ItemStack(string itemId, int quantity, int durability = 0)
+        /// <summary>
+        /// Per-item data for single items that are not interchangeable, such as which lock a key
+        /// opens ("Millbrook Apartments · Flat 3"). Null for ordinary items. A tagged stack always
+        /// holds one item in its own slot and is never merged.
+        /// </summary>
+        public string Tag;
+
+        public ItemStack(string itemId, int quantity, int durability = 0, string tag = null)
         {
             ItemId = itemId;
             Quantity = quantity;
             Durability = durability;
+            Tag = string.IsNullOrEmpty(tag) ? null : tag;
         }
+
+        public bool IsTagged => !string.IsNullOrEmpty(Tag);
 
         public static readonly ItemStack Empty = new ItemStack(null, 0);
 
         public bool IsEmpty => Quantity <= 0 || string.IsNullOrEmpty(ItemId);
 
-        public override string ToString() => IsEmpty ? "(empty)" : $"{ItemId} x{Quantity}" + (Durability > 0 ? $" [{Durability}]" : "");
+        public override string ToString() => IsEmpty ? "(empty)" : $"{ItemId} x{Quantity}" + (Durability > 0 ? $" [{Durability}]" : "") + (IsTagged ? $" <{Tag}>" : "");
     }
 
     /// <summary>An item id with a quantity, used by recipes, costs and loot.</summary>

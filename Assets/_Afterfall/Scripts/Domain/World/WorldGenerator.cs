@@ -55,6 +55,8 @@ namespace Afterfall.Domain.World
             PlaceSurvivors(layout);
             PlaceVegetation(layout, seed);
             PlaceForestSpawns(layout, seed);
+            // Added after the original content so every earlier seed, loot roll and spawn is unchanged.
+            PlacePlan(layout, BuildingPlans.MillbrookApartments(), "millbrook", 206f, 322f, 180f);
             return layout;
         }
 
@@ -464,6 +466,27 @@ namespace Afterfall.Domain.World
                 if (Vec3.DistanceXZ(new Vec3(x, 0, z), l.PlayerSpawn) < 70f) continue;
                 l.ZombieSpawnPoints.Add(l.Ground(x, z));
                 added++;
+            }
+        }
+
+        // ------------------------------------------------------------------ planned buildings
+
+        /// <summary>Places a multi-storey building: its shell as a prop, and every door and piece of furniture as a keyed fixture.</summary>
+        private static void PlacePlan(WorldLayout l, BuildingPlan plan, string poi, float x, float z, float yaw)
+        {
+            Vec3 origin = l.Ground(x, z);
+            var placed = new PlacedPlan { Plan = plan, Origin = origin, Yaw = yaw, PoiId = poi };
+            l.Plans.Add(placed);
+            l.Props.Add(new PropPlacement { Kind = "apartment", Position = origin, Yaw = yaw, Size = new Vec3(plan.Width, plan.TotalHeight, plan.Depth), PoiId = poi, PlanId = plan.Id });
+            foreach (PlanFixture f in plan.Fixtures)
+            {
+                var seed = new FixtureSeed
+                {
+                    Key = f.Key, DefId = f.DefId, Position = placed.ToWorld(f.X, f.Z, f.Floor), Yaw = yaw + f.Yaw, PoiId = poi,
+                    LootTable = f.LootTable, LockId = f.LockId, Locked = f.Locked
+                };
+                seed.KeysInside.AddRange(f.KeysInside);
+                l.Fixtures.Add(seed);
             }
         }
 

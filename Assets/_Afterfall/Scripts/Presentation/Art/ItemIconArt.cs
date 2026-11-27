@@ -47,6 +47,7 @@ namespace Afterfall.Presentation.Art
             ["metal_pickaxe"] = IronPickaxe,
             ["machete"] = Machete,
             ["lead_pipe"] = LeadPipe,
+            ["key"] = DoorKey,
             // Processed, electrical and mechanical (ItemIconArt.Industry.cs)
             ["planks"] = Planks,
             ["rope"] = RopeCoil,

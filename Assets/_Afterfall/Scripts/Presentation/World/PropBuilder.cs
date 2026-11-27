@@ -44,6 +44,7 @@ namespace Afterfall.Presentation
                 case "pylon": Pylon(t, s); break;
                 case "cliff": Cliff(t, s, p.Variant * 13 + place % 7); break;
                 case "silo": Silo(t, s); break;
+                case "apartment": PlanBuilder.Build(t, Afterfall.Domain.World.BuildingPlans.Get(p.PlanId)); break;
                 case "power_pole_old": OldPole(t, s, place % 4); break;
                 default:
                     Shapes.BevelBox(t, "Block", Mat(Surface.Concrete, new Color(0.55f, 0.54f, 0.52f)), new Vector3(0, s.y * 0.5f, 0), s, 0.04f);

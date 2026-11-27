@@ -238,11 +238,30 @@ namespace Afterfall.Domain.Items
             return toAdd;
         }
 
-        /// <summary>Adds an exact stack (preserving durability) or nothing.</summary>
+        /// <summary>Adds an exact stack (preserving durability and tag) or nothing.</summary>
         public bool TryAddStack(ItemStack stack)
         {
             if (stack.IsEmpty) return true;
+            if (stack.IsTagged)
+            {
+                // A tagged item (a key for one lock) keeps its own slot and its data.
+                if (stack.Quantity != 1 || !CanAccept(stack.ItemId, 1)) return false;
+                int slot = FirstEmptySlot();
+                if (slot < 0) return false;
+                _slots[slot] = stack;
+                NotifyChanged();
+                return true;
+            }
             return TryAdd(stack.ItemId, stack.Quantity, stack.Durability > 0 ? stack.Durability : -1);
+        }
+
+        /// <summary>True if a tagged item with exactly this tag (for example the key to one lock) is here.</summary>
+        public bool HasTagged(string itemId, string tag)
+        {
+            if (string.IsNullOrEmpty(tag)) return false;
+            foreach (ItemStack s in _slots)
+                if (!s.IsEmpty && s.ItemId == itemId && string.Equals(s.Tag, tag, StringComparison.Ordinal)) return true;
+            return false;
         }
 
         /// <summary>
@@ -325,7 +344,7 @@ namespace Afterfall.Domain.Items
             if (s.IsEmpty || quantity <= 0) return ItemStack.Empty;
             int allowed = Math.Min(s.Quantity, Math.Min(quantity, Available(s.ItemId)));
             if (allowed <= 0) return ItemStack.Empty;
-            var taken = new ItemStack(s.ItemId, allowed, s.Durability);
+            var taken = new ItemStack(s.ItemId, allowed, s.Durability, s.Tag);
             s.Quantity -= allowed;
             _slots[index] = s.Quantity > 0 ? s : ItemStack.Empty;
             NotifyChanged();
@@ -390,7 +409,7 @@ namespace Afterfall.Domain.Items
             if (empty < 0) return false;
             s.Quantity -= amount;
             _slots[index] = s;
-            _slots[empty] = new ItemStack(s.ItemId, amount, s.Durability);
+            _slots[empty] = new ItemStack(s.ItemId, amount, s.Durability, s.Tag);
             NotifyChanged();
             return true;
         }
@@ -400,12 +419,18 @@ namespace Afterfall.Domain.Items
         {
             Dictionary<string, int> totals = Totals();
             var durables = new List<ItemStack>();
+            // Durable and tagged items keep their own slots (and their condition or data).
             foreach (ItemStack s in _slots)
-                if (!s.IsEmpty && _catalog.TryGet(s.ItemId, out ItemDefinition d) && d.HasDurability) durables.Add(s);
+                if (!s.IsEmpty && (s.IsTagged || _catalog.TryGet(s.ItemId, out ItemDefinition d) && d.HasDurability)) durables.Add(s);
             for (int i = 0; i < _slots.Length; i++) _slots[i] = ItemStack.Empty;
             foreach (ItemStack s in durables)
             {
-                totals.Remove(s.ItemId);
+                if (totals.TryGetValue(s.ItemId, out int left))
+                {
+                    left -= s.Quantity;
+                    if (left > 0) totals[s.ItemId] = left;
+                    else totals.Remove(s.ItemId);
+                }
                 _slots[FirstEmptySlot()] = s;
             }
             foreach (KeyValuePair<string, int> kv in totals)
@@ -477,7 +502,11 @@ namespace Afterfall.Domain.Items
             if (total != r.Quantity) return false;
             _reservations.Remove(token.Id);
             foreach (ItemStack s in stacks)
-                if (!s.IsEmpty) PlaceUnchecked(s.ItemId, s.Quantity, s.Durability > 0 ? s.Durability : -1);
+            {
+                if (s.IsEmpty) continue;
+                if (s.IsTagged) _slots[FirstEmptySlot()] = s;
+                else PlaceUnchecked(s.ItemId, s.Quantity, s.Durability > 0 ? s.Durability : -1);
+            }
             NotifyChanged();
             return true;
         }
@@ -577,7 +606,7 @@ namespace Afterfall.Domain.Items
                 ItemStack s = _slots[i];
                 if (s.IsEmpty || s.ItemId != itemId) continue;
                 int take = Math.Min(s.Quantity, remaining);
-                taken?.Add(new ItemStack(itemId, take, s.Durability));
+                taken?.Add(new ItemStack(itemId, take, s.Durability, s.Tag));
                 s.Quantity -= take;
                 _slots[i] = s.Quantity > 0 ? s : ItemStack.Empty;
                 remaining -= take;

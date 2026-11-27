@@ -44,6 +44,9 @@ namespace Afterfall.Presentation
         public Terrain Terrain { get; private set; }
         public AudioDirector Audio { get; private set; }
 
+        /// <summary>Doors colonists open on their way and close behind them.</summary>
+        public DoorTraffic Doors { get; private set; }
+
         /// <summary>Map textures shared by the world map and the minimap.</summary>
         public Afterfall.Presentation.UI.MapTextures Maps { get; private set; }
         public bool Running { get; private set; }
@@ -91,6 +94,7 @@ namespace Afterfall.Presentation
             Sync = new GameObject("Entities").AddComponent<WorldSync>();
             Sync.transform.SetParent(_worldRoot, false);
             Sync.Initialize(this);
+            Doors = new DoorTraffic(this);
             Session.Colony.Movement = new NavColonistMovement(this);
             yield return null;
 
@@ -179,6 +183,7 @@ namespace Afterfall.Presentation
             UpdateCursor();
             UpdateInteraction();
             Maps?.Update();
+            Doors?.Update();
 
             if (!Session.Paused && !IsDead)
             {
@@ -290,6 +295,12 @@ namespace Afterfall.Presentation
                     _target.InteractHeld(this, _holdTick);
                     _holdTick = 0f;
                 }
+            }
+
+            if (_target is StructureView door && door.Def.IsDoor && i.Rotate.WasPressedThisFrame() && Session.World.Structures.TryGetValue(door.Id, out Afterfall.Domain.Construction.Structure ds))
+            {
+                OpResult locked = Session.SetDoorLocked(door.Id, !ds.DoorLocked);
+                Toast(locked.Message, locked.Ok ? Severity.Info : Severity.Warning);
             }
 
             if (_target is StructureView sv && i.Deconstruct.IsPressed())

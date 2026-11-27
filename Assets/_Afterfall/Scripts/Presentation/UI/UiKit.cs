@@ -231,7 +231,7 @@ namespace Afterfall.Presentation.UI
                 _dur.style.backgroundColor = Color.Lerp(new Color(0.9f, 0.3f, 0.2f), new Color(0.45f, 0.82f, 0.35f), f);
             }
             else _durTrack.style.display = DisplayStyle.None;
-            HoverText = $"{def.Name}{(stack.Quantity > 1 ? $" ×{stack.Quantity}" : "")}\n{def.Description}\n{def.Weight * stack.Quantity:0.##} kg" + (def.HasDurability ? $" · durability {stack.Durability}/{def.MaxDurability}" : "");
+            HoverText = $"{def.Name}{(stack.Quantity > 1 ? $" ×{stack.Quantity}" : "")}{(stack.IsTagged ? " — " + stack.Tag : "")}\n{def.Description}\n{def.Weight * stack.Quantity:0.##} kg" + (def.HasDurability ? $" · durability {stack.Durability}/{def.MaxDurability}" : "");
         }
 
         public void SetSelected(bool on) => UiKit.SetClass(this, "slot--selected", on);

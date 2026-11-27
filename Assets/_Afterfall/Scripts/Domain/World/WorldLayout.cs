@@ -138,6 +138,9 @@ namespace Afterfall.Domain.World
         public Vec3 Size { get; set; }
         public string PoiId { get; set; } = "";
         public int Variant { get; set; }
+
+        /// <summary>For planned multi-storey buildings: the <see cref="BuildingPlan"/> id the shell is built from.</summary>
+        public string PlanId { get; set; } = "";
     }
 
     public sealed class RoadPath
@@ -162,6 +165,49 @@ namespace Afterfall.Domain.World
         public Vec3 Position { get; set; }
         public float Yaw { get; set; }
         public string PoiId { get; set; } = "";
+    }
+
+    /// <summary>
+    /// A structure the layout places by a stable key (doors, furniture and containers of planned
+    /// buildings). Created in new games and, once, in older saves that do not have it yet.
+    /// </summary>
+    public sealed class FixtureSeed
+    {
+        public string Key { get; set; } = "";
+        public string DefId { get; set; } = "";
+        public Vec3 Position { get; set; }
+        public float Yaw { get; set; }
+        public string PoiId { get; set; } = "";
+        public string LootTable { get; set; } = "";
+        public string LockId { get; set; } = "";
+        public bool Locked { get; set; }
+        public List<string> KeysInside { get; } = new List<string>();
+    }
+
+    /// <summary>A multi-storey building placed from a <see cref="BuildingPlan"/> (origin at its ground, facing by yaw).</summary>
+    public sealed class PlacedPlan
+    {
+        public BuildingPlan Plan { get; set; }
+        public Vec3 Origin { get; set; }
+        public float Yaw { get; set; }
+        public string PoiId { get; set; } = "";
+
+        /// <summary>World position of a point in the plan's frame on a floor.</summary>
+        public Vec3 ToWorld(float x, float z, int floor)
+        {
+            Vec3 o = WorldGenerator.Rotate(new Vec3(x, 0f, z), Yaw);
+            return new Vec3(Origin.X + o.X, Origin.Y + Plan.FloorY(floor), Origin.Z + o.Z);
+        }
+
+        /// <summary>Plan-frame position and floor of a world point, or false when it is outside the building.</summary>
+        public bool ToPlan(Vec3 p, out float x, out float z, out int floor)
+        {
+            Vec3 local = WorldGenerator.Rotate(new Vec3(p.X - Origin.X, 0f, p.Z - Origin.Z), -Yaw);
+            x = local.X;
+            z = local.Z;
+            floor = (int)Math.Floor((p.Y - Origin.Y - Plan.GroundFloorY + 0.6f) / Plan.FloorHeight);
+            return Math.Abs(x) <= Plan.Width * 0.5f && Math.Abs(z) <= Plan.Depth * 0.5f && floor >= 0 && floor < Plan.Floors;
+        }
     }
 
     /// <summary>A survivor who can be recruited, placed by the generator.</summary>
@@ -194,6 +240,21 @@ namespace Afterfall.Domain.World
         public List<NodeSeed> Nodes { get; } = new List<NodeSeed>();
         public List<ContainerSeed> Containers { get; } = new List<ContainerSeed>();
         public List<SurvivorSeed> Survivors { get; } = new List<SurvivorSeed>();
+        public List<FixtureSeed> Fixtures { get; } = new List<FixtureSeed>();
+        public List<PlacedPlan> Plans { get; } = new List<PlacedPlan>();
+
+        /// <summary>The planned building and room at a world point (for room names and indoor checks), if any.</summary>
+        public PlanRoom RoomAt(Vec3 p, out PlacedPlan building)
+        {
+            foreach (PlacedPlan b in Plans)
+            {
+                if (!b.ToPlan(p, out float x, out float z, out int floor)) continue;
+                building = b;
+                return b.Plan.RoomAt(floor, x, z);
+            }
+            building = null;
+            return null;
+        }
 
         /// <summary>Side length of this layout's square map in metres.</summary>
         public float Size => Height != null ? Height.Size : WorldSize;

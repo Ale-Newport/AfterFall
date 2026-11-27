@@ -232,7 +232,8 @@ namespace Afterfall.Domain.AI
                 if (!_breachWarnings.TryGetValue(target.Id, out double last) || now - last > 20.0)
                 {
                     _breachWarnings[target.Id] = now;
-                    _bus?.Publish(new Notification($"The infected are breaking through your {def?.Name ?? "structure"}!", Severity.Danger));
+                    string what = target.PlayerBuilt ? $"your {def?.Name ?? "structure"}" : $"a {(def?.Name ?? "door").ToLowerInvariant()} nearby";
+                    _bus?.Publish(new Notification($"The infected are breaking through {what}!", Severity.Danger));
                 }
                 if (Construction.Damage(target, a.AttackDamage * StructureDamageMultiplier * _world.Settings.EnemyDamage, "the infected"))
                     z.BreachTarget = EntityId.None;
@@ -269,10 +270,17 @@ namespace Afterfall.Domain.AI
             float bestD = float.MaxValue;
             foreach (Structure s in _world.Structures.Values)
             {
-                if (!s.PlayerBuilt || !s.IsComplete) continue;
+                if (!s.IsComplete) continue;
                 BuildingDefinition def = _content.Building(s.DefId);
-                // Only barriers are battered (walls, doorways, barricades), not crates or machines.
-                if (def == null || !def.BlocksMovement || !def.IsDefensive) continue;
+                if (def == null) continue;
+                // Closed doors are battered wherever they are; open or broken ones are simply walked through.
+                if (def.IsDoor)
+                {
+                    // Doors on other floors of a building are not in reach, whatever the map distance.
+                    if (DoorRules.IsPassable(s, def) || Math.Abs(s.Position.Y - position.Y) > DoorRules.FloorReach) continue;
+                }
+                // Otherwise only the player's barriers are battered (walls, doorways, barricades), not crates or machines.
+                else if (!s.PlayerBuilt || !def.BlocksMovement || !def.IsDefensive) continue;
                 float d = Vec3.DistanceXZ(s.Position, position) - FootprintRadius(s);
                 if (d <= reach && d < bestD)
                 {
@@ -288,9 +296,10 @@ namespace Afterfall.Domain.AI
         {
             foreach (Structure s in _world.Structures.Values)
             {
-                if (!s.PlayerBuilt || !s.IsComplete) continue;
+                if (!s.IsComplete) continue;
                 BuildingDefinition def = _content.Building(s.DefId);
                 if (def == null || !def.BlocksMovement || def.Snap == SnapMode.Foundation || def.Snap == SnapMode.Roof) continue;
+                if (def.IsDoor ? DoorRules.IsPassable(s, def) || Math.Abs(s.Position.Y - p.Y) > DoorRules.FloorReach : !s.PlayerBuilt) continue;
                 double r = -s.Yaw * Math.PI / 180.0;
                 float dx = p.X - s.Position.X, dz = p.Z - s.Position.Z;
                 float lx = (float)(dx * Math.Cos(r) + dz * Math.Sin(r));

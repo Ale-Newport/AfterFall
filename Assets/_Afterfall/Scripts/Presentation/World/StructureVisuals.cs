@@ -144,6 +144,33 @@ namespace Afterfall.Presentation
                 case "toolbox":
                     Toolbox(k, sx, sy, sz, color);
                     break;
+                case "door":
+                    Door(k, sx, sy, sz, color, false);
+                    break;
+                case "door_entrance":
+                    Door(k, sx, sy, sz, color, true);
+                    break;
+                case "counter":
+                    Counter(k, sx, sy, sz, color);
+                    break;
+                case "drawers":
+                    Drawers(k, sx, sy, sz, color);
+                    break;
+                case "desk":
+                    Desk(k, sx, sy, sz, color);
+                    break;
+                case "bookshelf":
+                    Bookshelf(k, sx, sy, sz, color);
+                    break;
+                case "sink":
+                    Sink(k, sx, sy, sz, color);
+                    break;
+                case "stove":
+                    Stove(k, sx, sy, sz, color);
+                    break;
+                case "bed_double":
+                    DoubleBed(k, sx, sy, sz, color);
+                    break;
                 default:
                     k.Span(S.Paint, new Vector3(-sx * 0.5f, 0f, -sz * 0.5f), new Vector3(sx * 0.5f, sy, sz * 0.5f), Paint(color), 0.03f);
                     break;
@@ -276,6 +303,19 @@ namespace Afterfall.Presentation
                     break;
                 case "toolbox":
                     ColliderBox(root, "Box", mid, whole);
+                    break;
+                case "door":
+                case "door_entrance":
+                    // The leaf's collider swings with it (StructureView); the frame sits in the wall's opening.
+                    break;
+                case "counter":
+                case "drawers":
+                case "desk":
+                case "bookshelf":
+                case "sink":
+                case "stove":
+                case "bed_double":
+                    ColliderBox(root, "Body", mid, whole);
                     break;
                 default:
                     ColliderBox(root, "Block", mid, whole);

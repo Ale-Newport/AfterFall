@@ -232,6 +232,12 @@ namespace Afterfall.Presentation
             }
             bool stalled = !v.Agent.pathPending && v.Agent.pathStatus != NavMeshPathStatus.PathComplete && v.Agent.velocity.sqrMagnitude < 0.04f;
             v.StalledTime = stalled ? v.StalledTime + dt : 0f;
+            // A closed door carves the NavMesh, so the path ends at it: open it (if unlocked) and go on.
+            if (stalled && v.StalledTime > 0.3f && _gc.Doors != null && _gc.Doors.TryOpenNear(c))
+            {
+                v.StalledTime = 0f;
+                v.LastDestination = new Vector3(float.NaN, float.NaN, float.NaN);
+            }
             // A target inside a carved obstacle (crate, machine) can only be approached to its edge.
             return !v.Agent.pathPending && v.Agent.remainingDistance <= Mathf.Max(v.Agent.stoppingDistance, arriveDistance) && flat.magnitude <= arriveDistance + 1.5f;
         }

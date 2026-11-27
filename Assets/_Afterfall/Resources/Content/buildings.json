@@ -597,5 +597,169 @@
     "storage": {
       "slots": 12
     }
+  },
+  {
+    "id": "door_interior",
+    "name": "Door",
+    "description": "A panelled interior door. Opens and closes; some are locked and need their key. The infected batter closed doors down.",
+    "category": "WorldProp",
+    "cost": [
+      "planks:4",
+      "nails:6"
+    ],
+    "buildSeconds": 1,
+    "maxHealth": 220,
+    "sizeX": 1.6,
+    "sizeY": 2.3,
+    "sizeZ": 0.12,
+    "visual": "door",
+    "color": "#8A6A4A",
+    "buildable": false,
+    "isDoor": true,
+    "isDefensive": true
+  },
+  {
+    "id": "door_entrance",
+    "name": "Entrance Door",
+    "description": "A heavy steel-framed entrance door with a wired-glass panel.",
+    "category": "WorldProp",
+    "cost": [
+      "scrap_metal:6",
+      "planks:2",
+      "nails:6"
+    ],
+    "buildSeconds": 1,
+    "maxHealth": 420,
+    "sizeX": 1.6,
+    "sizeY": 2.3,
+    "sizeZ": 0.14,
+    "visual": "door_entrance",
+    "color": "#4E5A5C",
+    "buildable": false,
+    "isDoor": true,
+    "isDefensive": true
+  },
+  {
+    "id": "loot_counter",
+    "name": "Shop Counter",
+    "description": "",
+    "category": "WorldProp",
+    "cost": [],
+    "buildSeconds": 1,
+    "maxHealth": 150,
+    "sizeX": 1.8,
+    "sizeY": 1.0,
+    "sizeZ": 0.6,
+    "visual": "counter",
+    "color": "#7A6A58",
+    "buildable": false,
+    "storage": {
+      "slots": 8
+    }
+  },
+  {
+    "id": "loot_drawers",
+    "name": "Chest of Drawers",
+    "description": "",
+    "category": "WorldProp",
+    "cost": [],
+    "buildSeconds": 1,
+    "maxHealth": 120,
+    "sizeX": 1.0,
+    "sizeY": 0.9,
+    "sizeZ": 0.5,
+    "visual": "drawers",
+    "color": "#8C6B4A",
+    "buildable": false,
+    "storage": {
+      "slots": 8
+    }
+  },
+  {
+    "id": "loot_desk",
+    "name": "Desk",
+    "description": "",
+    "category": "WorldProp",
+    "cost": [],
+    "buildSeconds": 1,
+    "maxHealth": 120,
+    "sizeX": 1.4,
+    "sizeY": 0.76,
+    "sizeZ": 0.7,
+    "visual": "desk",
+    "color": "#76604A",
+    "buildable": false,
+    "storage": {
+      "slots": 8
+    }
+  },
+  {
+    "id": "loot_bookshelf",
+    "name": "Bookshelf",
+    "description": "",
+    "category": "WorldProp",
+    "cost": [],
+    "buildSeconds": 1,
+    "maxHealth": 120,
+    "sizeX": 1.0,
+    "sizeY": 2.0,
+    "sizeZ": 0.35,
+    "visual": "bookshelf",
+    "color": "#6E5640",
+    "buildable": false,
+    "storage": {
+      "slots": 6
+    }
+  },
+  {
+    "id": "loot_sink",
+    "name": "Bathroom Sink",
+    "description": "",
+    "category": "WorldProp",
+    "cost": [],
+    "buildSeconds": 1,
+    "maxHealth": 120,
+    "sizeX": 0.7,
+    "sizeY": 0.9,
+    "sizeZ": 0.45,
+    "visual": "sink",
+    "color": "#D8D6CE",
+    "buildable": false,
+    "storage": {
+      "slots": 6
+    }
+  },
+  {
+    "id": "stove",
+    "name": "Gas Stove",
+    "description": "A camping-gas kitchen stove with a little gas left. Cooks like a campfire, but gives no warmth.",
+    "category": "WorldProp",
+    "cost": [],
+    "buildSeconds": 1,
+    "maxHealth": 160,
+    "sizeX": 0.6,
+    "sizeY": 0.9,
+    "sizeZ": 0.6,
+    "visual": "stove",
+    "color": "#C9C4B8",
+    "buildable": false,
+    "craftingStation": "campfire"
+  },
+  {
+    "id": "bed_double",
+    "name": "Double Bed",
+    "description": "A real bed. Rest here to make it your respawn point.",
+    "category": "WorldProp",
+    "cost": [],
+    "buildSeconds": 1,
+    "maxHealth": 140,
+    "sizeX": 1.6,
+    "sizeY": 0.6,
+    "sizeZ": 2.1,
+    "visual": "bed_double",
+    "color": "#5E6E80",
+    "buildable": false,
+    "isBed": true,
+    "blocksMovement": true
   }
 ]

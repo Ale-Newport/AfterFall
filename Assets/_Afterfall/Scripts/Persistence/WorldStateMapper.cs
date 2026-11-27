@@ -128,6 +128,9 @@ namespace Afterfall.Persistence
                 PoiId = s.PoiId,
                 Searched = s.Searched,
                 DoorOpen = s.DoorOpen,
+                DoorLocked = s.DoorLocked,
+                LockId = s.LockId,
+                SeedKey = s.SeedKey,
                 Enabled = s.Enabled,
                 Storage = ToDto(s.Storage)
             };
@@ -164,7 +167,7 @@ namespace Afterfall.Persistence
             for (int i = 0; i < inv.SlotCount; i++)
             {
                 ItemStack st = inv.GetSlot(i);
-                if (!st.IsEmpty) dto.Items.Add(new SlotDto { Index = i, ItemId = st.ItemId, Quantity = st.Quantity, Durability = st.Durability });
+                if (!st.IsEmpty) dto.Items.Add(new SlotDto { Index = i, ItemId = st.ItemId, Quantity = st.Quantity, Durability = st.Durability, Tag = st.Tag });
             }
             foreach (ReservationRecord r in inv.Reservations)
                 dto.Reservations.Add(new ReservationRecord { Id = r.Id, Kind = r.Kind, ItemId = r.ItemId, Quantity = r.Quantity });
@@ -235,6 +238,9 @@ namespace Afterfall.Persistence
                     PoiId = sd.PoiId ?? "",
                     Searched = sd.Searched,
                     DoorOpen = sd.DoorOpen,
+                    DoorLocked = sd.DoorLocked,
+                    LockId = sd.LockId ?? "",
+                    SeedKey = sd.SeedKey ?? "",
                     Enabled = sd.Enabled
                 };
                 foreach (KeyValuePair<string, int> kv in sd.Delivered ?? new Dictionary<string, int>())
@@ -440,7 +446,7 @@ namespace Afterfall.Persistence
                 }
                 int qty = Math.Max(0, Math.Min(s.Quantity, def.HasDurability ? 1 : def.MaxStack));
                 if (qty != s.Quantity) warnings?.Add($"Inventory {dto.Id}: clamped {s.ItemId} from {s.Quantity} to {qty}.");
-                if (qty > 0) inv.SetSlotRaw(s.Index, new ItemStack(s.ItemId, qty, s.Durability));
+                if (qty > 0) inv.SetSlotRaw(s.Index, new ItemStack(s.ItemId, qty, s.Durability, s.Tag));
             }
             RestoreReservations(inv, dto, content, warnings);
         }

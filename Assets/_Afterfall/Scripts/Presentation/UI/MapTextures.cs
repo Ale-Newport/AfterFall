@@ -1,4 +1,5 @@
-using System.Threading.Tasks;
+using System;
+using System.Threading;
 using Afterfall.Domain.World;
 using UnityEngine;
 
@@ -16,7 +17,9 @@ namespace Afterfall.Presentation.UI
         public const int MaxOverview = 2048;
 
         private readonly WorldState _world;
-        private Task<byte[]> _pending;
+        private volatile byte[] _rendered;
+        private volatile Exception _failed;
+        private Thread _thread;
         private int _fogVersion = -1;
         private bool _fogHidden;
         private Color32[] _fogPixels;
@@ -27,11 +30,25 @@ namespace Afterfall.Presentation.UI
             WorldLayout layout = world.Layout;
             OverviewSize = Mathf.Clamp(Mathf.NextPowerOfTwo(Mathf.CeilToInt(layout.Size / 0.5f)), 256, MaxOverview);
             int res = OverviewSize;
-            _pending = Task.Run(() =>
+            // One low-priority thread, so drawing the map never competes with the game's first frames.
+            _thread = new Thread(() =>
             {
-                MapFeatures features = MapFeatures.Build(layout);
-                return MapRasterizer.Render(layout, features, 0f, 0f, layout.Size, layout.Size, res, res);
-            });
+                try
+                {
+                    MapFeatures features = MapFeatures.Build(layout);
+                    _rendered = MapRasterizer.Render(layout, features, 0f, 0f, layout.Size, layout.Size, res, res, false);
+                }
+                catch (Exception e)
+                {
+                    _failed = e;
+                }
+            })
+            {
+                IsBackground = true,
+                Priority = System.Threading.ThreadPriority.BelowNormal,
+                Name = "Afterfall map"
+            };
+            _thread.Start();
         }
 
         public int OverviewSize { get; }
@@ -62,10 +79,14 @@ namespace Afterfall.Presentation.UI
         /// <summary>Uploads finished work and refreshes the fog. Call once per frame from the main thread.</summary>
         public void Update()
         {
-            if (Overview == null && _pending != null && _pending.IsCompleted)
+            if (_failed != null)
             {
-                if (_pending.Exception != null) Debug.LogException(_pending.Exception);
-                else
+                Debug.LogException(_failed);
+                _failed = null;
+            }
+            byte[] done = _rendered;
+            if (Overview == null && done != null)
+            {
                 {
                     var tex = new Texture2D(OverviewSize, OverviewSize, TextureFormat.RGBA32, true, false)
                     {
@@ -74,11 +95,11 @@ namespace Afterfall.Presentation.UI
                         filterMode = FilterMode.Trilinear,
                         anisoLevel = 4
                     };
-                    tex.SetPixelData(_pending.Result, 0);
+                    tex.SetPixelData(done, 0);
                     tex.Apply(true, true);
                     Overview = tex;
                 }
-                _pending = null;
+                _rendered = null;
             }
             ExplorationState ex = _world.Exploration;
             if (Fog == null)
@@ -102,8 +123,8 @@ namespace Afterfall.Presentation.UI
 
         public void Dispose()
         {
-            if (Overview != null) Object.Destroy(Overview);
-            if (Fog != null) Object.Destroy(Fog);
+            if (Overview != null) UnityEngine.Object.Destroy(Overview);
+            if (Fog != null) UnityEngine.Object.Destroy(Fog);
         }
     }
 }

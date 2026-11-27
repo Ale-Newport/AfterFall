@@ -196,6 +196,28 @@ namespace Afterfall.Presentation.Art
             Glint(c, f.X(36f, 13f), f.Y(36f, 13f), 2.2f, 0.7f);
         }
 
+        /// <summary>A brass door key with a round bow and two bits, and a paper label tied to it with string.</summary>
+        private static void DoorKey(IconCanvas c)
+        {
+            Rgba brass = new Rgba(0.86f, 0.68f, 0.3f);
+            Part(c, l =>
+            {
+                l.Line(30f, 34f, 34f, 64f, 1.6f, new Rgba(0.55f, 0.45f, 0.32f));
+                l.RoundRect(34f, 72f, 28f, 18f, 3f, -12f, Paint.Shaded(new Rgba(0.93f, 0.88f, 0.74f), 20f, 62f, 48f, 84f, 0.15f));
+                l.Circle(25.5f, 66.5f, 2.2f, new Rgba(0.4f, 0.32f, 0.22f));
+                for (int i = 0; i < 2; i++) l.Line(28f, 70f + i * 5f, 44f, 67f + i * 5f, 1.3f, Ink.WithAlpha(0.55f));
+            }, 1.2f, 0.4f);
+            Part(c, l =>
+            {
+                Paint metal = Paint.Shaded(brass, 20f, 20f, 86f, 52f, 0.32f);
+                l.Circle(32f, 34f, 15f, metal);
+                l.RoundRect(64f, 34f, 46f, 8f, 2f, 0f, metal);
+                l.RoundRect(77f, 42f, 6f, 10f, 1f, 0f, metal);
+                l.RoundRect(86f, 41f, 5f, 8f, 1f, 0f, metal);
+                l.Cut(k => k.Circle(32f, 34f, 6f, Ink));
+            }, 2.4f, 0.5f);
+        }
+
         /// <summary>Claw hammer: a steel head with a round striking face and a split, curved claw; rope-wrapped grip.</summary>
         private static void Hammer(IconCanvas c)
         {

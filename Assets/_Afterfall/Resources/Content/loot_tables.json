@@ -434,5 +434,121 @@
         "chance": 1.0
       }
     ]
+  },
+  {
+    "id": "counter",
+    "entries": [
+      {
+        "itemId": "snack_bar",
+        "min": 1,
+        "max": 3,
+        "chance": 0.7
+      },
+      {
+        "itemId": "water_bottle",
+        "min": 1,
+        "max": 2,
+        "chance": 0.5
+      },
+      {
+        "itemId": "battery",
+        "min": 1,
+        "max": 2,
+        "chance": 0.3
+      },
+      {
+        "itemId": "bandage",
+        "min": 1,
+        "max": 1,
+        "chance": 0.25
+      }
+    ]
+  },
+  {
+    "id": "office",
+    "entries": [
+      {
+        "itemId": "battery",
+        "min": 1,
+        "max": 2,
+        "chance": 0.5
+      },
+      {
+        "itemId": "copper_wire",
+        "min": 1,
+        "max": 3,
+        "chance": 0.4
+      },
+      {
+        "itemId": "circuit_board",
+        "min": 1,
+        "max": 1,
+        "chance": 0.12
+      },
+      {
+        "itemId": "snack_bar",
+        "min": 1,
+        "max": 1,
+        "chance": 0.25
+      }
+    ]
+  },
+  {
+    "id": "study",
+    "entries": [
+      {
+        "itemId": "cloth",
+        "min": 1,
+        "max": 2,
+        "chance": 0.3
+      },
+      {
+        "itemId": "rope",
+        "min": 1,
+        "max": 1,
+        "chance": 0.15
+      },
+      {
+        "itemId": "battery",
+        "min": 1,
+        "max": 1,
+        "chance": 0.2
+      },
+      {
+        "itemId": "schematic_generator",
+        "min": 1,
+        "max": 1,
+        "chance": 0.08
+      }
+    ]
+  },
+  {
+    "id": "bathroom",
+    "entries": [
+      {
+        "itemId": "bandage",
+        "min": 1,
+        "max": 2,
+        "chance": 0.45
+      },
+      {
+        "itemId": "empty_bottle",
+        "min": 1,
+        "max": 1,
+        "chance": 0.35
+      },
+      {
+        "itemId": "cloth",
+        "min": 1,
+        "max": 2,
+        "chance": 0.3
+      },
+      {
+        "itemId": "medkit",
+        "min": 1,
+        "max": 1,
+        "chance": 0.06
+      }
+    ]
   }
 ]

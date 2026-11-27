@@ -97,7 +97,10 @@ namespace Afterfall.Presentation
     {
         public BuildingDefinition Def;
         public bool BuiltComplete;
-        private Transform _engine, _fire, _lampHead, _indicator, _crops, _soil;
+        private Transform _engine, _fire, _lampHead, _indicator, _crops, _soil, _leaf;
+        private BoxCollider _leafCollider;
+        private UnityEngine.AI.NavMeshObstacle _leafObstacle;
+        private float _leafAngle;
         private Material _soilMat;
         private Light _light, _fireLight;
         private Material _fireMat, _lampMat;
@@ -116,6 +119,8 @@ namespace Afterfall.Presentation
             _indicator = FindDeep(transform, "Indicator");
             _crops = FindDeep(transform, "Crops");
             _soil = FindDeep(transform, "Soil");
+            _leaf = FindDeep(transform, "Leaf");
+            if (_leaf != null && Def.IsDoor && BuiltComplete) SetUpDoorLeaf();
             if (_soil != null && BuiltComplete)
             {
                 _soilMat = new Material(_soil.GetComponent<Renderer>().sharedMaterial);
@@ -154,6 +159,44 @@ namespace Afterfall.Presentation
             }
         }
 
+        /// <summary>
+        /// The door leaf's collider and NavMesh obstacle swing with it. The collider is left out of the
+        /// NavMesh bake, so the doorway stays walkable, and the obstacle carves it only while the door is closed.
+        /// </summary>
+        private void SetUpDoorLeaf()
+        {
+            float w = Def.SizeX - StructureModels.DoorHingeInset - 0.055f, h = Def.SizeY - 0.07f;
+            var go = new GameObject("LeafCollider");
+            go.transform.SetParent(_leaf, false);
+            go.layer = Layers.Structure;
+            _leafCollider = go.AddComponent<BoxCollider>();
+            _leafCollider.center = new Vector3(w * 0.5f, h * 0.5f, 0f);
+            _leafCollider.size = new Vector3(w, h, StructureModels.DoorLeafThickness + 0.02f);
+            var mod = go.AddComponent<Unity.AI.Navigation.NavMeshModifier>();
+            mod.ignoreFromBuild = true;
+            _leafObstacle = go.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+            _leafObstacle.shape = UnityEngine.AI.NavMeshObstacleShape.Box;
+            _leafObstacle.center = _leafCollider.center;
+            _leafObstacle.size = new Vector3(w + 0.1f, h, 0.3f);
+            _leafObstacle.carving = true;
+            _leafObstacle.carveOnlyStationary = false;
+        }
+
+        /// <summary>Doors swing open (toward their front), and a broken door hangs askew and stops blocking.</summary>
+        private void AnimateDoor(Structure s, float dt)
+        {
+            bool broken = DoorRules.IsBroken(s, Def);
+            float target = broken ? -72f : s.DoorOpen ? -95f : 0f;
+            _leafAngle = Mathf.MoveTowards(_leafAngle, target, 220f * dt);
+            _leaf.localRotation = Quaternion.Euler(0f, _leafAngle, broken ? 7f : 0f);
+            bool blocking = !broken && !s.DoorOpen;
+            if (_leafCollider != null) _leafCollider.enabled = !broken;
+            if (_leafObstacle != null && _leafObstacle.enabled != blocking) _leafObstacle.enabled = blocking;
+        }
+
+        /// <summary>Whether the door's NavMesh obstacle is carving (closed and intact).</summary>
+        public bool DoorBlocksNavigation => _leafObstacle != null && _leafObstacle.enabled;
+
         private static Transform FindDeep(Transform t, string name)
         {
             if (t.name == name) return t;
@@ -169,6 +212,7 @@ namespace Afterfall.Presentation
         public void RefreshVisualState(Structure s, float dt)
         {
             if (s == null || !s.IsComplete) return;
+            if (_leaf != null && Def.IsDoor) AnimateDoor(s, dt);
             if (_engine != null && s.Generator != null)
             {
                 _vibe += dt * 40f;
@@ -231,6 +275,7 @@ namespace Afterfall.Presentation
                 }
                 return $"[Hold E] Deliver & build {Def.Name} — needs {string.Join(", ", parts)}";
             }
+            if (Def.IsDoor) return DoorPrompt(gc, s);
             string own = s.PlayerBuilt ? "  · [Hold X] Demolish" : "";
             if (NeedsRepair(s))
                 return $"[E] Repair {Def.Name} ({s.Health:0}/{Def.MaxHealth:0}){(Def.IsBroken(s.Health) ? " — BROKEN" : "")} — {RepairCostText(gc, s)}{own}";
@@ -265,6 +310,13 @@ namespace Afterfall.Presentation
                 InteractHeld(gc, 0.25f);
                 return;
             }
+            if (Def.IsDoor)
+            {
+                OpResult d = DoorRules.IsBroken(s, Def) ? gc.Session.Repair(s.Id) : gc.Session.ToggleDoor(s.Id);
+                gc.Toast(d.Message, d.Ok ? Severity.Info : Severity.Warning);
+                if (d.Ok) gc.Audio?.PlayAt("swing", transform.position + Vector3.up, 0.25f);
+                return;
+            }
             if (NeedsRepair(s))
             {
                 OpResult rep = gc.Session.Repair(s.Id);
@@ -290,6 +342,17 @@ namespace Afterfall.Presentation
                 OpResult r = gc.Session.ToggleEnabled(s.Id);
                 gc.Toast(r.Message);
             }
+        }
+
+        private string DoorPrompt(GameController gc, Structure s)
+        {
+            if (DoorRules.IsBroken(s, Def))
+                return $"[E] Repair {Def.Name} ({s.Health:0}/{Def.MaxHealth:0}) — BROKEN, it cannot close — {RepairCostText(gc, s)}";
+            bool key = DoorRules.HasKey(gc.Session.Player.Inventory, s);
+            string lockName = DoorRules.LockName(s);
+            if (s.DoorOpen) return $"[E] Close {Def.Name.ToLowerInvariant()}";
+            if (s.DoorLocked) return key ? $"[E] Unlock and open (you have the key to {lockName}) · [R] Unlock only" : $"Locked — needs the key to {lockName}";
+            return $"[E] Open {Def.Name.ToLowerInvariant()}{(key ? " · [R] Lock with your key" : "")}";
         }
 
         /// <summary>E repairs pieces with no other use (walls, barricades, foundations) and anything broken.</summary>

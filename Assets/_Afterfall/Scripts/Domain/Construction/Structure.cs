@@ -43,6 +43,18 @@ namespace Afterfall.Domain.Construction
 
         public bool DoorOpen { get; set; }
 
+        /// <summary>Doors: locked (only the key tagged with <see cref="LockId"/> opens it).</summary>
+        public bool DoorLocked { get; set; }
+
+        /// <summary>Doors: the lock's name, shared with the key that opens it ("" = no lock).</summary>
+        public string LockId { get; set; } = "";
+
+        /// <summary>
+        /// Stable key of the layout seed that created this world structure ("" for older content and
+        /// player builds). Lets content added to the world later be created in existing saves once.
+        /// </summary>
+        public string SeedKey { get; set; } = "";
+
         /// <summary>Player toggle for lights and machines.</summary>
         public bool Enabled { get; set; } = true;
 

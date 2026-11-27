@@ -92,7 +92,7 @@ namespace Afterfall.Domain.Weather
         /// <summary>World buildings the player can walk into.</summary>
         private static readonly HashSet<string> IndoorKinds = new HashSet<string>(StringComparer.Ordinal)
         {
-            "house", "clinic", "shop", "garage", "warehouse", "barn"
+            "house", "clinic", "shop", "garage", "warehouse", "barn", "apartment"
         };
 
         /// <summary>Heat (°C) and reach of a furnace while it burns fuel.</summary>
