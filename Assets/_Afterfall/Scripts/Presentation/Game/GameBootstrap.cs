@@ -71,19 +71,20 @@ namespace Afterfall.Presentation
             }
         }
 
-        public void StartNewGame(DifficultyPreset preset, int seed, GameMode mode = GameMode.Survival)
+        public void StartNewGame(DifficultyPreset preset, int seed, GameMode mode = GameMode.Survival, int worldVersion = 1)
         {
             EndGame();
             Ui.HideMainMenu();
             Ui.ShowLoading("Generating world…");
-            StartCoroutine(NewGameRoutine(preset, seed, mode));
+            StartCoroutine(NewGameRoutine(preset, seed, mode, worldVersion));
         }
 
-        private System.Collections.IEnumerator NewGameRoutine(DifficultyPreset preset, int seed, GameMode mode)
+        private System.Collections.IEnumerator NewGameRoutine(DifficultyPreset preset, int seed, GameMode mode, int worldVersion)
         {
             yield return null; // let the loading screen render before the synchronous generation step
             GameSettings settings = GameSettings.FromPreset(preset);
             settings.Mode = mode;
+            settings.WorldVersion = worldVersion;
             GameSession session = NewGameFactory.Create(Content, seed, settings);
             _game = GameController.Create(this, session, "save1");
         }

@@ -68,7 +68,7 @@ namespace Afterfall.Domain.World
         internal struct Segment
         {
             public float Ax, Az, Bx, Bz, HalfWidth;
-            public bool Paved;
+            public bool Paved, Rail;
         }
 
         internal struct Footprint
@@ -96,7 +96,7 @@ namespace Afterfall.Domain.World
             var f = new MapFeatures();
             foreach (RoadPath r in layout.Roads)
                 for (int i = 0; i + 1 < r.Points.Count; i++)
-                    f.Roads.Add(new Segment { Ax = r.Points[i].X, Az = r.Points[i].Z, Bx = r.Points[i + 1].X, Bz = r.Points[i + 1].Z, HalfWidth = r.Width * 0.5f, Paved = r.Paved });
+                    f.Roads.Add(new Segment { Ax = r.Points[i].X, Az = r.Points[i].Z, Bx = r.Points[i + 1].X, Bz = r.Points[i + 1].Z, HalfWidth = r.Width * 0.5f, Paved = r.Paved, Rail = r.Rail });
             foreach (PropPlacement p in layout.Props)
             {
                 if (!BuildingKinds.Contains(p.Kind)) continue;
@@ -235,18 +235,23 @@ namespace Afterfall.Domain.World
             float pixel = Math.Max(sx, sz);
             foreach (MapFeatures.Footprint b in features.Buildings) DrawFootprint(px, width, height, x0, z0, sx, sz, b, pixel);
             // Casings first, then fills, so junctions read as one network.
+            // Railways: a thin dark line under the roads.
             foreach (MapFeatures.Segment s in features.Roads)
-                if (s.Paved) DrawSegment(px, width, height, x0, z0, sx, sz, s, s.HalfWidth + Math.Max(1.2f, pixel * 1.2f), RoadCasing);
+                if (s.Rail) DrawSegment(px, width, height, x0, z0, sx, sz, s, Math.Max(0.9f, pixel * 0.6f), RoadCasing);
             foreach (MapFeatures.Segment s in features.Roads)
-                DrawSegment(px, width, height, x0, z0, sx, sz, s, Math.Max(s.HalfWidth * (s.Paved ? 0.8f : 0.55f), pixel * (s.Paved ? 0.9f : 0.6f)), s.Paved ? PavedFill : DirtFill);
+                if (s.Paved && !s.Rail) DrawSegment(px, width, height, x0, z0, sx, sz, s, s.HalfWidth + Math.Max(1.2f, pixel * 1.2f), RoadCasing);
+            foreach (MapFeatures.Segment s in features.Roads)
+                if (!s.Rail) DrawSegment(px, width, height, x0, z0, sx, sz, s, Math.Max(s.HalfWidth * (s.Paved ? 0.8f : 0.55f), pixel * (s.Paved ? 0.9f : 0.6f)), s.Paved ? PavedFill : DirtFill);
             return px;
         }
 
         private static Rgb Ground(WorldLayout layout, MapFeatures f, float x, float z, float sx, float sz, float water, float maxH)
         {
             float h = layout.HeightAt(x, z);
-            if (h < water)
+            // Rivers and lakes have their own level; the valley lake uses the sea-level water line.
+            if (layout.WaterAt(x, z, out float waterLevel) && h < waterLevel + 0.15f)
             {
+                water = waterLevel + 0.15f;
                 float depth = Math.Min(1f, (water - h) / 6f);
                 Rgb w = Rgb.Lerp(Water, DeepWater, depth);
                 return Rgb.Lerp(Shore, w, Math.Min(1f, (water - h) / 0.5f + 0.15f));

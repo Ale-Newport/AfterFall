@@ -13,8 +13,9 @@ namespace Afterfall.Services
         public static GameSession Create(ContentDatabase content, int seed, GameSettings settings)
         {
             settings = settings ?? GameSettings.FromPreset(DifficultyPreset.Survival);
-            var world = new WorldState(seed, settings, new SimulationClock(settings.DayLengthMinutes * 60.0), new IdAllocator());
-            world.Layout = WorldGenerator.Generate(seed);
+            WorldLayout layout = WorldGenerator.Generate(seed, settings.WorldVersion);
+            var world = new WorldState(seed, settings, new SimulationClock(settings.DayLengthMinutes * 60.0), new IdAllocator(), layout.Size);
+            world.Layout = layout;
 
             var player = new PlayerState
             {

@@ -9,6 +9,8 @@ Vehicles are real, saved world entities that can be found, unlocked or hotwired,
 | `pickup` | Pickup | 4x4 | 70 L, 0.12 L/km | 115 km/h, 1850 kg | 2 | 24 slots, 400 kg | Unlocked at Hartley's Workshop, key lost: hotwire it. Scrap and parts in the bed. |
 | `atv` | Quad bike | 4x4 | 12 L, 0.045 L/km | 75 km/h, 330 kg | 0 | 6 slots, 45 kg (rack) | At Dawson Farm with its key in the ignition and 2.5 L of fuel. |
 
+In Greater Millbrook (world version 2) three more wait in the region: a locked grey sedan in Eastgate ("Grey sedan · EG-7730", its key in the Eastgate Apartments' flat 2 kitchen), a pickup on an Ashford street with its key in the ignition, and a quad bike in Pinecrest with 6 L of fuel. Roads there are graded for driving (tested: no 4 m stretch rises more than 0.35 m per metre) and two bridges cross the Kessel.
+
 Each definition sets mass, torque, brakes, top speed, steering lock, fuel use, seats, doors, trunk size, body size and wheel layout, hotwiring time and difficulty, engine noise and paint options.
 
 ## Domain (Domain/Vehicles, Services/VehicleService.cs)

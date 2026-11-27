@@ -141,6 +141,9 @@ namespace Afterfall.Domain.World
 
         /// <summary>For planned multi-storey buildings: the <see cref="BuildingPlan"/> id the shell is built from.</summary>
         public string PlanId { get; set; } = "";
+
+        /// <summary>Tilt in degrees, positive when the +Z end is higher (bridges between banks of different height).</summary>
+        public float Pitch { get; set; }
     }
 
     public sealed class RoadPath
@@ -148,6 +151,8 @@ namespace Afterfall.Domain.World
         public List<Vec3> Points { get; } = new List<Vec3>();
         public float Width { get; set; } = 7f;
         public bool Paved { get; set; } = true;
+        /// <summary>A railway line (ballast and track) rather than a road.</summary>
+        public bool Rail { get; set; }
     }
 
     /// <summary>A river: a centre line whose points carry the water surface height (falling downstream) and a width.</summary>
@@ -378,6 +383,36 @@ namespace Afterfall.Domain.World
         public float HeightAt(float x, float z) => Height.Sample(x, z);
         public Vec3 Ground(float x, float z) => new Vec3(x, Height.Sample(x, z), z);
         public bool IsWater(float x, float z) => WaterAt(x, z, out _);
+
+        /// <summary>
+        /// The level of the water nearest a point within <paramref name="reach"/> metres of a river
+        /// bank or lake shore (for shore painting); the valley's water line otherwise.
+        /// </summary>
+        public bool WaterNear(float x, float z, float reach, out float level)
+        {
+            level = WaterLevel;
+            foreach (LakeInfo lake in Lakes)
+            {
+                float dx = x - lake.Center.X, dz = z - lake.Center.Z, r = lake.Radius + reach;
+                if (dx * dx + dz * dz > r * r) continue;
+                level = lake.Level;
+                return true;
+            }
+            if (_riverIndex == null || _riverIndex.Count == 0) return false;
+            long k = ((long)(int)Math.Floor(x / RiverCell) << 32) ^ (uint)(int)Math.Floor(z / RiverCell);
+            if (!_riverIndex.TryGetValue(k, out List<int> segs)) return false;
+            float best = float.MaxValue;
+            foreach (int id in segs)
+            {
+                (int r, int i) = _riverSegs[id];
+                RiverPath river = Rivers[r];
+                float d = DistanceToSegmentXZ(x, z, river.Points[i], river.Points[i + 1], out float t);
+                if (d > river.Width * 0.5f + reach || d >= best) continue;
+                best = d;
+                level = river.Points[i].Y + (river.Points[i + 1].Y - river.Points[i].Y) * t;
+            }
+            return best < float.MaxValue;
+        }
 
         public bool IsInsideMap(float x, float z, float margin = 0f) =>
             x >= margin && z >= margin && x <= Size - margin && z <= Size - margin;

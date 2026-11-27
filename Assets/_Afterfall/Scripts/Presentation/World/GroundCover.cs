@@ -549,7 +549,7 @@ namespace Afterfall.Presentation
 
         private void PlaceReeds(Cell c, float x, float z, float[] w, float h0, float h1, float h2)
         {
-            float water = _layout.WaterLevel;
+            _layout.WaterNear(x, z, 4f, out float water);
             float h = _layout.HeightAt(x, z);
             if (h < water - 0.35f || h > water + 0.5f) return;
             float patch = Smooth(-0.3f, 0.3f, Noise.Value(_seed + 71, x * 0.08f, z * 0.08f));
@@ -575,6 +575,7 @@ namespace Afterfall.Presentation
             pos = new Vector3(x, h, z);
             normal = Vector3.up;
             if (minAboveWater >= 0f && h < _layout.WaterLevel + minAboveWater) return false;
+            if (minAboveWater >= 0f && _layout.WaterNear(x, z, 0.5f, out float level) && h < level + minAboveWater) return false;
             const float d = 0.5f;
             float hx = _layout.HeightAt(x + d, z) - _layout.HeightAt(x - d, z);
             float hz = _layout.HeightAt(x, z + d) - _layout.HeightAt(x, z - d);

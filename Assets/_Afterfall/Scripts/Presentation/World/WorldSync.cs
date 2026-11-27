@@ -18,6 +18,16 @@ namespace Afterfall.Presentation
     {
         public const float ZombieViewRadius = 140f;
 
+        /// <summary>
+        /// In a large world resource nodes (trees, rocks, plants) only have views within this range
+        /// of the survivor; they are distance-culled at 260 m anyway. The small valley builds them all.
+        /// </summary>
+        public const float NodeViewRadius = 300f;
+        private const float NodeKeepMargin = 40f, NodeRescanStep = 24f;
+        private bool _streamNodes;
+        private Vector3 _nodeFocus;
+        private float _nodeScan;
+
         private GameController _gc;
         private Transform _nodesRoot, _structuresRoot, _dropsRoot, _zombiesRoot;
         private readonly Dictionary<EntityId, ResourceNodeView> _nodes = new Dictionary<EntityId, ResourceNodeView>();
@@ -45,6 +55,8 @@ namespace Afterfall.Presentation
             _zombiesRoot = Root("Infected");
             _colonistsRoot = Root("Survivors");
             _vehiclesRoot = Root("Vehicles");
+            _streamNodes = gc.Session.World.Layout.Size > 600f;
+            _nodeFocus = NodeFocus();
             Reconcile();
         }
 
@@ -69,12 +81,72 @@ namespace Afterfall.Presentation
             foreach (KeyValuePair<EntityId, StructureView> kv in _structures)
                 if (_gc.Session.World.Structures.TryGetValue(kv.Key, out Structure s)) kv.Value.RefreshVisualState(s, dt);
 
+            if (_streamNodes)
+            {
+                _nodeScan -= dt;
+                if (_nodeScan <= 0f)
+                {
+                    _nodeScan = 0.5f;
+                    Vector3 f = NodeFocus();
+                    float dx = f.x - _nodeFocus.x, dz = f.z - _nodeFocus.z;
+                    if (dx * dx + dz * dz > NodeRescanStep * NodeRescanStep)
+                    {
+                        _nodeFocus = f;
+                        StreamNodes();
+                    }
+                }
+            }
+
             _zombieScan -= dt;
             if (_zombieScan <= 0f)
             {
                 _zombieScan = 0.5f;
                 SyncZombieViews();
             }
+        }
+
+        public int NodeViewCount => _nodes.Count;
+
+        private Vector3 NodeFocus() => _gc.Session.World.Player.Position.ToUnity();
+
+        private bool InNodeRange(Vec3 p, float extra)
+        {
+            if (!_streamNodes) return true;
+            float dx = p.X - _nodeFocus.x, dz = p.Z - _nodeFocus.z, r = NodeViewRadius + extra;
+            return dx * dx + dz * dz <= r * r;
+        }
+
+        /// <summary>Builds node views that came into range and drops those well out of it.</summary>
+        private void StreamNodes()
+        {
+            WorldState w = _gc.Session.World;
+            var drop = new List<EntityId>();
+            foreach (KeyValuePair<EntityId, ResourceNodeView> kv in _nodes)
+                if (!w.ResourceNodes.TryGetValue(kv.Key, out ResourceNodeState n) || !InNodeRange(n.Position, NodeKeepMargin)) drop.Add(kv.Key);
+            foreach (EntityId id in drop)
+            {
+                if (_nodes[id] != null) Destroy(_nodes[id].gameObject);
+                _nodes.Remove(id);
+            }
+            foreach (ResourceNodeState n in w.ResourceNodes.Values)
+                if (!_nodes.ContainsKey(n.Id) && InNodeRange(n.Position, 0f)) CreateNodeView(n);
+        }
+
+        private void CreateNodeView(ResourceNodeState n)
+        {
+            ResourceNodeDefinition def = _gc.Session.Content.Node(n.DefId);
+            if (def == null) return;
+            var go = new GameObject($"{n.DefId}{n.Id}");
+            go.transform.SetParent(_nodesRoot, false);
+            go.transform.SetPositionAndRotation(n.Position.ToUnity(), Quaternion.Euler(0, n.Yaw, 0));
+            go.transform.localScale = Vector3.one * n.Scale;
+            NodeVisuals.Build(go.transform, def, n);
+            Shapes.SetLayerRecursive(go, Layers.Resource);
+            var v = go.AddComponent<ResourceNodeView>();
+            v.Id = n.Id;
+            v.Def = def;
+            v.BuiltDepleted = n.Depleted;
+            _nodes[n.Id] = v;
         }
 
         public void Reconcile()
@@ -92,19 +164,7 @@ namespace Afterfall.Presentation
                     Destroy(view.gameObject);
                     _nodes.Remove(n.Id);
                 }
-                ResourceNodeDefinition def = _gc.Session.Content.Node(n.DefId);
-                if (def == null) continue;
-                var go = new GameObject($"{n.DefId}{n.Id}");
-                go.transform.SetParent(_nodesRoot, false);
-                go.transform.SetPositionAndRotation(n.Position.ToUnity(), Quaternion.Euler(0, n.Yaw, 0));
-                go.transform.localScale = Vector3.one * n.Scale;
-                NodeVisuals.Build(go.transform, def, n);
-                Shapes.SetLayerRecursive(go, Layers.Resource);
-                var v = go.AddComponent<ResourceNodeView>();
-                v.Id = n.Id;
-                v.Def = def;
-                v.BuiltDepleted = n.Depleted;
-                _nodes[n.Id] = v;
+                if (InNodeRange(n.Position, 0f)) CreateNodeView(n);
             }
 
             // Structures

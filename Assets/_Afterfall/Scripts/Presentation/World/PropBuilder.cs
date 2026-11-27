@@ -14,13 +14,13 @@ namespace Afterfall.Presentation
     /// kind, size and variant. Convention: local origin at ground centre, entrance on the +Z face,
     /// floor top at y = 0.1.
     /// </summary>
-    public static class PropBuilder
+    public static partial class PropBuilder
     {
         public static GameObject Build(PropPlacement p)
         {
             var go = new GameObject("Prop_" + p.Kind);
             go.transform.position = new Vector3(p.Position.X, p.Position.Y, p.Position.Z);
-            go.transform.rotation = Quaternion.Euler(0f, p.Yaw, 0f);
+            go.transform.rotation = Quaternion.Euler(-p.Pitch, p.Yaw, 0f);
             Transform t = go.transform;
             Vector3 s = new Vector3(p.Size.X, p.Size.Y, p.Size.Z);
             // Props without a variant (fences, cliffs, poles) vary with their place in the world.
@@ -46,6 +46,8 @@ namespace Afterfall.Presentation
                 case "silo": Silo(t, s); break;
                 case "apartment": PlanBuilder.Build(t, Afterfall.Domain.World.BuildingPlans.Get(p.PlanId)); break;
                 case "power_pole_old": OldPole(t, s, place % 4); break;
+                case "bridge": Bridge(t, s); break;
+                case "rail": Rail(t, s, p.Variant); break;
                 default:
                     Shapes.BevelBox(t, "Block", Mat(Surface.Concrete, new Color(0.55f, 0.54f, 0.52f)), new Vector3(0, s.y * 0.5f, 0), s, 0.04f);
                     break;

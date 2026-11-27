@@ -393,17 +393,19 @@ namespace Afterfall.Presentation
             float n2 = Noise.Fbm(seed + 502, x * 0.06f, z * 0.06f, 3);
             float n3 = Noise.Fbm(seed + 503, x * 0.28f, z * 0.28f, 2);
             float n4 = Noise.Value(seed + 504, x * 1.3f, z * 1.3f);
-            float water = layout.WaterLevel;
+            // Shores follow the nearest river or lake; the valley lake uses the water line.
+            layout.WaterNear(x, z, 8f, out float water);
+            bool region = layout.Version >= 2;
             int si = sz * stamps.Res + sx;
 
             // Natural ground: meadow, drying out in broad patches, higher up and on the slopes.
             w[TerrainSurfaces.Meadow] = 1f;
             float lakeLush = Smooth(water + 6f, water + 2f, h);
-            float dry = Smooth(0.12f, 0.45f, n1 * 0.8f + n2 * 0.45f + n3 * 0.12f + Smooth(32f, 60f, h) * 0.35f + Smooth(8f, 22f, slope) * 0.2f - lakeLush * 0.4f);
+            float dry = Smooth(0.12f, 0.45f, n1 * 0.8f + n2 * 0.45f + n3 * 0.12f + (region ? Smooth(70f, 130f, h) : Smooth(32f, 60f, h)) * 0.35f + Smooth(8f, 22f, slope) * 0.2f - lakeLush * 0.4f);
             Over(w, TerrainSurfaces.DryGrass, dry * 0.8f);
 
             // Forest floor where the generator plants the forest, and needle skirts under every tree.
-            float forestNoise = Noise.Fbm(seed + 77, x * 0.011f, z * 0.011f, 3) + (256f - x) / 256f * 0.25f;
+            float forestNoise = region ? WorldGenerator.RegionForest(seed, x, z) : Noise.Fbm(seed + 77, x * 0.011f, z * 0.011f, 3) + (256f - x) / 256f * 0.25f;
             float forest = Smooth(-0.1f, 0.18f, forestNoise + n3 * 0.08f) * 0.6f;
             forest = Mathf.Max(forest, stamps.Forest[si]);
             Over(w, TerrainSurfaces.ForestFloor, forest);
@@ -414,7 +416,10 @@ namespace Afterfall.Presentation
 
             // Rock on steep ground and outcrops along the northern ridge.
             float rock = Smooth(24f, 34f, slope + n3 * 6f + n4 * 2f);
-            rock = Mathf.Max(rock, Smooth(52f, 62f, h + n2 * 8f) * Smooth(0.05f, 0.35f, n2 + n3 * 0.3f));
+            float rockLine = region ? 125f : 52f;
+            rock = Mathf.Max(rock, Smooth(rockLine, rockLine + 10f, h + n2 * 8f) * Smooth(0.05f, 0.35f, n2 + n3 * 0.3f));
+            // Snow-dusted scree on the highest peaks of the region.
+            if (region) rock = Mathf.Max(rock, Smooth(170f, 190f, h + n2 * 10f));
             Over(w, TerrainSurfaces.Gravel, Smooth(16f, 26f, slope + n3 * 6f) * 0.35f * (1f - rock));
             Over(w, TerrainSurfaces.Rock, Mathf.Max(rock, stamps.Rock[si]));
 
@@ -578,13 +583,58 @@ namespace Afterfall.Presentation
 
         // ------------------------------------------------------------------ water
 
+        /// <summary>
+        /// The world's water surfaces: the valley lake, a ribbon along each river at its (falling)
+        /// level, in chunks so they cull, and a disc for each lake. Edges run under the banks.
+        /// </summary>
         public static GameObject BuildWater(WorldLayout layout, Transform parent)
         {
+            var root = new GameObject("Water");
+            root.transform.SetParent(parent, false);
+            root.layer = 4; // built-in Water layer
             float size = layout.LakeRadius * 3f;
-            GameObject water = Shapes.Part(parent, "Lake", MeshFactory.Quad, WaterMaterial(),
-                new Vector3(layout.LakeCenter.X, layout.WaterLevel, layout.LakeCenter.Z), new Vector3(size, size, 1f), Quaternion.Euler(90f, 0f, 0f), false);
-            water.layer = 4; // built-in Water layer
-            return water;
+            Shapes.Part(root.transform, "Lake", MeshFactory.Quad, WaterMaterial(),
+                new Vector3(layout.LakeCenter.X, layout.WaterLevel, layout.LakeCenter.Z), new Vector3(size, size, 1f), Quaternion.Euler(90f, 0f, 0f), false).layer = 4;
+            foreach (RiverPath river in layout.Rivers)
+            {
+                const int chunk = 16;
+                for (int start = 0; start + 1 < river.Points.Count; start += chunk)
+                {
+                    int end = Mathf.Min(river.Points.Count - 1, start + chunk);
+                    var mb = new MeshBuilder();
+                    int prev = -1;
+                    for (int i = start; i <= end; i++)
+                    {
+                        Vec3 a = river.Points[Mathf.Max(0, i - 1)], b = river.Points[Mathf.Min(river.Points.Count - 1, i + 1)];
+                        var dir = new Vector3(b.X - a.X, 0f, b.Z - a.Z).normalized;
+                        var side = new Vector3(-dir.z, 0f, dir.x) * (river.Width * 0.5f + 4f);
+                        var c = new Vector3(river.Points[i].X, river.Points[i].Y, river.Points[i].Z);
+                        int l0 = mb.Vertex(c - side, Vector3.up), r0 = mb.Vertex(c + side, Vector3.up);
+                        if (prev >= 0)
+                        {
+                            mb.Triangle(prev, r0, l0);
+                            mb.Triangle(prev, prev + 1, r0);
+                        }
+                        prev = l0;
+                    }
+                    Shapes.Mesh(root.transform, river.Name + " " + start, mb.Build(river.Name), WaterMaterial(), Vector3.zero, null, false).layer = 4;
+                }
+            }
+            foreach (LakeInfo lake in layout.Lakes)
+            {
+                var mb = new MeshBuilder();
+                const int sides = 72;
+                float r = lake.Radius * 1.12f;
+                int centre = mb.Vertex(Vector3.zero, Vector3.up);
+                for (int i = 0; i <= sides; i++)
+                {
+                    float a = i * Mathf.PI * 2f / sides;
+                    mb.Vertex(new Vector3(Mathf.Cos(a) * r, 0f, Mathf.Sin(a) * r), Vector3.up);
+                    if (i > 0) mb.Triangle(centre, centre + i + 1, centre + i);
+                }
+                Shapes.Mesh(root.transform, lake.Name, mb.Build(lake.Name), WaterMaterial(), new Vector3(lake.Center.X, lake.Level, lake.Center.Z), null, false).layer = 4;
+            }
+            return root;
         }
 
         /// <summary>The lake material (Afterfall/Water) with its procedural ripple normal map.</summary>

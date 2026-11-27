@@ -10,7 +10,7 @@ namespace Afterfall.Domain.World
     /// (stable between seeds) while terrain detail, vegetation and loot vary with the seed.
     /// Fully deterministic for a given seed.
     /// </summary>
-    public static class WorldGenerator
+    public static partial class WorldGenerator
     {
         private struct ContainerSpec
         {

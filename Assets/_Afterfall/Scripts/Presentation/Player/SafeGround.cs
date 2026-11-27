@@ -71,7 +71,7 @@ namespace Afterfall.Presentation
             {
                 if (hit.normal.y < 0.7f || IsNotWalkable(hit.collider)) continue;
                 Vector3 feet = hit.point + Vector3.up * 0.05f;
-                if (feet.y < layout.WaterLevel + 0.3f && layout.IsWater(feet.x, feet.z)) return false;
+                if (layout.WaterAt(feet.x, feet.z, out float level) && feet.y < level + 0.3f) return false;
                 if (!Fits(feet)) continue;
                 spot = feet;
                 return true;

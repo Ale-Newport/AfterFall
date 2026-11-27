@@ -26,7 +26,7 @@
   <a href="https://github.com/Ale-Newport/AfterFall/discussions">Discussions</a>
 </p>
 
-You wake up alone in a quiet, ruined valley. You scavenge, build shelter, smelt metal, bring electricity back and automate production, then recruit survivors who haul, build, farm and defend with you. Everything (inventories, machines, power grids, colonist jobs, infected, saves) runs on one authoritative simulation that works with or without rendering, and 155 tests check it headlessly on Linux, Windows and macOS, including progression checks on generated worlds and two-day soak runs with saves and reloads.
+You wake up alone in a quiet, ruined valley. You scavenge, build shelter, smelt metal, bring electricity back and automate production, then recruit survivors who haul, build, farm and defend with you. Everything (inventories, machines, power grids, colonist jobs, infected, saves) runs on one authoritative simulation that works with or without rendering, and 211 tests check it headlessly on Linux, Windows and macOS, including progression checks on generated worlds and two-day soak runs with saves and reloads.
 
 > **Status: early playable prototype, `v0.1.1`, for macOS and Windows.** All 155 EditMode tests and 7 PlayMode tests pass in Unity 6000.3.28f1. The macOS build passes a scripted tour of every system with 0 failed checks and 0 logged errors at about 8.4 ms per frame on an Apple M2 Max, and the Windows build runs the same tour on a GitHub-hosted Windows runner (software rendering, so its frame times say nothing about real PCs). Nobody has played it by hand yet (the tour drives commands, not the mouse and keyboard), and the art is procedural. [docs/PROGRESS.md](docs/PROGRESS.md) lists exactly what is verified. Playtest reports are the most useful contribution right now.
 
@@ -91,7 +91,11 @@ The simulation is deterministic and engine-independent: a furnace keeps smelting
 
 | Area | Implemented |
 |---|---|
-| World | Deterministic 512 m × 512 m valley: Unity Terrain, lake, northern ridge, roads, forest (~1,000 harvestable trees), 6 points of interest (Millbrook settlement, Route 9 gas station, Hartley's Workshop, Ridge Substation, Old Quarry, Dawson Farm) plus a starting camp |
+| World | Two deterministic worlds. **Greater Millbrook** (default, 2 × 2 km): the start valley, the Kessel river and reservoir with two bridges, the towns of Ashford and Eastgate (about 220 enterable buildings), the mountain village of Pinecrest, two farms, a lodge, a research station, a freight line and ~13,000 harvestable trees, rocks and plants, streamed around the survivor (terrain tiles, node views and a moving NavMesh window). **Millbrook Valley** (512 m): the original compact start with 6 points of interest plus a starting camp |
+| Buildings and doors | Single-storey houses, shops, clinics, garages, warehouses, barns and cabins with furnished, lootable interiors; a three-storey apartment block (stairs, flats, a corner shop) in Millbrook, Ashford and Eastgate. Doors open, lock with keys found in the world and break under attack |
+| Vehicles | A sedan, a pickup and a quad bike: keys, locks, abstract hotwiring, wheel physics, fuel, repairs, trunks, saved where you park them |
+| Map | World map (M) drawn from the world data, with fog of war, labels, a waypoint and custom markers; minimap and waypoint marker on the HUD |
+| Creative and debug | Creative mode, and developer tools for any game (F6): item browser and spawner over the whole catalogue, vehicle spawner, teleports, time and weather, diagnostics; free flight (F7) |
 | Survivor | Third-person movement: walk, run, stamina-limited sprint, crouch, jump. Health, stamina, hunger, thirst, body warmth, carry weight, death and respawn with recoverable belongings |
 | Cameras | Cinemachine 3 shoulder camera with collision and zoom. Tab switches to a strategic view with pan, rotate and zoom |
 | Items | 37 items in 8 categories, with stacking, weight limits, durability, filters and a reservation-based transactional inventory |
@@ -164,6 +168,10 @@ To build a standalone player, use **AFTERFALL → Build → macOS / Windows (64-
 | Backpack and crafting | I |
 | Construction menu / rotate blueprint / cancel | B / R or wheel / right mouse button |
 | Strategic view | Tab (WASD pan, Q/E rotate, wheel zoom, left-click select) |
+| World map / minimap zoom | M / = and - |
+| Vehicle: get in or out / engine (hold to hotwire) / handbrake / vehicle window | E / F / Space / R |
+| Door: open / lock with its key | E / R |
+| Creative and developer panel / free flight | F6 / F7 |
 | Quick save / quick load | F5 / F9 |
 | Performance overlay / help / menu | F3 / F1 / Esc |
 
@@ -175,7 +183,7 @@ Every binding can be changed in **Settings**.
 dotnet test tools/dotnet/AfterfallSim.Tests/AfterfallSim.Tests.csproj
 ```
 
-This runs the EditMode test suite (168 tests) headlessly, as CI does on Linux, Windows and macOS: inventory conservation, reservations, crafting, construction, machines, power, AI, threats, weather and warmth, world generation, saves and colonist jobs, farming, full gameplay-loop scenarios, progression reachability on generated worlds and long soak runs with save and reload.
+This runs the EditMode test suite (211 tests) headlessly, as CI does on Linux, Windows and macOS: inventory conservation, reservations, crafting, construction, machines, power, AI, threats, weather and warmth, world generation, saves and colonist jobs, farming, full gameplay-loop scenarios, progression reachability on generated worlds and long soak runs with save and reload.
 
 With Unity installed and licensed, `tools/run-unity-checks.sh` runs the same suite inside Unity, the PlayMode smoke tests, a macOS build and the scripted tour (screenshots, frame times and an error count in `Logs/unity-checks/`). See [docs/TESTING.md](docs/TESTING.md).
 
@@ -187,7 +195,8 @@ With Unity installed and licensed, `tools/run-unity-checks.sh` runs the same sui
 - [docs/PROGRESS.md](docs/PROGRESS.md): what is done, verified, partial or missing
 - [docs/TESTING.md](docs/TESTING.md) and [docs/CONTENT_PIPELINE.md](docs/CONTENT_PIPELINE.md)
 - [docs/decisions/](docs/decisions/): architecture decision records
-- [docs/ASSET_LICENSES.md](docs/ASSET_LICENSES.md) and [CHANGELOG.md](CHANGELOG.md)
+- World expansion: [audit](docs/WORLD_EXPANSION_AUDIT.md), [roadmap](docs/WORLD_EXPANSION_ROADMAP.md), [progress](docs/WORLD_EXPANSION_PROGRESS.md), [world generation](docs/WORLD_GENERATION.md), [vehicles](docs/VEHICLE_SYSTEM.md), [map](docs/MAP_SYSTEM.md), [creative and debug mode](docs/CREATIVE_DEBUG_MODE.md), [character pipeline](docs/CHARACTER_PIPELINE.md)
+- [docs/ASSET_LICENSES.md](docs/ASSET_LICENSES.md), [docs/ASSET_PROVENANCE.md](docs/ASSET_PROVENANCE.md) and [CHANGELOG.md](CHANGELOG.md)
 
 ## Contributing
 

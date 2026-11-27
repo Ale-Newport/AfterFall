@@ -37,7 +37,7 @@ namespace Afterfall.Services
         {
             Content = content ?? throw new ArgumentNullException(nameof(content));
             World = world ?? throw new ArgumentNullException(nameof(world));
-            if (World.Layout == null) World.Layout = WorldGenerator.Generate(World.Seed);
+            if (World.Layout == null) World.Layout = WorldGenerator.Generate(World.Seed, World.Settings.WorldVersion);
             Events = new EventBus();
             Scheduler = new TickScheduler();
             Rng = World.SessionRng;

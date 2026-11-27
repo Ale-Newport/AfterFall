@@ -1,17 +1,17 @@
 # Progress log
 
-_Last updated: 2026-11-24 (session 6: weather, cold snaps and body warmth, campfires, lightning rods; gathering areas for colonists; a colony save-determinism fix)._
+_Last updated: 2026-11-27 (session 7: world expansion — creative and developer tools, map and minimap, doors and apartment blocks, vehicles, the 2 km Greater Millbrook world; character pipeline planned)._
 
 ## Snapshot
 | | |
 |---|---|
 | Branch | `main` (every commit pushed to `origin`). Latest release: `v0.1.1` |
 | Unity version | 6000.3.28f1 (arm64), installed through Unity Hub 3.22.6 with a Personal license |
-| Last headless tests | 2026-11-24: **174/174 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on Linux, Windows and macOS on each push. |
-| Last Unity EditMode run | 2026-11-24: **174/174 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
-| Last Unity PlayMode run | 2026-11-24: **7/7 passed** (5 smoke tests plus 2 Input System integration tests; the Input System package's 2 Windows mouse tests skip themselves on macOS). |
-| Last player builds | 2026-11-24: macOS (universal), no errors. 2026-11-20: Windows x64 (Mono), attached to the v0.1.1 release with the macOS build |
-| Last scripted tour of the build | 2026-11-24 (macOS, with the new gathering and weather scenes): **0 failed checks, 0 errors logged**, new game in 2.4 s, frames 8.3–8.6 ms average at the start camp, in the strategic view, in the rain and at night (vsync-capped, Apple M2 Max, 1600×900). 2026-11-20 (v0.1.1): Windows (GitHub-hosted `windows-latest`, WARP software rendering, 800×450, patience 25): **0 failed checks, 0 errors logged**, 46 minutes. |
+| Last headless tests | 2026-11-27: **211/211 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on Linux, Windows and macOS on each push. |
+| Last Unity EditMode run | 2026-11-27: **211/211 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
+| Last Unity PlayMode run | 2026-11-27: **7/7 passed** (5 smoke tests plus 2 Input System integration tests; the Input System package's 2 Windows mouse tests skip themselves on macOS). |
+| Last player builds | 2026-11-27: macOS (universal), no errors. 2026-11-20: Windows x64 (Mono), attached to the v0.1.1 release with the macOS build |
+| Last scripted tour of the build | 2026-11-27 (macOS, with every world-expansion scene and a new game in the 2 km region): **0 failed checks, 0 errors logged**, valley new game in 2.5 s, region in 7.6 s; region frames 8.3–8.4 ms average in every town. 2026-11-24: new game in 2.4 s, frames 8.3–8.6 ms average at the start camp, in the strategic view, in the rain and at night (vsync-capped, Apple M2 Max, 1600×900). 2026-11-20 (v0.1.1): Windows (GitHub-hosted `windows-latest`, WARP software rendering, 800×450, patience 25): **0 failed checks, 0 errors logged**, 46 minutes. |
 | Last model gallery | 2026-11-09: **151 screenshots, 0 errors logged** (`tools/gallery.sh`, all sections), reviewed by eye. |
 | Human playtest of the acceptance loop | **not yet** |
 | Windows build | built (v0.1.1); the full scripted tour passes on a GitHub-hosted runner; **never run on a real Windows PC with a GPU** |
@@ -114,6 +114,16 @@ All twelve are fixed (commit `fix(game): runtime issues found in presentation re
 
 ## Not started
 Conveyors and pipes, disasters other than storms and cold snaps (fires, floods, disease), factions, wildlife, the armoured infected, firearms, vehicles, multiple regions and streaming, skinned character animation, recorded audio, localisation.
+
+## World expansion (session 7, 2026-11-27)
+Details, phases and limitations: WORLD_EXPANSION_PROGRESS.md.
+- **Creative mode and developer tools** (F6 panel: item browser and spawner, vehicles, teleports, time, weather, infected, diagnostics; F7 free flight). `CreativeTests`.
+- **World map and minimap** drawn from the layout, fog of war, waypoint and markers (saved). `MapTests`.
+- **Doors, keys and the three-storey apartment block** (Millbrook; also Ashford and Eastgate in the region). `DoorTests`.
+- **Vehicles**: sedan, pickup, quad bike; keys, hotwiring, fuel, repairs, trunks, persistence. `VehicleTests`.
+- **Greater Millbrook** (world version 2, 2 × 2 km, the new default): river and reservoir with bridges, Ashford, Eastgate, Pinecrest, farms, lodge, research station, rail; terrain tiles, node-view streaming and a NavMesh window. `RegionTests`.
+- **Characters**: researched and planned (CHARACTER_PIPELINE.md, ASSET_PROVENANCE.md); waiting for approval to download MPFB2 and the MakeHuman CC0 assets.
+- Tests: 211 headless and in Unity EditMode; the expansion tour (`-afterfall-tour-expansion`) covers every feature above in the macOS build.
 
 ## Gathering areas (session 6, 2026-11-24)
 - **Strategic order:** "Mark area…" in the strategic view, then a click on explored ground, places a gathering area (6–30 m, default 14 m; at most six). Toggles choose wood, stone, fiber and food; "Focus" and "Remove" act on it. A translucent disc and a world label show each area in the strategic view.
@@ -258,6 +268,7 @@ Bugs that only showed up in the engine, all fixed:
 - Not yet measured (needs playtests): time to first construction, time to first machine output, playtime without critical bugs.
 
 ## Next development tasks
+0. **World expansion follow-ups**: realistic characters once the MPFB2/MakeHuman download is approved (CHARACTER_PIPELINE.md); sector streaming of props and structure views for worlds beyond 2 km; far-distance tree impostors; map detail tiles; road-aware vehicle routing; vehicle sounds and headlights.
 1. **Playtest the acceptance scenario** ([#1](https://github.com/Ale-Newport/AfterFall/issues/1), docs/TESTING.md) by hand in the editor or the macOS build, including a session into days 2–3 for storms and a cold snap. Tune movement, camera, harvest and colonist pacing, day length, and weather balance. Record time to first construction and to first machine output.
 2. Storage designation in the strategic view (which crates take what); the Guard profession.
 3. Conveyors (automation level 3) between storage and machines.

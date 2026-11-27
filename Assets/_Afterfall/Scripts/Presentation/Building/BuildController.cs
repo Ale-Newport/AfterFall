@@ -197,7 +197,7 @@ namespace Afterfall.Presentation
                 OnSupport = onSupport,
                 HasGround = true,
                 SlopeDegrees = onSupport ? 0f : FootprintSlope(pos, yaw),
-                InWater = !onSupport && layout.HeightAt(pos.x, pos.z) < layout.WaterLevel + 0.1f,
+                InWater = !onSupport && layout.WaterAt(pos.x, pos.z, out float waterLevel) && layout.HeightAt(pos.x, pos.z) < waterLevel + 0.1f,
                 WaterNearby = WaterNear(layout, pos, 6f),
                 Distance = tactical ? 0f : Vector3.Distance(_gc.Player.transform.position, pos),
                 MaxDistance = 12f

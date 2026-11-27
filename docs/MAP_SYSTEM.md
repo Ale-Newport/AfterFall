@@ -23,7 +23,9 @@ No camera renders the world for either map.
 ## Rendering
 `MapRasterizer` is pure C# (no UnityEngine), deterministic and thread-safe. Per pixel it samples the height field: hypsometric tints by height above the water, hill shading lit from the north-west, contour lines every 5 m (every 25 m stronger, widths adapted to the scale), woodland from a blurred 8 m tree-density grid with a light stipple, water by depth with a dark shoreline. Then it draws building footprints (rotated rectangles, darker rims) and roads (paved roads cased, tracks plain), anti-aliased in world units. Any rectangle of the world can be rendered on its own, and a tile is pixel-for-pixel the same as the matching part of a larger render (tested), so the map can be split into tiles when the world grows. The 512 m valley renders as one 1024² overview (0.5 m per pixel) in about 80 ms on a worker thread.
 
-Preview without Unity: `dotnet run -c Release --project tools/dotnet/ArtPreview -- map <outdir> [seed]` writes `map.png`.
+Rivers and lakes are drawn at their own water levels (`WorldLayout.WaterAt`), the railway as a thin dark line under the roads, bridges as the roads that cross the water.
+
+Preview without Unity: `dotnet run -c Release --project tools/dotnet/ArtPreview -- map <outdir> [seed] [world version]` writes `map.png` (2048² for the 2 km region, rendered in about 0.5 s).
 
 ## Exploration and fog
 - The fog texture comes from `ExplorationState` (saved) and is rebuilt only when it changes. Unexplored land is covered by a dark wash through which the relief shows faintly.
@@ -54,9 +56,8 @@ The strategic camera keeps its own fog plane over the 3D world (from the same `E
 `WorldDto.Navigation` holds the markers (id, name, position, kind) and the waypoint. Older saves have none and load with an empty list. Marker ids come from the world's id allocator and are never reused.
 
 ## Not done yet
-- Detail tiles: the overview is enough at 512 m (0.5 m per pixel). For the larger world the plan is the same rasterizer per tile, cached and loaded by zoom level.
+- Detail tiles: one overview covers the 2 km region; at close zoom it is coarser than in the valley. Worlds beyond 2 km need the same rasterizer per tile, cached and loaded by zoom level.
 - Road-aware route planning for vehicles.
-- Vehicle positions on the map (vehicles do not exist yet).
 
 ## Tests
 - Headless (`MapTests`): projection round trips at several rotations; north-up and heading-up orientation; the raster shows the lake as water, the main road, a building footprint and woodland; a tile matches the whole map at its seams; rendering is deterministic. `CreativeTests` covers waypoint and marker persistence and the waypoint rules.

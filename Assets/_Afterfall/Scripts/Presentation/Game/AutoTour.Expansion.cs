@@ -29,6 +29,7 @@ namespace Afterfall.Presentation
             if (_boot.Game != null && _boot.Game.Running) gc = _boot.Game;
             gc.Session.Threats.SpawningEnabled = false;
             yield return CreativeScene(gc);
+            yield return RegionScene(gc);
         }
 
         private IEnumerator MapScene(GameController gc)

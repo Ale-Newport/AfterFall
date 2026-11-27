@@ -151,7 +151,22 @@ namespace Afterfall.Domain.World
         /// <summary>The sedan parked beside the apartments; its key hangs in flat 2's kitchen.</summary>
         public const string SedanLock = "Blue sedan · MB-2187";
 
-        public static BuildingPlan Get(string id) => id == MillbrookApartmentsId ? MillbrookApartments() : null;
+        public const string AshfordApartmentsId = "ashford_apartments";
+        public const string EastgateApartmentsId = "eastgate_apartments";
+
+        public static BuildingPlan Get(string id)
+        {
+            switch (id)
+            {
+                case MillbrookApartmentsId: return MillbrookApartments();
+                case AshfordApartmentsId: return Apartments(AshfordApartmentsId, "Ashford Apartments", "");
+                case EastgateApartmentsId: return Apartments(EastgateApartmentsId, "Eastgate Apartments", EastgateCarLock);
+                default: return null;
+            }
+        }
+
+        /// <summary>The sedan parked at the Eastgate apartments; its key is in that building's flat 2 kitchen.</summary>
+        public const string EastgateCarLock = "Grey sedan · EG-7730";
 
         /// <summary>
         /// Millbrook Apartments: a three-storey brick block, 16 × 12 m. A stair hall on the west
@@ -159,13 +174,19 @@ namespace Afterfall.Domain.World
         /// floor is flat 2 (living room and kitchen, bedroom, bathroom); the second is flat 3, locked,
         /// with a study. The key to flat 3 is behind the shop counter; the storage key is in flat 2.
         /// </summary>
-        public static BuildingPlan MillbrookApartments()
+        public static BuildingPlan MillbrookApartments() => Apartments(MillbrookApartmentsId, "Millbrook Apartments", SedanLock);
+
+        /// <summary>
+        /// The three-storey apartment block, named <paramref name="name"/> (lock names follow it).
+        /// <paramref name="carKey"/>, if set, is a vehicle key left in flat 2's kitchen.
+        /// </summary>
+        public static BuildingPlan Apartments(string id, string name, string carKey)
         {
             const float hx = 8f, hz = 6f, ext = 0.3f;
             const float inX = hx - ext, inZ = hz - ext; // 7.7, 5.7
-            var p = new BuildingPlan { Id = MillbrookApartmentsId, Name = "Millbrook Apartments", Width = hx * 2f, Depth = hz * 2f, Floors = 3 };
-            const string flat3 = "Millbrook Apartments · Flat 3";
-            const string storage = "Millbrook Apartments · Storage";
+            var p = new BuildingPlan { Id = id, Name = name, Width = hx * 2f, Depth = hz * 2f, Floors = 3 };
+            string flat3 = name + " · Flat 3";
+            string storage = name + " · Storage";
 
             // Stair lanes: west lane rises north from floor 0, east lane rises south from floor 1.
             const float laneW0 = -inX, laneMid = -6.15f, laneE1 = -4.6f, stairS = -4.1f, stairN = 1.3f;
@@ -260,7 +281,8 @@ namespace Afterfall.Domain.World
 
             // First floor: flat 2.
             Container(p, "flat2:fridge", 1, "loot_fridge", "fridge", 7.2f, 4.6f, -90f);
-            Container(p, "flat2:kitchen", 1, "loot_cabinet", "kitchen", 7.2f, 3.4f, -90f).KeysInside.Add(SedanLock);
+            PlanFixture kitchen = Container(p, "flat2:kitchen", 1, "loot_cabinet", "kitchen", 7.2f, 3.4f, -90f);
+            if (!string.IsNullOrEmpty(carKey)) kitchen.KeysInside.Add(carKey);
             Fixture(p, "flat2:stove", 1, "stove", 7.2f, 2.3f, -90f);
             Container(p, "flat2:bookshelf", 1, "loot_bookshelf", "study", -0.55f, 5.25f, 180f);
             Container(p, "flat2:wardrobe", 1, "loot_wardrobe", "wardrobe", -0.7f, -4.8f, 90f);

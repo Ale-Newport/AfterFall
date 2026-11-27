@@ -192,7 +192,9 @@ namespace Afterfall.Persistence
         public static WorldState FromDto(WorldDto dto, ContentDatabase content, List<string> warnings)
         {
             var clock = new SimulationClock(dto.DayLengthSeconds, dto.ElapsedSeconds, dto.StartTimeOfDay);
-            var w = new WorldState(dto.Seed, dto.Settings ?? GameSettings.FromPreset(DifficultyPreset.Survival), clock, new IdAllocator(dto.NextId));
+            GameSettings settings = dto.Settings ?? GameSettings.FromPreset(DifficultyPreset.Survival);
+            WorldLayout layout = WorldGenerator.Generate(dto.Seed, settings.WorldVersion);
+            var w = new WorldState(dto.Seed, settings, clock, new IdAllocator(dto.NextId), layout.Size);
             w.Rng.State = dto.RngState;
             if (dto.SessionRngState != 0) w.SessionRng.State = dto.SessionRngState;
             if (dto.ZombieRngState != 0) w.ZombieRng.State = dto.ZombieRngState;
@@ -201,7 +203,7 @@ namespace Afterfall.Persistence
             if (dto.WeatherRngState != 0) w.WeatherRng.State = dto.WeatherRngState;
             foreach (KeyValuePair<string, double> kv in dto.TickPhases ?? new Dictionary<string, double>()) w.TickPhases[kv.Key] = kv.Value;
             w.ColonyNextPlanAt = dto.ColonyNextPlanAt;
-            w.Layout = WorldGenerator.Generate(dto.Seed);
+            w.Layout = layout;
 
             if (dto.Player != null)
             {

@@ -24,7 +24,7 @@ internal static class Program
     {
         if (args.Length < 2)
         {
-            Console.Error.WriteLine("usage: ArtPreview <textures|icons|all> <outdir> [filter]");
+            Console.Error.WriteLine("usage: ArtPreview <textures|icons|map|all> <outdir> [filter | seed] [world version]");
             return 2;
         }
         string mode = args[0], outDir = Path.GetFullPath(args[1]);
@@ -32,7 +32,7 @@ internal static class Program
         Directory.CreateDirectory(outDir);
         if (mode == "textures" || mode == "all") Textures(outDir, filter);
         if (mode == "icons" || mode == "all") Icons(outDir, filter);
-        if (mode == "map" || mode == "all") Map(outDir, filter);
+        if (mode == "map" || mode == "all") Map(outDir, filter, args.Length > 3 ? args[3] : null);
         Console.WriteLine("Wrote previews to " + outDir);
         return 0;
     }
@@ -175,14 +175,15 @@ internal static class Program
     }
 
     /// <summary>The world map as the game draws it (map.png, north up) for a seed.</summary>
-    private static void Map(string outDir, string seedText)
+    private static void Map(string outDir, string seedText, string versionText = null)
     {
         int seed = int.TryParse(seedText, out int s) ? s : 20261107;
+        int version = int.TryParse(versionText, out int v) ? v : 1;
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var layout = Afterfall.Domain.World.WorldGenerator.Generate(seed);
+        var layout = Afterfall.Domain.World.WorldGenerator.Generate(seed, version);
         var features = Afterfall.Domain.World.MapFeatures.Build(layout);
         long gen = sw.ElapsedMilliseconds;
-        const int res = 1024;
+        int res = layout.Size > 1000f ? 2048 : 1024;
         byte[] px = Afterfall.Domain.World.MapRasterizer.Render(layout, features, 0f, 0f, layout.Size, layout.Size, res, res);
         long draw = sw.ElapsedMilliseconds - gen;
         var flipped = new byte[px.Length];

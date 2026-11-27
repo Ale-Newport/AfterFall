@@ -140,6 +140,9 @@ namespace Afterfall.Presentation
                 Rig.Animate(0f, false, true, Time.deltaTime);
                 return;
             }
+            // In the large region the NavMesh follows the survivor: an agent whose tile went away is
+            // taken off and placed again when the NavMesh is back under it.
+            if (Agent.enabled && _gc.NavReady && !Agent.isOnNavMesh) Agent.enabled = false;
             if (!Agent.enabled && _gc.NavReady && NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 4f, NavMesh.AllAreas))
             {
                 Agent.enabled = true;

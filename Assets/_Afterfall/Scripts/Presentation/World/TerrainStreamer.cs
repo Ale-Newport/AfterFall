@@ -50,6 +50,9 @@ namespace Afterfall.Presentation
         }
 
         public int TotalTiles => _across * _across;
+
+        /// <summary>Counts tiles built, so the NavMesh window knows to take in new ground.</summary>
+        public int Version { get; private set; }
         public int PaintingTiles { get; private set; }
 
         public void Initialize(GameController gc, WorldLayout layout, int seed, Transform root)
@@ -118,6 +121,7 @@ namespace Afterfall.Presentation
             t.Painting = null;
             t.Weights = w;
             t.Terrain = WorldBuilder.BuildTile(_layout, t.X, t.Z, w, _root);
+            Version++;
             WorldBuilder.PublishGroundTint(w, _tint, _layout.Size);
         }
 

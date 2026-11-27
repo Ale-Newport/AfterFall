@@ -150,11 +150,53 @@ namespace Afterfall.Presentation
             _surface.voxelSize = 0.22f;
             _surface.overrideTileSize = true;
             _surface.tileSize = 128;
+            // A world larger than the window is baked only around the survivor, and the window
+            // follows them (only the tiles that changed are rebuilt, in the background).
+            if (Session.World.Layout.Size > NavWindow)
+            {
+                _surface.collectObjects = CollectObjects.Volume;
+                _navCenter = NavWindowCenter(Player.transform.position);
+                _surface.center = _navCenter;
+                _surface.size = new Vector3(NavWindow, Session.World.Layout.MaxHeight + 120f, NavWindow);
+            }
             _surface.navMeshData = new NavMeshData(_surface.agentTypeID);
             _surface.AddData();
             _navOp = _surface.UpdateNavMesh(_surface.navMeshData);
             while (_navOp != null && !_navOp.isDone) yield return null;
             NavReady = true;
+        }
+
+        /// <summary>Side of the square NavMesh window baked around the survivor in a large world.</summary>
+        public const float NavWindow = 512f;
+        private const float NavRecenter = 80f;
+        private Vector3 _navCenter;
+        private int _navTiles = -1;
+
+        public bool NavWindowed => _surface != null && _surface.collectObjects == CollectObjects.Volume;
+
+        /// <summary>Centre of the NavMesh window (large worlds) and whether a (re)bake is running.</summary>
+        public Vector3 NavWindowCentre => _navCenter;
+        public bool NavBaking => _navOp != null && !_navOp.isDone;
+
+        private Vector3 NavWindowCenter(Vector3 p)
+        {
+            float half = NavWindow * 0.5f, size = Session.World.Layout.Size;
+            return new Vector3(Mathf.Clamp(Mathf.Round(p.x / 16f) * 16f, half, size - half), (Session.World.Layout.MaxHeight + 120f) * 0.5f - 60f,
+                Mathf.Clamp(Mathf.Round(p.z / 16f) * 16f, half, size - half));
+        }
+
+        /// <summary>Moves the NavMesh window when the survivor has gone far enough from its centre.</summary>
+        private void UpdateNavWindow()
+        {
+            if (!NavReady || !NavWindowed || (_navOp != null && !_navOp.isDone)) return;
+            Vector3 c = NavWindowCenter(Player.transform.position);
+            // A terrain tile that arrived since the last bake is new ground for the window.
+            bool newGround = TerrainTiles != null && TerrainTiles.Version != _navTiles;
+            if (!newGround && Mathf.Abs(c.x - _navCenter.x) < NavRecenter && Mathf.Abs(c.z - _navCenter.z) < NavRecenter) return;
+            if (TerrainTiles != null) _navTiles = TerrainTiles.Version;
+            if (Mathf.Abs(c.x - _navCenter.x) >= NavRecenter || Mathf.Abs(c.z - _navCenter.z) >= NavRecenter) _navCenter = c;
+            _surface.center = _navCenter;
+            _navOp = _surface.UpdateNavMesh(_surface.navMeshData);
         }
 
         private void Subscribe()
@@ -198,6 +240,7 @@ namespace Afterfall.Presentation
             else UpdateInteraction();
             Maps?.Update();
             Doors?.Update();
+            UpdateNavWindow();
 
             if (!Session.Paused && !IsDead)
             {
