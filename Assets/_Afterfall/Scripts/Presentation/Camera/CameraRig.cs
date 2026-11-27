@@ -143,6 +143,32 @@ namespace Afterfall.Presentation
 
         public bool Flying => _flight;
 
+        private bool _vehicle;
+        private float _vehicleSavedDistance;
+        private float _lookIdle;
+
+        /// <summary>A chase camera behind the vehicle: further back, centred, swinging round behind it when the mouse is left alone.</summary>
+        public void SetVehicle(bool on)
+        {
+            if (on == _vehicle) return;
+            _vehicle = on;
+            if (on)
+            {
+                _vehicleSavedDistance = _distance;
+                _distance = 6.8f;
+                _follow.ShoulderOffset = Vector3.zero;
+                _follow.VerticalArmLength = 0.6f;
+                _follow.Damping = new Vector3(0.2f, 0.35f, 0.45f);
+            }
+            else
+            {
+                _distance = _vehicleSavedDistance > 0f ? _vehicleSavedDistance : 4.2f;
+                _follow.ShoulderOffset = new Vector3(0.55f, 0.2f, 0f);
+                _follow.VerticalArmLength = 0.25f;
+                _follow.Damping = new Vector3(0.1f, 0.25f, 0.3f);
+            }
+        }
+
         /// <summary>From the air the whole region should be visible.</summary>
         public const float FlightFarClip = 2500f;
 
@@ -176,11 +202,14 @@ namespace Afterfall.Presentation
             if (!TacticalActive && _gc.LookInputActive && Mouse.current != null)
             {
                 Vector2 look = _gc.Input.Look.ReadValue<Vector2>() * (0.09f * _gc.Settings.MouseSensitivity);
+                _lookIdle = look.sqrMagnitude > 0.0001f ? 0f : _lookIdle + dt;
+                if (_vehicle && _lookIdle > 1.2f && _gc.Player.Vehicle != null && _gc.Player.Vehicle.Speed > 3f)
+                    _yaw = Mathf.MoveTowardsAngle(_yaw, _gc.Player.Vehicle.transform.eulerAngles.y, 90f * dt);
                 _yaw += look.x;
                 _pitch += _gc.Settings.InvertY ? look.y : -look.y;
                 _pitch = _flight ? Mathf.Clamp(_pitch, -85f, 85f) : Mathf.Clamp(_pitch, -40f, 70f);
                 float zoom = _gc.Input.Zoom.ReadValue<float>();
-                if (Mathf.Abs(zoom) > 0.01f && !_gc.Build.IsPlacing && !_flight) _distance = Mathf.Clamp(_distance - Mathf.Sign(zoom) * 0.6f, 1.8f, 9f);
+                if (Mathf.Abs(zoom) > 0.01f && !_gc.Build.IsPlacing && !_flight) _distance = Mathf.Clamp(_distance - Mathf.Sign(zoom) * 0.6f, 1.8f, _vehicle ? 14f : 9f);
             }
             _follow.CameraDistance = _flight ? _distance : Mathf.Lerp(_follow.CameraDistance, _distance, 1f - Mathf.Exp(-10f * dt));
 

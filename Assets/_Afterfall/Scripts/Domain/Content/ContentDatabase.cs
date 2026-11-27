@@ -51,6 +51,9 @@ namespace Afterfall.Domain.Content
         public Dictionary<string, ResourceNodeDefinition> ResourceNodes { get; } = new Dictionary<string, ResourceNodeDefinition>(StringComparer.Ordinal);
         public Dictionary<string, LootTable> LootTables { get; } = new Dictionary<string, LootTable>(StringComparer.Ordinal);
         public Dictionary<string, ZombieArchetype> Archetypes { get; } = new Dictionary<string, ZombieArchetype>(StringComparer.Ordinal);
+        public Dictionary<string, Afterfall.Domain.Vehicles.VehicleDefinition> Vehicles { get; } = new Dictionary<string, Afterfall.Domain.Vehicles.VehicleDefinition>(StringComparer.Ordinal);
+
+        public Afterfall.Domain.Vehicles.VehicleDefinition Vehicle(string id) => id != null && Vehicles.TryGetValue(id, out var v) ? v : null;
         public SurvivalConfig Survival { get; set; } = new SurvivalConfig();
 
         public RecipeDefinition Recipe(string id) => id != null && Recipes.TryGetValue(id, out RecipeDefinition r) ? r : null;

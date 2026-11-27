@@ -269,3 +269,9 @@
     position: absolute; top: 16px; translate: -50% 0; white-space: nowrap; font-size: 14px; -unity-font-style: bold;
     color: rgb(255, 236, 170); text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95); background-color: rgba(0, 0, 0, 0.35); border-radius: 3px; padding: 0 4px;
 }
+
+/* Vehicle status line above the hotbar */
+.hud-vehicle {
+    position: absolute; left: 20%; right: 20%; bottom: 132px; -unity-text-align: middle-center; font-size: 16px;
+    background-color: rgba(18, 20, 18, 0.82); border-radius: 5px; padding: 4px 10px; color: rgb(236, 228, 204);
+}

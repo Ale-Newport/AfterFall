@@ -66,8 +66,13 @@ namespace Afterfall.Services
             Zombies.HearingFactor = () => WeatherReadout.Of(World).HearingFactor;
             _playerSystem = new PlayerSystem(this);
             Creative = new CreativeTools(this);
+            Vehicles = new VehicleService(this);
 
-            Zombies.PlayerHit += (z, dmg) => DamagePlayer(dmg, "the infected");
+            Zombies.PlayerHit += (z, dmg) =>
+            {
+                // Inside a vehicle the infected tear at the vehicle until its body gives way.
+                if (!Vehicles.AbsorbAttack(dmg)) DamagePlayer(dmg, "the infected");
+            };
             Zombies.Construction = Construction;
             if (Zombies.Adapter is DirectZombieAdapter direct) direct.IsBlocked = p => Zombies.IsInsideBlocker(p, 0.35f);
 
@@ -81,6 +86,7 @@ namespace Afterfall.Services
             Scheduler.Register(Threats, 0.5);
             Scheduler.Register(Weather, 1);
             Scheduler.Register(Heaters, 2);
+            Scheduler.Register(new VehicleSystem(this), 1);
             Scheduler.Register(new ResourceRespawnSystem(World, Content), 0.2);
             Scheduler.RestorePhases(World.TickPhases);
         }
@@ -103,6 +109,9 @@ namespace Afterfall.Services
 
         /// <summary>Creative and developer commands (item spawning, teleports, modes).</summary>
         public CreativeTools Creative { get; }
+
+        /// <summary>Vehicle commands and the physics facts about vehicles.</summary>
+        public VehicleService Vehicles { get; }
 
         /// <summary>The weather right now (derived from the saved state and the clock).</summary>
         public WeatherReadout WeatherNow => WeatherReadout.Of(World);
@@ -552,6 +561,17 @@ namespace Afterfall.Services
                 extra = FootprintRadius(s);
             }
             else if (World.Drops.TryGetValue(owner, out WorldDrop d)) pos = d.Position;
+            else if (World.Vehicles.TryGetValue(owner, out Afterfall.Domain.Vehicles.VehicleState veh))
+            {
+                pos = veh.Position;
+                var vdef = Content.Vehicle(veh.DefId);
+                extra = vdef != null ? Math.Max(vdef.SizeX, vdef.SizeZ) * 0.5f : 2f;
+                if (veh.Locked && Player.VehicleId != veh.Id)
+                {
+                    reason = "It is locked.";
+                    return false;
+                }
+            }
             else
             {
                 reason = "Unknown container.";

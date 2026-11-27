@@ -17,7 +17,8 @@ namespace Afterfall.Presentation.UI
         Bookmark,
         Poi,
         Settlement,
-        Survivor
+        Survivor,
+        Vehicle
     }
 
     /// <summary>One thing drawn on the map or minimap at a world position.</summary>
@@ -53,6 +54,13 @@ namespace Afterfall.Presentation.UI
                 into.Add(new MapSymbol { Kind = MapSymbolKind.Settlement, X = home.X, Z = home.Z, Label = "Your settlement" });
             foreach (ColonistState c in w.Colonists.Values)
                 if (c.Recruited && !c.Vitals.IsDead) into.Add(new MapSymbol { Kind = MapSymbolKind.Survivor, X = c.Position.X, Z = c.Position.Z, Label = c.Name, Ref = c.Id });
+            foreach (Afterfall.Domain.Vehicles.VehicleState v in w.Vehicles.Values)
+            {
+                // Only vehicles the survivor knows about: ones they have been in, inspected or claimed.
+                if (!v.Known && !v.Claimed && !revealAll) continue;
+                var vdef = gc.Session.Content.Vehicle(v.DefId);
+                into.Add(new MapSymbol { Kind = MapSymbolKind.Vehicle, X = v.Position.X, Z = v.Position.Z, Label = (vdef?.Name ?? "Vehicle") + (v.Claimed ? " (yours)" : ""), Ref = v.Id });
+            }
             foreach (MapMarker m in w.Navigation.Markers)
                 into.Add(new MapSymbol { Kind = m.Kind == MarkerKind.Bookmark ? MapSymbolKind.Bookmark : MapSymbolKind.Marker, X = m.Position.X, Z = m.Position.Z, Label = m.Name, Ref = m.Id });
             if (w.Navigation.HasWaypoint)
@@ -94,6 +102,7 @@ namespace Afterfall.Presentation.UI
                 case MapSymbolKind.Marker: return "map_marker";
                 case MapSymbolKind.Bookmark: return "map_bookmark";
                 case MapSymbolKind.Settlement: return "map_settlement";
+                case MapSymbolKind.Vehicle: return "map_vehicle";
                 default: return "map_dot";
             }
         }

@@ -235,6 +235,87 @@ namespace Afterfall.Services
             return OpResult.Success($"Spawned a {archetype}.");
         }
 
+        // ------------------------------------------------------------------ vehicles
+
+        /// <summary>Every vehicle type in the content, by name.</summary>
+        public List<Afterfall.Domain.Vehicles.VehicleDefinition> VehicleTypes(string query = "")
+        {
+            string q = (query ?? "").Trim();
+            var list = new List<Afterfall.Domain.Vehicles.VehicleDefinition>();
+            foreach (var d in _session.Content.Vehicles.Values)
+                if (q.Length == 0 || d.Name.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 || d.Id.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 || d.Category.ToString().IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)
+                    list.Add(d);
+            list.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+            return list;
+        }
+
+        /// <summary>
+        /// Creates a vehicle at a spot the caller has checked is clear (the presentation tests the
+        /// space physically first). With <see cref="VehicleSpawnOptions.GiveKey"/> its key goes in the backpack.
+        /// </summary>
+        public OpResult SpawnVehicle(string defId, Vec3 position, float yaw, VehicleSpawnOptions options, out Afterfall.Domain.Vehicles.VehicleState vehicle)
+        {
+            vehicle = null;
+            if (!Enabled) return OpResult.Fail("locked", Locked);
+            var def = _session.Content.Vehicle(defId);
+            if (def == null) return OpResult.Fail("unknown", $"Unknown vehicle '{defId}'.");
+            if (!World.Layout.IsInsideMap(position.X, position.Z, 4f)) return OpResult.Fail("outside", "That is outside the map.");
+            options = options ?? new VehicleSpawnOptions();
+            var v = VehicleService.Create(World, _session.Content, def, position, yaw);
+            int paints = Math.Max(1, def.Paints?.Length ?? 1);
+            v.Paint = ((options.Paint % paints) + paints) % paints;
+            v.Fuel = def.FuelCapacity * Math.Max(0f, Math.Min(1f, options.FuelFraction));
+            float c = Math.Max(0f, Math.Min(100f, options.Condition));
+            v.Engine = v.Body = v.Tyres = v.Battery = c;
+            v.LockId = $"{def.Name} · DEV-{v.Id.Value % 10000:0000}";
+            v.Locked = options.Locked && def.Doors > 0;
+            v.Known = true;
+            v.DebugSpawned = true;
+            World.AddVehicle(v);
+            if (options.GiveKey) _session.Player.Inventory.TryAddStack(new ItemStack(Afterfall.Domain.Vehicles.VehicleRules.KeyItem, 1, 0, v.LockId));
+            vehicle = v;
+            return OpResult.Success($"Spawned a {def.Name.ToLowerInvariant()}{(options.GiveKey ? " (its key is in your backpack)" : "")}.");
+        }
+
+        /// <summary>Removes a vehicle spawned from this panel (its trunk spills on the ground).</summary>
+        public OpResult DeleteVehicle(EntityId id)
+        {
+            if (!Enabled) return OpResult.Fail("locked", Locked);
+            if (!World.Vehicles.TryGetValue(id, out var v)) return OpResult.Fail("missing", "No such vehicle.");
+            if (!v.DebugSpawned) return OpResult.Fail("not_debug", "Only vehicles spawned from the creative panel can be deleted.");
+            if (_session.Player.VehicleId == id) return OpResult.Fail("occupied", "Get out first.");
+            var stacks = new List<ItemStack>();
+            for (int i = 0; i < v.Storage.SlotCount; i++)
+                if (!v.Storage.GetSlot(i).IsEmpty) stacks.Add(v.Storage.GetSlot(i));
+            if (stacks.Count > 0) _session.Construction.CreateDrop(stacks, v.Position, "Trunk contents", false);
+            World.RemoveVehicle(id);
+            return OpResult.Success("Vehicle removed.");
+        }
+
+        /// <summary>Refuels and repairs a vehicle fully (testing).</summary>
+        public OpResult ResetVehicle(EntityId id)
+        {
+            if (!Enabled) return OpResult.Fail("locked", Locked);
+            if (!World.Vehicles.TryGetValue(id, out var v)) return OpResult.Fail("missing", "No such vehicle.");
+            var def = _session.Content.Vehicle(v.DefId);
+            v.Fuel = def.FuelCapacity;
+            v.Engine = v.Body = v.Tyres = v.Battery = 100f;
+            v.WindowBroken = false;
+            return OpResult.Success("Refuelled and repaired.");
+        }
+
+        /// <summary>Moves a vehicle to a checked spot (the presentation places its body there).</summary>
+        public OpResult MoveVehicle(EntityId id, Vec3 position, float yaw)
+        {
+            if (!Enabled) return OpResult.Fail("locked", Locked);
+            if (!World.Vehicles.TryGetValue(id, out var v)) return OpResult.Fail("missing", "No such vehicle.");
+            if (_session.Player.VehicleId == id) return OpResult.Fail("occupied", "Get out first.");
+            v.Position = position;
+            v.Yaw = yaw;
+            World.MarkChanged();
+            return OpResult.Success("Vehicle moved.");
+        }
+
         /// <summary>Removes every infected from the world (testing).</summary>
         public OpResult RemoveAllInfected()
         {

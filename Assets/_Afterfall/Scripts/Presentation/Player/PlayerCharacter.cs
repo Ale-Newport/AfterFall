@@ -36,6 +36,36 @@ namespace Afterfall.Presentation
 
         /// <summary>Creative/debug free flight; while active it moves this body instead of the controller.</summary>
         public FreeFlight Flight { get; private set; }
+
+        /// <summary>The vehicle the survivor sits in (null on foot).</summary>
+        public VehicleView Vehicle { get; private set; }
+
+        /// <summary>Sits the survivor in a vehicle's seat: the controller is off and the body rides along, seated.</summary>
+        public void SitIn(VehicleView v)
+        {
+            Vehicle = v;
+            _cc.enabled = false;
+            transform.SetParent(v.Seat, false);
+            transform.localPosition = Vector3.zero;
+            transform.localRotation = Quaternion.identity;
+            _velocity = Vector3.zero;
+            _verticalSpeed = 0f;
+            bool atv = v.Def.Category == Afterfall.Domain.Vehicles.VehicleCategory.Atv;
+            Rig.SetSeated(true, atv ? 0.32f : 0f, atv ? 0.12f : 0.5f);
+            Rig.SetHeldItem(null);
+        }
+
+        /// <summary>Stands the survivor up beside the vehicle at <paramref name="spot"/>.</summary>
+        public void StandUp(Vector3 spot)
+        {
+            Transform game = _gc.transform;
+            transform.SetParent(game, true);
+            Vehicle = null;
+            Rig.SetSeated(false);
+            transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+            _yaw = transform.eulerAngles.y;
+            Teleport(spot);
+        }
         public bool IsCrouching => _crouching;
         public bool IsSprinting { get; private set; }
         public float HorizontalSpeed { get; private set; }
@@ -109,6 +139,13 @@ namespace Afterfall.Presentation
         {
             if (_gc?.Session == null || Flight.Active) return;
             float dt = Time.deltaTime;
+            if (Vehicle != null)
+            {
+                Rig.SetDead(_gc.Session.Player.Vitals.IsDead);
+                Rig.Animate(0f, false, true, dt);
+                _gc.Session.ReportPlayerTransform(transform.position.ToSim(), transform.eulerAngles.y, new PlayerActivity { Driving = true });
+                return;
+            }
             PlayerState state = _gc.Session.Player;
             bool dead = state.Vitals.IsDead;
             Rig.SetDead(dead);

@@ -108,6 +108,19 @@ namespace Afterfall.Presentation.Art
                         l.RoundRect(50f, 74f, 14f, 24f, 2f, 0f, new Rgba(0.2f, 0.3f, 0.15f));
                     }, 3f, 0f);
                     break;
+                case "map_vehicle":
+                    // A car seen from above, nose up.
+                    Part(art, l =>
+                    {
+                        Rgba dark = new Rgba(0.12f, 0.12f, 0.13f);
+                        foreach (float x in new[] { 28f, 72f })
+                            foreach (float y in new[] { 30f, 72f })
+                                l.RoundRect(x, y, 12f, 20f, 3f, 0f, dark);
+                        l.RoundRect(50f, 51f, 44f, 76f, 12f, 0f, Paint.Shaded(new Rgba(0.35f, 0.78f, 0.95f), 28f, 13f, 72f, 89f, 0.3f));
+                        l.RoundRect(50f, 38f, 34f, 14f, 4f, 0f, new Rgba(0.15f, 0.25f, 0.32f));
+                        l.RoundRect(50f, 70f, 32f, 10f, 3f, 0f, new Rgba(0.15f, 0.25f, 0.32f));
+                    }, 3f, 0f);
+                    break;
                 case "map_dot":
                     // White so the UI can tint it per kind.
                     Part(art, l => l.Circle(50f, 50f, 30f, new Rgba(1f, 1f, 1f)), 3f, 0f);

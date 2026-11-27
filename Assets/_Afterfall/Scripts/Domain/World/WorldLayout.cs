@@ -182,6 +182,26 @@ namespace Afterfall.Domain.World
         public string LockId { get; set; } = "";
         public bool Locked { get; set; }
         public List<string> KeysInside { get; } = new List<string>();
+        public List<string> ItemsInside { get; } = new List<string>();
+    }
+
+    /// <summary>An abandoned vehicle the layout places by a stable key (created once, like fixtures).</summary>
+    public sealed class VehicleSeed
+    {
+        public string Key { get; set; } = "";
+        public string DefId { get; set; } = "";
+        public Vec3 Position { get; set; }
+        public float Yaw { get; set; }
+        public int Paint { get; set; }
+        public float Fuel { get; set; }
+        public float Engine { get; set; } = 100f;
+        public float Body { get; set; } = 100f;
+        public float Tyres { get; set; } = 100f;
+        public float Battery { get; set; } = 100f;
+        public bool Locked { get; set; }
+        public string LockId { get; set; } = "";
+        public bool KeyInIgnition { get; set; }
+        public List<string> TrunkItems { get; } = new List<string>();
     }
 
     /// <summary>A multi-storey building placed from a <see cref="BuildingPlan"/> (origin at its ground, facing by yaw).</summary>
@@ -242,6 +262,7 @@ namespace Afterfall.Domain.World
         public List<SurvivorSeed> Survivors { get; } = new List<SurvivorSeed>();
         public List<FixtureSeed> Fixtures { get; } = new List<FixtureSeed>();
         public List<PlacedPlan> Plans { get; } = new List<PlacedPlan>();
+        public List<VehicleSeed> Vehicles { get; } = new List<VehicleSeed>();
 
         /// <summary>The planned building and room at a world point (for room names and indoor checks), if any.</summary>
         public PlanRoom RoomAt(Vec3 p, out PlacedPlan building)

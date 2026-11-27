@@ -12,6 +12,9 @@ namespace Afterfall.Domain.World
         public bool Sprinting;
         public bool Crouching;
 
+        /// <summary>Driving: no footsteps (the engine makes its own noise).</summary>
+        public bool Driving;
+
         /// <summary>Free flight (creative/debug camera): no footstep noise, no map discovery, and the infected cannot perceive the survivor.</summary>
         public bool Flying;
     }
@@ -41,6 +44,11 @@ namespace Afterfall.Domain.World
         public Vec3 WorldSpawn { get; set; }
         public int Deaths { get; set; }
         public PlayerActivity Activity;
+
+        /// <summary>The vehicle the survivor is driving (None on foot).</summary>
+        public EntityId VehicleId { get; set; }
+
+        public bool InVehicle => VehicleId != EntityId.None;
 
         /// <summary>Simulation time before which the player cannot attack/harvest again.</summary>
         public double NextActionTime { get; set; }

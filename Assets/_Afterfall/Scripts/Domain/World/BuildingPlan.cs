@@ -87,6 +87,9 @@ namespace Afterfall.Domain.World
 
         /// <summary>Containers: names of the locks whose keys lie inside.</summary>
         public readonly List<string> KeysInside = new List<string>();
+
+        /// <summary>Containers: items always found inside (besides the loot roll).</summary>
+        public readonly List<string> ItemsInside = new List<string>();
     }
 
     /// <summary>Decoration drawn with the building (sofas, tables, toilets): no interaction, its own kind name.</summary>
@@ -144,6 +147,9 @@ namespace Afterfall.Domain.World
     public static class BuildingPlans
     {
         public const string MillbrookApartmentsId = "millbrook_apartments";
+
+        /// <summary>The sedan parked beside the apartments; its key hangs in flat 2's kitchen.</summary>
+        public const string SedanLock = "Blue sedan · MB-2187";
 
         public static BuildingPlan Get(string id) => id == MillbrookApartmentsId ? MillbrookApartments() : null;
 
@@ -248,13 +254,13 @@ namespace Afterfall.Domain.World
             Container(p, "shop:fridge", 0, "loot_fridge", "fridge", 7.1f, 2.2f, -90f);
             Container(p, "shop:counter", 0, "loot_counter", "counter", 1.6f, 1.4f, 0f).KeysInside.Add(flat3);
             Container(p, "storage:locker", 0, "loot_locker", "electrical_minor", 7.2f, -4.4f, -90f);
-            Container(p, "storage:toolbox", 0, "loot_toolbox", "toolbox", 3.2f, -5.2f, 0f);
+            Container(p, "storage:toolbox", 0, "loot_toolbox", "toolbox", 3.2f, -5.2f, 0f).ItemsInside.Add("screwdriver");
             Container(p, "storage:crate", 0, "loot_crate", "general", 6.8f, -1.0f, -90f);
             Fixture(p, "storage:workbench", 0, "workbench", 0.8f, -4.8f, 0f);
 
             // First floor: flat 2.
             Container(p, "flat2:fridge", 1, "loot_fridge", "fridge", 7.2f, 4.6f, -90f);
-            Container(p, "flat2:kitchen", 1, "loot_cabinet", "kitchen", 7.2f, 3.4f, -90f);
+            Container(p, "flat2:kitchen", 1, "loot_cabinet", "kitchen", 7.2f, 3.4f, -90f).KeysInside.Add(SedanLock);
             Fixture(p, "flat2:stove", 1, "stove", 7.2f, 2.3f, -90f);
             Container(p, "flat2:bookshelf", 1, "loot_bookshelf", "study", -0.55f, 5.25f, 180f);
             Container(p, "flat2:wardrobe", 1, "loot_wardrobe", "wardrobe", -0.7f, -4.8f, 90f);

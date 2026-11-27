@@ -493,5 +493,16 @@
     "weight": 0.02,
     "icon": "KY",
     "color": "#C8A040"
+  },
+  {
+    "id": "screwdriver",
+    "name": "Screwdriver",
+    "description": "A flat-head screwdriver. Opens panels and gets at a car's ignition wiring.",
+    "category": "Tool",
+    "maxStack": 1,
+    "weight": 0.15,
+    "maxDurability": 0,
+    "icon": "SD",
+    "color": "#C04030"
   }
 ]

@@ -123,6 +123,9 @@ namespace Afterfall.Domain.World
         public Dictionary<EntityId, ColonistState> Colonists { get; } = new Dictionary<EntityId, ColonistState>();
         public Dictionary<EntityId, Job> Jobs { get; } = new Dictionary<EntityId, Job>();
 
+        /// <summary>Vehicles in the world (abandoned, claimed or spawned).</summary>
+        public Dictionary<EntityId, Afterfall.Domain.Vehicles.VehicleState> Vehicles { get; } = new Dictionary<EntityId, Afterfall.Domain.Vehicles.VehicleState>();
+
         /// <summary>Areas marked in the strategic view where colonists gather resources.</summary>
         public Dictionary<EntityId, WorkZone> WorkZones { get; } = new Dictionary<EntityId, WorkZone>();
         public TechnologyState Tech { get; } = new TechnologyState();
@@ -236,6 +239,23 @@ namespace Afterfall.Domain.World
             Colonists[c.Id] = c;
             Ids.EnsureAbove(c.Id);
             RegisterInventory(c.Carry, c.Id);
+            MarkChanged();
+        }
+
+        public void AddVehicle(Afterfall.Domain.Vehicles.VehicleState v)
+        {
+            Vehicles[v.Id] = v;
+            Ids.EnsureAbove(v.Id);
+            RegisterInventory(v.Storage, v.Id);
+            MarkChanged();
+        }
+
+        public void RemoveVehicle(EntityId id)
+        {
+            if (!Vehicles.TryGetValue(id, out var v)) return;
+            UnregisterInventory(v.Storage);
+            Vehicles.Remove(id);
+            if (Player != null && Player.VehicleId == id) Player.VehicleId = EntityId.None;
             MarkChanged();
         }
 

@@ -46,7 +46,7 @@ namespace Afterfall.Presentation
         /// <summary>True if a standing survivor fits at <paramref name="feet"/> without touching anything solid.</summary>
         public static bool Fits(Vector3 feet)
         {
-            return !Physics.CheckCapsule(feet + Vector3.up * (Radius + 0.06f), feet + Vector3.up * (Height - Radius), Radius, StandMask, QueryTriggerInteraction.Ignore);
+            return !Physics.CheckCapsule(feet + Vector3.up * (Radius + 0.06f), feet + Vector3.up * (Height - Radius), Radius, StandMask | Layers.Mask(Layers.Vehicle), QueryTriggerInteraction.Ignore);
         }
 
         private static bool TryStandAt(GameController gc, Vector3 p, float castFromY, out Vector3 spot)

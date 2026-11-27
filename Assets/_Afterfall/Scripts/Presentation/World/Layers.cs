@@ -17,6 +17,9 @@ namespace Afterfall.Presentation
         public static readonly int Interactable = Get("Interactable");
         public static readonly int Ghost = Get("Ghost");
 
+        /// <summary>Vehicle bodies: solid for people and placement, but not baked into the NavMesh and ignored by the camera.</summary>
+        public static readonly int Vehicle = Get("Vehicle");
+
         /// <summary>Solid world geometry the camera and line of sight collide with.</summary>
         public static int SolidMask => Mask(Terrain, Structure, Prop, Resource) | 1;
 
@@ -24,9 +27,9 @@ namespace Afterfall.Presentation
         public static int PlacementSurfaceMask => Mask(Terrain, Structure) | 1;
 
         /// <summary>Things that block a placement.</summary>
-        public static int PlacementBlockerMask => Mask(Structure, Prop, Resource, Character, Zombie);
+        public static int PlacementBlockerMask => Mask(Structure, Prop, Resource, Character, Zombie, Vehicle);
 
-        public static int InteractMask => Mask(Structure, Prop, Resource, Interactable, Zombie, Terrain) | 1;
+        public static int InteractMask => Mask(Structure, Prop, Resource, Interactable, Zombie, Terrain, Vehicle) | 1;
 
         private static int Get(string name)
         {

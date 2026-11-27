@@ -16,7 +16,7 @@ namespace Afterfall.Presentation.UI
         private readonly UiManager _ui;
         private readonly GameController _gc;
         private readonly Bar _health, _stamina, _hunger, _thirst, _warmth;
-        private readonly Label _carry, _equipped, _clock, _prompt, _mode, _warnings, _craftLabel, _placeTitle, _placeReasons, _caption;
+        private readonly Label _carry, _equipped, _clock, _prompt, _mode, _warnings, _craftLabel, _placeTitle, _placeReasons, _caption, _vehicle;
         private readonly Bar _craftBar;
         private readonly VisualElement _crosshair, _craftPanel, _placePanel, _vitals, _hotbarRow, _equippedIcon, _craftIcon, _placeCost;
         private readonly ItemSlot[] _hotbar = new ItemSlot[PlayerState.HotbarSize];
@@ -56,6 +56,7 @@ namespace Afterfall.Presentation.UI
             Root.Add(Minimap.Root);
             _prompt = Root.Put(UiKit.Text("", "hud-prompt"));
             _caption = Root.Put(UiKit.Text("", "hud-caption"));
+            _vehicle = Root.Put(UiKit.Text("", "hud-vehicle"));
 
             _hotbarRow = Root.Put(UiKit.Div("hud-hotbar"));
             for (int i = 0; i < _hotbar.Length; i++)
@@ -122,6 +123,17 @@ namespace Afterfall.Presentation.UI
             UiKit.Show(_vitals, true);
             UiKit.Show(_crosshair, !tactical && !windows && !v.IsDead);
             Minimap.Refresh(!tactical && !v.IsDead);
+            Afterfall.Domain.Vehicles.VehicleState car = _gc.Session.Vehicles.Current;
+            UiKit.Show(_vehicle, car != null);
+            if (car != null)
+            {
+                var cdef = _gc.Session.Content.Vehicle(car.DefId);
+                float kmh = (_gc.Player.Vehicle != null ? _gc.Player.Vehicle.Speed : 0f) * 3.6f;
+                string ignition = car.EngineOn ? "engine running" : "engine off";
+                string how = car.KeyInIgnition ? "key in the ignition" : car.Hotwired ? "hotwired" : Afterfall.Domain.Vehicles.VehicleRules.HasKey(p.Inventory, car) ? "your key" : "no key";
+                _vehicle.text = $"{cdef?.Name}  {kmh:0} km/h   ·   fuel {car.Fuel:0.0}/{cdef?.FuelCapacity:0} L   ·   {ignition} ({how})   ·   engine {car.Engine:0}% body {car.Body:0}% tyres {car.Tyres:0}%";
+                UiKit.SetClass(_vehicle, "warn", car.Fuel < 2f || car.Body < 25f);
+            }
             Waypoint.Refresh(!tactical && !windows && !v.IsDead);
             for (int i = 0; i < _hotbar.Length; i++)
             {

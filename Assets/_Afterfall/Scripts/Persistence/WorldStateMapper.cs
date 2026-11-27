@@ -87,6 +87,17 @@ namespace Afterfall.Persistence
             foreach (KeyValuePair<string, int> kv in w.Tech.Progress) dto.TechProgress[kv.Key] = kv.Value;
             dto.DiscoveredPois.AddRange(w.Exploration.DiscoveredPois);
             dto.DiscoveredPois.Sort(StringComparer.Ordinal);
+            foreach (Afterfall.Domain.Vehicles.VehicleState v in Sorted(w.Vehicles))
+            {
+                dto.Vehicles.Add(new VehicleDto
+                {
+                    Id = v.Id.Value, DefId = v.DefId, Position = v.Position, Yaw = v.Yaw, Paint = v.Paint, Fuel = v.Fuel,
+                    Engine = v.Engine, Body = v.Body, Tyres = v.Tyres, Battery = v.Battery, Locked = v.Locked, LockId = v.LockId,
+                    KeyInIgnition = v.KeyInIgnition, Hotwired = v.Hotwired, WindowBroken = v.WindowBroken, EngineOn = v.EngineOn,
+                    DoorsOpen = v.DoorsOpen, Known = v.Known, Claimed = v.Claimed, OdometerMetres = v.OdometerMetres,
+                    DebugSpawned = v.DebugSpawned, SeedKey = v.SeedKey, Storage = ToDto(v.Storage)
+                });
+            }
             MapNavigation nav = w.Navigation;
             dto.Navigation = new NavigationDto { HasWaypoint = nav.HasWaypoint, Waypoint = nav.Waypoint, WaypointLabel = nav.WaypointLabel };
             foreach (MapMarker m in nav.Markers)
@@ -109,7 +120,8 @@ namespace Afterfall.Persistence
                 SpawnStructureId = p.SpawnStructureId.Value,
                 WorldSpawn = p.WorldSpawn,
                 Deaths = p.Deaths,
-                NextActionTime = p.NextActionTime
+                NextActionTime = p.NextActionTime,
+                VehicleId = p.VehicleId.Value
             };
         }
 
@@ -204,7 +216,8 @@ namespace Afterfall.Persistence
                     SpawnStructureId = new EntityId(pd.SpawnStructureId),
                     WorldSpawn = pd.WorldSpawn,
                     Deaths = pd.Deaths,
-                    NextActionTime = pd.NextActionTime
+                    NextActionTime = pd.NextActionTime,
+                    VehicleId = new EntityId(pd.VehicleId)
                 };
                 p.Inventory = FromDto(pd.Inventory, content, null, warnings) ?? new Inventory(w.Ids.Allocate(), content.Items, PlayerState.BackpackSlots, PlayerState.CarryMaxKg, null, "Backpack");
                 foreach (var job in pd.Crafting ?? new List<Domain.Crafting.CraftJob>())
@@ -401,6 +414,26 @@ namespace Afterfall.Persistence
             if (dto.Threat != null) CopyThreat(dto.Threat, w.Threat);
             if (dto.Weather != null) CopyWeather(dto.Weather, w.Weather);
             if (dto.Metrics != null) CopyMetrics(dto.Metrics, w.Metrics);
+            foreach (VehicleDto vd in dto.Vehicles ?? new List<VehicleDto>())
+            {
+                if (content.Vehicle(vd.DefId) == null)
+                {
+                    warnings?.Add($"Removed a vehicle of unknown type '{vd.DefId}'.");
+                    continue;
+                }
+                var v = new Afterfall.Domain.Vehicles.VehicleState
+                {
+                    Id = new EntityId(vd.Id), DefId = vd.DefId, Position = vd.Position, Yaw = vd.Yaw, Paint = vd.Paint, Fuel = vd.Fuel,
+                    Engine = vd.Engine, Body = vd.Body, Tyres = vd.Tyres, Battery = vd.Battery, Locked = vd.Locked, LockId = vd.LockId ?? "",
+                    KeyInIgnition = vd.KeyInIgnition, Hotwired = vd.Hotwired, WindowBroken = vd.WindowBroken, EngineOn = vd.EngineOn,
+                    DoorsOpen = vd.DoorsOpen, Known = vd.Known, Claimed = vd.Claimed, OdometerMetres = vd.OdometerMetres,
+                    DebugSpawned = vd.DebugSpawned, SeedKey = vd.SeedKey ?? ""
+                };
+                var vdef = content.Vehicle(vd.DefId);
+                v.Storage = FromDto(vd.Storage, content, null, warnings) ?? new Inventory(w.Ids.Allocate(), content.Items, vdef.StorageSlots, vdef.StorageMaxWeight, null, vdef.Name + " trunk");
+                w.AddVehicle(v);
+            }
+            if (w.Player != null && w.Player.InVehicle && !w.Vehicles.ContainsKey(w.Player.VehicleId)) w.Player.VehicleId = EntityId.None;
             if (dto.Navigation != null)
             {
                 var markers = new List<MapMarker>();

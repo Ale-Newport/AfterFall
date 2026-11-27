@@ -1362,7 +1362,7 @@ namespace Afterfall.Presentation
         }
 
         private static void CarDetails(MeshBuilder body, MeshBuilder trim, MeshBuilder glass, MeshBuilder rubber, int seed, bool pickup, bool stripped,
-            float zFront, float zTail, float wheelF, float wheelR)
+            float zFront, float zTail, float wheelF, float wheelR, bool wheels = true)
         {
             var chrome = new Color(1.05f, 1.08f, 1.12f, 1f);
             var rusty = new Color(1f, 0.72f, 0.52f, 0.9f);
@@ -1447,6 +1447,8 @@ namespace Afterfall.Presentation
             Tube(trim, new[] { new Vector3(0.45f, 0.33f, -1.2f), new Vector3(0.5f, 0.3f, -1.9f), new Vector3(0.52f, 0.31f, zTail - 0.02f) }, new[] { 0.028f, 0.028f, 0.028f }, 6, (k, p, n) => new Color(0.75f, 0.55f, 0.45f, 0.7f), false, true);
 
             // Wheels: flat tyres on rusty rims, or bare rims sunk into the dirt on a stripped wreck.
+            // (Driveable vehicles leave them out and turn separate wheels.)
+            if (wheels)
             foreach (float wz in new[] { wheelF, wheelR })
                 foreach (float s in new[] { -1f, 1f })
                 {

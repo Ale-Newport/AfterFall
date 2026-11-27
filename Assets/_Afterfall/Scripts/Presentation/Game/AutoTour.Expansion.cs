@@ -24,6 +24,10 @@ namespace Afterfall.Presentation
             SkipTo(gc, 11.0);
             yield return MapScene(gc);
             yield return ApartmentScene(gc);
+            yield return VehicleScene(gc);
+            // The vehicle scene reloads the game: carry on in the reloaded one.
+            if (_boot.Game != null && _boot.Game.Running) gc = _boot.Game;
+            gc.Session.Threats.SpawningEnabled = false;
             yield return CreativeScene(gc);
         }
 
@@ -111,6 +115,184 @@ namespace Afterfall.Presentation
             foreach (GameObject h in hidden) h.SetActive(true);
             if (apt != null) apt.SetActive(true);
             gc.Ui.Hud.Minimap.Suspended = false;
+        }
+
+        // ================================================================== vehicles
+
+        private IEnumerator VehicleScene(GameController gc)
+        {
+            GameSession s = gc.Session;
+            WorldState w = s.World;
+            Line("— Vehicles —");
+            Afterfall.Domain.Vehicles.VehicleState sedan = w.Vehicles.Values.FirstOrDefault(v => v.SeedKey == "vehicle:millbrook_sedan");
+            if (sedan == null)
+            {
+                Line("FAIL: the abandoned sedan is missing");
+                yield break;
+            }
+            VehicleView view = gc.Sync.VehicleViewOf(sedan.Id);
+            Check(view != null, $"The sedan stands at {Fmt(sedan.Position.ToUnity())}: {Afterfall.Domain.Vehicles.VehicleRules.Summary(sedan, view?.Def)}");
+            Vector3 side = view.transform.position - view.transform.right * 2.6f;
+            StandAndLook(gc, Ground(gc, side), view.transform.position + Vector3.up * 0.8f);
+            yield return Seconds(1f);
+            yield return Capture("60_sedan_locked");
+            OpResult locked = s.Vehicles.Enter(sedan.Id);
+            Check(!locked.Ok && !s.Player.InVehicle, "The sedan is locked without its key: " + locked.Message);
+
+            // Its key hangs in flat 2's kitchen.
+            Structure kitchen = w.Structures.Values.FirstOrDefault(x => x.SeedKey == BuildingPlans.MillbrookApartmentsId + ":flat2:kitchen");
+            StandAndLook(gc, StandSpot(gc, kitchen), kitchen.Position.ToUnity());
+            yield return null;
+            OpResult took = s.TakeAll(kitchen.Storage.Id);
+            Check(took.Ok && s.Player.Inventory.HasTagged(Afterfall.Domain.Vehicles.VehicleRules.KeyItem, sedan.LockId), $"Found the key to {sedan.LockId} in flat 2's kitchen");
+
+            StandAndLook(gc, Ground(gc, side), view.transform.position + Vector3.up * 0.8f);
+            yield return null;
+            gc.EnterVehicle(view);
+            yield return Seconds(1.2f);
+            Check(s.Player.InVehicle && gc.Player.Vehicle == view && gc.Player.Rig.Seated, "Unlocked the sedan with its key and got in: the survivor sits at the wheel");
+            yield return Capture("61_in_the_sedan");
+            OpResult start = s.Vehicles.ToggleEngine();
+            Check(start.Ok && sedan.EngineOn, "Started the engine: " + start.Message);
+
+            float fuel0 = sedan.Fuel;
+            Vector3 from = view.transform.position;
+            var route = new[] { new Vector3(172f, 0f, 286f), new Vector3(186f, 0f, 262f), new Vector3(205f, 0f, 263f), new Vector3(262f, 0f, 257f), new Vector3(279f, 0f, 252f) };
+            yield return DriveRoute(gc, view, route, 38f, P(60f), "62_driving_on_the_road");
+            float driven = Vector3.Distance(from, view.transform.position);
+            Check(driven > 100f && Vector3.Distance(Flat(view.transform.position), Flat(route[route.Length - 1])) < 14f,
+                $"Drove {driven:0} m (odometer {sedan.OdometerMetres:0} m) along the road toward the gas station; fuel {fuel0:0.00} → {sedan.Fuel:0.00} L; upright {Vector3.Dot(view.transform.up, Vector3.up):0.00}");
+            Check(sedan.Fuel < fuel0 && sedan.OdometerMetres > 90.0, "Driving burned fuel and ran up the odometer");
+            Check(Vector3.Distance(s.Player.Position.ToUnity(), view.transform.position) < 3f, "The survivor rode along with the car");
+
+            gc.ExitVehicle();
+            yield return Seconds(1f);
+            Vector3 feet = gc.Player.transform.position;
+            Check(!s.Player.InVehicle && gc.Player.Vehicle == null && !gc.Player.Rig.Seated && SafeGround.Fits(feet + Vector3.up * 0.02f) && Vector3.Distance(feet, view.transform.position) < 5f,
+                $"Parked and got out beside the car at {Fmt(feet)}; the engine is {(sedan.EngineOn ? "still on" : "off")}");
+            Check(s.Vehicles.SetLocked(sedan.Id, true).Ok && sedan.Locked, "Locked the sedan with its key");
+            yield return Seconds(0.5f);
+            yield return Capture("63_parked_at_the_gas_station");
+
+            // Save, reload, and find it where it was left.
+            Vector3 parked = view.transform.position;
+            float parkedFuel = sedan.Fuel;
+            gc.Save("tour_vehicle");
+            _boot.LoadGame("tour_vehicle");
+            float loadTimeout = Time.realtimeSinceStartup + P(120f);
+            while ((_boot.Game == null || _boot.Game == gc || !_boot.Game.Running) && Time.realtimeSinceStartup < loadTimeout) yield return null;
+            _boot.Saves.Store.Delete("tour_vehicle");
+            GameController g2 = _boot.Game;
+            if (g2 == null || g2 == gc || !g2.Running)
+            {
+                Line("FAIL: the reload after parking did not complete");
+                yield break;
+            }
+            g2.Session.Threats.SpawningEnabled = false;
+            g2.Session.Weather.Hold(Afterfall.Domain.Weather.WeatherKind.Clear);
+            yield return Seconds(1.5f);
+            Afterfall.Domain.Vehicles.VehicleState again = g2.Session.World.Vehicles[sedan.Id];
+            VehicleView view2 = g2.Sync.VehicleViewOf(sedan.Id);
+            Check(view2 != null && Vector3.Distance(Flat(view2.transform.position), Flat(parked)) < 1.0f && Mathf.Abs(again.Fuel - parkedFuel) < 0.01f && again.Locked
+                  && g2.Session.Player.Inventory.HasTagged(Afterfall.Domain.Vehicles.VehicleRules.KeyItem, again.LockId),
+                $"After a reload the sedan is where it was parked ({Fmt(view2 != null ? view2.transform.position : Vector3.zero)}), with {again.Fuel:0.00} L, locked, and the key in the backpack");
+
+            // The pickup at the workshop has no key: hotwire it.
+            gc = g2;
+            s = gc.Session;
+            w = s.World;
+            Afterfall.Domain.Vehicles.VehicleState pickup = w.Vehicles.Values.First(v => v.SeedKey == "vehicle:hartley_pickup");
+            VehicleView pv = gc.Sync.VehicleViewOf(pickup.Id);
+            Vector3 pside = pv.transform.position - pv.transform.right * 2.8f;
+            gc.TeleportTo(pside, "the workshop pickup", false);
+            yield return Seconds(1f);
+            StandAndLook(gc, Ground(gc, pside), pv.transform.position + Vector3.up);
+            yield return null;
+            gc.EnterVehicle(pv);
+            yield return Seconds(0.6f);
+            OpResult noKey = s.Vehicles.ToggleEngine();
+            Check(s.Player.InVehicle && !noKey.Ok, "Got into the unlocked pickup; without a key it will not start: " + noKey.Message);
+            Grant(s.Player.Inventory, "screwdriver", 1);
+            Grant(s.Player.Inventory, "copper_wire", 12);
+            int tries = 0;
+            OpResult wired = OpResult.Fail("", "");
+            while (!pickup.Hotwired && tries < 12)
+            {
+                tries++;
+                wired = s.Vehicles.Hotwire();
+            }
+            Check(pickup.Hotwired, $"Hotwired the pickup after {tries} attempt(s): {wired.Message}");
+            Check(s.Vehicles.ToggleEngine().Ok && pickup.EngineOn, "The hotwired pickup starts without a key");
+            yield return Capture("64_hotwired_pickup");
+            // Run down an infected standing in the yard.
+            Vector3 ahead = pv.transform.position + pv.transform.forward * 22f;
+            ahead.y = gc.GroundHeight(ahead);
+            var zombie = s.Zombies.Spawn(ahead.ToSim(), "wanderer", s.Rng);
+            yield return null;
+            Vector3 p0 = pv.transform.position;
+            yield return DriveRoute(gc, pv, new[] { ahead + pv.transform.forward * 12f }, 45f, P(12f), null);
+            Check(zombie.IsDead, $"Drove the pickup into an infected and ran it down (pickup body {pickup.Body:0}%, drove {Vector3.Distance(p0, pv.transform.position):0} m)");
+            if (!zombie.IsDead) LogZombie(gc, zombie);
+            foreach (var x in w.Zombies.Values.ToList()) w.Zombies.Remove(x.Id);
+            w.MarkChanged();
+            gc.ExitVehicle(true);
+            yield return Seconds(0.5f);
+
+            // The farm's quad bike still has its key in the ignition, and almost no fuel.
+            Afterfall.Domain.Vehicles.VehicleState atv = w.Vehicles.Values.First(v => v.SeedKey == "vehicle:dawson_atv");
+            VehicleView av = gc.Sync.VehicleViewOf(atv.Id);
+            Vector3 aside = av.transform.position - av.transform.right * 2.2f;
+            gc.TeleportTo(aside, "the farm quad bike", false);
+            yield return Seconds(1f);
+            StandAndLook(gc, Ground(gc, aside), av.transform.position + Vector3.up);
+            yield return null;
+            gc.EnterVehicle(av);
+            yield return Seconds(0.5f);
+            Check(s.Player.InVehicle && s.Vehicles.ToggleEngine().Ok && atv.EngineOn, "The quad bike starts with the key left in its ignition");
+            Vector3 a0 = av.transform.position;
+            yield return DriveRoute(gc, av, new[] { av.transform.position + av.transform.forward * 25f }, 25f, P(10f), "65_quad_bike");
+            Check(Vector3.Distance(a0, av.transform.position) > 12f, $"Rode the quad bike {Vector3.Distance(a0, av.transform.position):0} m (fuel {atv.Fuel:0.00} L left)");
+            gc.ExitVehicle(true);
+            yield return Seconds(0.5f);
+        }
+
+        /// <summary>Drives a vehicle through <paramref name="points"/> (steering toward each, holding a speed), then brakes to a stop.</summary>
+        private IEnumerator DriveRoute(GameController gc, VehicleView v, Vector3[] points, float maxKmh, float timeout, string capture)
+        {
+            int idx = 0;
+            float end = Time.realtimeSinceStartup + timeout;
+            bool captured = capture == null;
+            float start = Time.realtimeSinceStartup;
+            while (idx < points.Length && Time.realtimeSinceStartup < end && gc.Player.Vehicle == v)
+            {
+                Vector3 to = points[idx] - v.transform.position;
+                to.y = 0f;
+                if (to.magnitude < 7f)
+                {
+                    idx++;
+                    continue;
+                }
+                Vector3 fwd = v.transform.forward;
+                fwd.y = 0f;
+                float angle = Vector3.SignedAngle(fwd, to, Vector3.up);
+                float kmh = v.Speed * 3.6f;
+                float throttle = kmh < maxKmh ? 0.75f : 0f;
+                if (Mathf.Abs(angle) > 45f && kmh > 18f) throttle = -0.4f;
+                gc.ScriptedDriving = new Vector3(Mathf.Clamp(angle / 28f, -1f, 1f), throttle, 0f);
+                if (!captured && Time.realtimeSinceStartup - start > 1.5f)
+                {
+                    captured = true;
+                    yield return Capture(capture);
+                }
+                yield return null;
+            }
+            float stop = Time.realtimeSinceStartup + P(8f);
+            while (v.Speed > 0.4f && Time.realtimeSinceStartup < stop)
+            {
+                gc.ScriptedDriving = new Vector3(0f, -1f, 1f);
+                yield return null;
+            }
+            gc.ScriptedDriving = null;
         }
 
         // ================================================================== multi-storey building
@@ -441,6 +623,31 @@ namespace Afterfall.Presentation
             }
             s.DamagePlayer(80f, "tour");
             Check(s.Player.Vitals.Health >= s.Player.Vitals.MaxHealth - 0.01f, "Creative mode keeps the survivor unharmed");
+
+            // Spawn a vehicle from the panel's vehicle browser.
+            gc.Ui.ToggleCreativePanel();
+            yield return Seconds(0.4f);
+            if (gc.Ui.CurrentWindow is CreativePanel vehiclesPanel)
+            {
+                vehiclesPanel.ShowVehicles();
+                yield return Seconds(0.4f);
+                yield return Capture("38_creative_vehicles");
+                int before = s.World.Vehicles.Count;
+                OpResult made = vehiclesPanel.SpawnVehicle("pickup");
+                gc.Ui.CloseWindow();
+                yield return Seconds(1.5f);
+                var spawnedCar = s.World.Vehicles.Values.FirstOrDefault(v => v.DebugSpawned);
+                VehicleView sv = spawnedCar != null ? gc.Sync.VehicleViewOf(spawnedCar.Id) : null;
+                Check(made.Ok && s.World.Vehicles.Count == before + 1 && sv != null && Vector3.Dot(sv.transform.up, Vector3.up) > 0.95f
+                      && s.Player.Inventory.HasTagged(Afterfall.Domain.Vehicles.VehicleRules.KeyItem, spawnedCar.LockId),
+                    $"Spawned a pickup from the creative panel on clear ground {(sv != null ? Vector3.Distance(sv.transform.position, gc.Player.transform.position) : 0f):0} m ahead, upright, with its key: {made.Message}");
+                if (sv != null)
+                {
+                    StandAndLook(gc, Ground(gc, sv.transform.position - sv.transform.right * 3f), sv.transform.position + Vector3.up);
+                    yield return Seconds(0.8f);
+                    yield return Capture("39_spawned_pickup");
+                }
+            }
 
             bool fps = gc.Settings.ShowFps;
             int sections = gc.Settings.DiagnosticSections;

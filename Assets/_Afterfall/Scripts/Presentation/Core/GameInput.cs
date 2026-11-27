@@ -23,7 +23,7 @@ namespace Afterfall.Presentation
         public readonly InputAction Pause, Inventory, ToggleTactical, QuickSave, QuickLoad, DebugOverlay, Help, Build, CreativePanel, FreeFlight, WorldMap, MinimapZoomIn, MinimapZoomOut;
 
         // Player (third person)
-        public readonly InputAction Move, Look, Zoom, Jump, Sprint, Crouch, Interact, Primary, Secondary, Rotate, Drop, Deconstruct;
+        public readonly InputAction Move, Look, Zoom, Jump, Sprint, Crouch, Interact, Primary, Secondary, Rotate, Drop, Deconstruct, Engine;
         public readonly InputAction[] Hotbar = new InputAction[8];
 
         // Tactical camera
@@ -67,6 +67,7 @@ namespace Afterfall.Presentation
             Rotate = Button(Player, "Rotate Blueprint", "<Keyboard>/r");
             Drop = Button(Player, "Drop Item", "<Keyboard>/q");
             Deconstruct = Button(Player, "Demolish (hold)", "<Keyboard>/x");
+            Engine = Button(Player, "Engine / Hotwire (hold)", "<Keyboard>/f");
             for (int i = 0; i < Hotbar.Length; i++) Hotbar[i] = Button(Player, $"Hotbar {i + 1}", $"<Keyboard>/{i + 1}");
 
             TacPan = Tactical.AddAction("Pan", InputActionType.Value);

@@ -104,6 +104,14 @@ namespace Afterfall.Presentation
             Player.transform.SetParent(transform, true);
             CameraRig = CameraRig.Create(this, Player.transform, Settings);
             CameraRig.transform.SetParent(transform, true);
+            // A game saved at the wheel continues at the wheel.
+            if (Session.Player.InVehicle && Sync.VehicleViewOf(Session.Player.VehicleId) is VehicleView seat)
+            {
+                Player.SitIn(seat);
+                CameraRig.SetVehicle(true);
+                seat.SetCameraIgnored(true);
+            }
+            else if (Session.Player.InVehicle) Session.Vehicles.ForceExit();
             gameObject.AddComponent<DayNightCycle>().Initialize(this);
             gameObject.AddComponent<WeatherView>().Initialize(this);
             gameObject.AddComponent<GroundCover>().Initialize(this);
@@ -181,7 +189,9 @@ namespace Afterfall.Presentation
                 Playtime += Time.deltaTime;
             }
             UpdateCursor();
-            UpdateInteraction();
+            if (Player.Vehicle != null && IsDead) ExitVehicle(true);
+            if (Player.Vehicle != null) UpdateVehicleInput();
+            else UpdateInteraction();
             Maps?.Update();
             Doors?.Update();
 
@@ -217,6 +227,7 @@ namespace Afterfall.Presentation
             if (i.ToggleTactical.WasPressedThisFrame() && !Ui.WindowOpen)
             {
                 if (Player.Flight.Active) ToastThrottled("Land first (F7) to use the strategic view.", Severity.Warning);
+                else if (Player.Vehicle != null) ToastThrottled("Get out of the vehicle to use the strategic view.", Severity.Warning);
                 else SetTactical(!CameraRig.TacticalActive);
             }
             if (i.QuickSave.WasPressedThisFrame()) Save(SaveService.QuickSlot);
@@ -228,7 +239,11 @@ namespace Afterfall.Presentation
             }
             if (i.Help.WasPressedThisFrame() && !menuWindow) Ui.OpenHelp();
             if (i.CreativePanel.WasPressedThisFrame() && !menuWindow) Ui.ToggleCreativePanel();
-            if (i.FreeFlight.WasPressedThisFrame() && !menuWindow && !Ui.WindowOpen && !CameraRig.TacticalActive) ToggleFlight();
+            if (i.FreeFlight.WasPressedThisFrame() && !menuWindow && !Ui.WindowOpen && !CameraRig.TacticalActive)
+            {
+                if (Player.Vehicle != null) ToastThrottled("Get out of the vehicle first.", Severity.Warning);
+                else ToggleFlight();
+            }
             if (i.WorldMap.WasPressedThisFrame() && !menuWindow) Ui.ToggleWorldMap();
             if (i.MinimapZoomIn.WasPressedThisFrame()) Ui.ZoomMinimap(-1);
             if (i.MinimapZoomOut.WasPressedThisFrame()) Ui.ZoomMinimap(1);
@@ -301,6 +316,24 @@ namespace Afterfall.Presentation
             {
                 OpResult locked = Session.SetDoorLocked(door.Id, !ds.DoorLocked);
                 Toast(locked.Message, locked.Ok ? Severity.Info : Severity.Warning);
+            }
+
+            if (_target is VehicleView car)
+            {
+                if (i.Rotate.WasPressedThisFrame()) OpenVehicle(car);
+                if (i.Deconstruct.IsPressed() && Session.World.Vehicles.TryGetValue(car.Id, out Afterfall.Domain.Vehicles.VehicleState cs) && cs.Locked)
+                {
+                    _demolishHold += Time.deltaTime;
+                    CurrentPrompt = $"Smashing a window… {Mathf.Clamp01(_demolishHold / 1.0f) * 100:0}%";
+                    if (_demolishHold >= 1.0f)
+                    {
+                        _demolishHold = 0f;
+                        OpResult smashed = Session.Vehicles.SmashWindow(car.Id);
+                        Toast(smashed.Message, smashed.Ok ? Severity.Warning : Severity.Warning);
+                        if (smashed.Ok) Audio.PlayAt("hit_flesh", car.transform.position + Vector3.up, 1f);
+                    }
+                    return;
+                }
             }
 
             if (_target is StructureView sv && i.Deconstruct.IsPressed())
@@ -489,6 +522,7 @@ namespace Afterfall.Presentation
                 yield break;
             }
             float ground = GroundHeight(target);
+            if (Player.Vehicle != null) ExitVehicle(true);
             if (Player.Flight.Active)
             {
                 Player.Flight.MoveTo(new Vector3(target.x, Mathf.Max(target.y, ground) + 25f, target.z));
@@ -517,6 +551,150 @@ namespace Afterfall.Presentation
                 return;
             }
             TeleportTo(back.ToUnity(), "your previous location", false);
+        }
+
+        // ------------------------------------------------------------------ vehicles
+
+        private float _hotwire = -1f;
+
+        /// <summary>Drives without a keyboard (the scripted tour): x steer, y throttle, z handbrake (0/1).</summary>
+        public Vector3? ScriptedDriving { get; set; }
+
+        public void EnterVehicle(VehicleView v)
+        {
+            if (Player.Flight.Active || Player.Vehicle != null) return;
+            OpResult r = Session.Vehicles.Enter(v.Id);
+            Toast(r.Message, r.Ok ? Severity.Info : Severity.Warning);
+            if (!r.Ok) return;
+            v.SwingDriverDoor();
+            Player.SitIn(v);
+            CameraRig.SetVehicle(true);
+            v.SetCameraIgnored(true);
+        }
+
+        /// <summary>Gets out beside the driver's door (or wherever there is room); <paramref name="force"/> skips the speed check.</summary>
+        public void ExitVehicle(bool force = false)
+        {
+            VehicleView v = Player.Vehicle;
+            if (v == null) return;
+            if (force) Session.Vehicles.ForceExit();
+            else
+            {
+                OpResult r = Session.Vehicles.Exit();
+                Toast(r.Message, r.Ok ? Severity.Info : Severity.Warning);
+                if (!r.Ok) return;
+            }
+            v.Throttle = 0f;
+            v.Steer = 0f;
+            v.Handbrake = true;
+            v.SwingDriverDoor();
+            v.SetCameraIgnored(false);
+            if (!v.ExitSpot(out Vector3 spot)) spot = v.transform.position - v.transform.right * (v.Def.SizeX * 0.5f + 0.8f);
+            Player.StandUp(spot);
+            CameraRig.SetVehicle(false);
+            _hotwire = -1f;
+        }
+
+        public void OpenVehicle(VehicleView v)
+        {
+            Session.Vehicles.MarkInspected(v.Id);
+            Ui.OpenWindow(new Afterfall.Presentation.UI.VehicleWindow(Ui, this, v.Id));
+        }
+
+        /// <summary>At the wheel: drive with WASD, Space handbrake, F engine (hold F to hotwire), E get out, R trunk and condition.</summary>
+        private void UpdateVehicleInput()
+        {
+            VehicleView v = Player.Vehicle;
+            CurrentPrompt = null;
+            _target = null;
+            if (!GameplayInputActive)
+            {
+                v.Throttle = 0f;
+                v.Steer = 0f;
+                v.Handbrake = true;
+                return;
+            }
+            GameInput i = Input;
+            Vector2 move = i.Move.ReadValue<Vector2>();
+            v.Throttle = move.y;
+            v.Steer = move.x;
+            v.Handbrake = i.Jump.IsPressed();
+            if (ScriptedDriving.HasValue)
+            {
+                v.Steer = ScriptedDriving.Value.x;
+                v.Throttle = ScriptedDriving.Value.y;
+                v.Handbrake = ScriptedDriving.Value.z > 0.5f;
+            }
+            Afterfall.Domain.Vehicles.VehicleState state = Session.Vehicles.Current;
+            if (state == null) return;
+            if (i.Interact.WasPressedThisFrame())
+            {
+                ExitVehicle();
+                return;
+            }
+            if (i.Rotate.WasPressedThisFrame()) OpenVehicle(v);
+
+            string problem = Afterfall.Domain.Vehicles.VehicleRules.StartProblem(state, v.Def, Session.Player.Inventory);
+            bool canHotwire = Session.Vehicles.CanTryHotwire(out string missing, out float chance);
+            if (i.Engine.WasPressedThisFrame())
+            {
+                if (state.EngineOn || problem.Length == 0)
+                {
+                    OpResult r = Session.Vehicles.ToggleEngine();
+                    Toast(r.Message, r.Ok ? Severity.Info : Severity.Warning);
+                }
+                else if (canHotwire && missing.Length == 0) _hotwire = 0f;
+                else Toast(canHotwire ? $"Hotwiring {missing}." : problem, Severity.Warning);
+            }
+            if (_hotwire >= 0f)
+            {
+                if (!i.Engine.IsPressed())
+                {
+                    _hotwire = -1f;
+                    Toast("You stop working on the ignition.", Severity.Info);
+                }
+                else
+                {
+                    _hotwire += Time.deltaTime;
+                    CurrentPrompt = $"Hotwiring under the dashboard… {Mathf.Clamp01(_hotwire / v.Def.HotwireSeconds) * 100f:0}% (keep holding F; about {chance * 100f:0}% to work)";
+                    if (_hotwire >= v.Def.HotwireSeconds)
+                    {
+                        _hotwire = -1f;
+                        OpResult r = Session.Vehicles.Hotwire();
+                        Toast(r.Message, r.Ok ? Severity.Success : Severity.Warning);
+                        if (!r.Ok && r.Code == "failed") Audio.PlayAt("swing", v.transform.position + Vector3.up, 1f);
+                    }
+                    return;
+                }
+            }
+            string engine = state.EngineOn ? "[F] Engine off" : problem.Length == 0 ? "[F] Start engine" : canHotwire ? (missing.Length == 0 ? $"[Hold F] Hotwire ({chance * 100f:0}%)" : $"Hotwiring {missing}") : problem;
+            CurrentPrompt = $"{engine} · [W/S] drive · [A/D] steer · [Space] handbrake · [E] get out · [R] trunk";
+        }
+
+        /// <summary>Finds clear, level ground for a vehicle about <paramref name="distance"/> ahead of the survivor (creative spawning).</summary>
+        public bool FindVehicleSpot(Afterfall.Domain.Vehicles.VehicleDefinition def, float distance, out Vector3 spot, out float yaw)
+        {
+            Transform t = Player.transform;
+            yaw = t.eulerAngles.y + 90f;
+            int blockers = Layers.Mask(Layers.Structure, Layers.Prop, Layers.Resource, Layers.Character, Layers.Zombie, Layers.Vehicle) | 1;
+            for (float d = distance; d < distance + 14f; d += 2f)
+            {
+                for (int k = 0; k < 8; k++)
+                {
+                    float a = (k % 2 == 0 ? 1 : -1) * (k / 2) * 25f;
+                    Vector3 p = t.position + Quaternion.Euler(0f, a, 0f) * t.forward * d;
+                    var layout = Session.World.Layout;
+                    if (!layout.IsInsideMap(p.x, p.z, 6f) || layout.IsWater(p.x, p.z) || layout.Height.SlopeDegrees(p.x, p.z) > 18f) continue;
+                    p.y = GroundHeight(p);
+                    Quaternion rot = Quaternion.Euler(0f, yaw, 0f);
+                    Vector3 half = new Vector3(def.SizeX * 0.5f + 0.3f, def.SizeY * 0.5f, def.SizeZ * 0.5f + 0.3f);
+                    if (Physics.CheckBox(p + Vector3.up * (def.SizeY * 0.5f + 0.25f), half, rot, blockers, QueryTriggerInteraction.Ignore)) continue;
+                    spot = p;
+                    return true;
+                }
+            }
+            spot = t.position;
+            return false;
         }
 
         public void OnRespawned()

@@ -145,6 +145,36 @@ namespace Afterfall.Persistence
         public Vec3 WorldSpawn { get; set; }
         public int Deaths { get; set; }
         public double NextActionTime { get; set; }
+
+        /// <summary>The vehicle the survivor was driving (0 on foot).</summary>
+        public long VehicleId { get; set; }
+    }
+
+    public sealed class VehicleDto
+    {
+        public long Id { get; set; }
+        public string DefId { get; set; } = "";
+        public Vec3 Position { get; set; }
+        public float Yaw { get; set; }
+        public int Paint { get; set; }
+        public float Fuel { get; set; }
+        public float Engine { get; set; }
+        public float Body { get; set; }
+        public float Tyres { get; set; }
+        public float Battery { get; set; }
+        public bool Locked { get; set; }
+        public string LockId { get; set; } = "";
+        public bool KeyInIgnition { get; set; }
+        public bool Hotwired { get; set; }
+        public bool WindowBroken { get; set; }
+        public bool EngineOn { get; set; }
+        public int DoorsOpen { get; set; }
+        public bool Known { get; set; }
+        public bool Claimed { get; set; }
+        public double OdometerMetres { get; set; }
+        public bool DebugSpawned { get; set; }
+        public string SeedKey { get; set; } = "";
+        public InventoryDto Storage { get; set; }
     }
 
     public sealed class NodeDto
@@ -282,6 +312,8 @@ namespace Afterfall.Persistence
         public PlaythroughMetrics Metrics { get; set; }
 
         public NavigationDto Navigation { get; set; }
+
+        public List<VehicleDto> Vehicles { get; set; } = new List<VehicleDto>();
     }
 
     public sealed class SaveFile

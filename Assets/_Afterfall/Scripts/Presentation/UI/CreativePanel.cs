@@ -25,6 +25,7 @@ namespace Afterfall.Presentation.UI
         private enum Tab
         {
             Items,
+            Vehicles,
             World,
             Debug
         }
@@ -53,6 +54,16 @@ namespace Afterfall.Presentation.UI
         private string _filter = "All";
         private ItemDefinition _selected;
 
+        // Vehicles tab
+        private readonly TextField _vehicleSearch;
+        private readonly VisualElement _vehicleList;
+        private readonly Label _vehicleOptions, _nearestInfo;
+        private readonly Toggle _lockedToggle, _keyToggle;
+        private readonly Dictionary<float, Button> _fuelButtons = new Dictionary<float, Button>();
+        private readonly Dictionary<float, Button> _conditionButtons = new Dictionary<float, Button>();
+        private float _spawnFuel = 1f, _spawnCondition = 100f;
+        private int _spawnPaint;
+
         // World tab
         private readonly Label _flightInfo, _positionInfo;
         private readonly VisualElement _destinations;
@@ -70,7 +81,7 @@ namespace Afterfall.Presentation.UI
             header.Add(UiKit.Text("Creative & Developer", "title"));
             _modeLabel = header.Put(UiKit.Text("", "creative-mode"));
             // Tabs sit on the left, clear of the toasts in the top-right corner.
-            foreach (Tab t in new[] { Tab.Items, Tab.World, Tab.Debug })
+            foreach (Tab t in new[] { Tab.Items, Tab.Vehicles, Tab.World, Tab.Debug })
             {
                 Tab tab = t;
                 Button b = header.Put(UiKit.Btn(t.ToString(), () => Show(tab), "creative-tab"));
@@ -127,6 +138,41 @@ namespace Afterfall.Presentation.UI
             actions.Add(UiKit.Btn("Drop in front of me", () => SpawnSelected(SpawnTarget.World)));
             actions.Add(UiKit.Btn("Put into container", () => SpawnSelected(SpawnTarget.Container)));
             _targetInfo = detail.Put(UiKit.Text("", "muted"));
+
+            // ------------------------------------------------------------ vehicles
+            VisualElement vehicles = Page(Tab.Vehicles);
+            var vSearchRow = vehicles.Put(UiKit.Div("row"));
+            vSearchRow.Add(UiKit.Text("Search", "muted"));
+            _vehicleSearch = vSearchRow.Put(new TextField { value = "" });
+            _vehicleSearch.AddToClassList("grow");
+            _vehicleSearch.RegisterValueChangedCallback(_ => RebuildVehicleList());
+            var vOptions = vehicles.Put(UiKit.Div("row", "wrap-row"));
+            vOptions.Add(UiKit.Text("Fuel", "muted"));
+            foreach (float f in new[] { 0f, 0.25f, 1f })
+            {
+                float fuel = f;
+                _fuelButtons[f] = vOptions.Put(UiKit.Btn($"{f * 100:0}%", () => { _spawnFuel = fuel; RefreshVehicleOptions(); }, "btn--small"));
+            }
+            vOptions.Add(UiKit.Text("Condition", "muted"));
+            foreach (float c in new[] { 25f, 60f, 100f })
+            {
+                float cond = c;
+                _conditionButtons[c] = vOptions.Put(UiKit.Btn($"{c:0}%", () => { _spawnCondition = cond; RefreshVehicleOptions(); }, "btn--small"));
+            }
+            _lockedToggle = vOptions.Put(new Toggle("Locked") { value = false });
+            _keyToggle = vOptions.Put(new Toggle("Give me its key") { value = true });
+            vOptions.Add(UiKit.Btn("Next paint", () => { _spawnPaint++; RefreshVehicleOptions(); }, "btn--small"));
+            _vehicleOptions = vehicles.Put(UiKit.Text("", "muted"));
+            var vScroll = vehicles.Put(new ScrollView());
+            vScroll.AddToClassList("creative-destinations");
+            _vehicleList = vScroll.contentContainer;
+            vehicles.Add(UiKit.Text("The vehicle you spawned nearest to you", "subtitle"));
+            var nearRow = vehicles.Put(UiKit.Div("row"));
+            _nearestInfo = nearRow.Put(UiKit.Text("", "muted", "grow"));
+            nearRow.Add(UiKit.Btn("Refuel & repair", () => WithNearest(id => Report(_gc.Session.Creative.ResetVehicle(id))), "btn--small"));
+            nearRow.Add(UiKit.Btn("Move in front of me", MoveNearest, "btn--small"));
+            nearRow.Add(UiKit.Btn("Delete", () => WithNearest(id => Report(_gc.Session.Creative.DeleteVehicle(id))), "btn--small", "btn--danger"));
+            RebuildVehicleList();
 
             // ------------------------------------------------------------ world
             VisualElement world = Page(Tab.World);
@@ -254,6 +300,88 @@ namespace Afterfall.Presentation.UI
             _positionInfo.text = string.Format(CultureInfo.InvariantCulture, "You are at X {0:0.0}, Y {1:0.0}, Z {2:0.0} (map {3:0} m across)", p.X, p.Y, p.Z, _gc.Session.World.Layout.Size);
             _targetInfo.text = ContainerTarget(out string label) != EntityId.None ? $"Container target: {label}" : "Container target: none — open a container first.";
             if (_markersVersion != _gc.Session.World.Navigation.Version) RebuildDestinations();
+            Afterfall.Domain.Vehicles.VehicleState near = NearestSpawned();
+            _nearestInfo.text = near == null ? "None spawned yet." : string.Format(CultureInfo.InvariantCulture, "{0} {1:0} m away: {2}",
+                _gc.Session.Content.Vehicle(near.DefId)?.Name, Vector3.Distance(near.Position.ToUnity(), _gc.Player.transform.position), Afterfall.Domain.Vehicles.VehicleRules.Summary(near, _gc.Session.Content.Vehicle(near.DefId)));
+            RefreshVehicleOptions();
+        }
+
+        // ------------------------------------------------------------ vehicles
+
+        public void ShowVehicles() => Show(Tab.Vehicles);
+
+        private void RebuildVehicleList()
+        {
+            _vehicleList.Clear();
+            foreach (Afterfall.Domain.Vehicles.VehicleDefinition d in _gc.Session.Creative.VehicleTypes(_vehicleSearch.value))
+            {
+                Afterfall.Domain.Vehicles.VehicleDefinition def = d;
+                var row = _vehicleList.Put(UiKit.Div("list-item"));
+                var col = row.Put(UiKit.Div("col", "grow"));
+                col.Add(UiKit.Text($"{d.Name} · {d.Category}", "subtitle"));
+                col.Add(UiKit.Text($"{d.Description} {d.Seats} seats, {d.Doors} doors, {d.FuelCapacity:0} L tank, {d.MaxSpeedKmh:0} km/h, {(d.FourWheelDrive ? "4x4" : "2WD")}, trunk {d.StorageSlots} slots.", "muted"));
+                row.Add(UiKit.Btn("Spawn in front of me", () => SpawnVehicle(def.Id), "btn--small", "btn--primary"));
+            }
+        }
+
+        private void RefreshVehicleOptions()
+        {
+            foreach (var kv in _fuelButtons) UiKit.SetClass(kv.Value, "btn--selected", Mathf.Approximately(kv.Key, _spawnFuel));
+            foreach (var kv in _conditionButtons) UiKit.SetClass(kv.Value, "btn--selected", Mathf.Approximately(kv.Key, _spawnCondition));
+            _vehicleOptions.text = $"Spawns with {_spawnFuel * 100:0}% fuel, {_spawnCondition:0}% condition, paint {_spawnPaint % 4 + 1}, {(_lockedToggle.value ? "locked" : "unlocked")}{(_keyToggle.value ? ", key in your backpack" : ", no key (hotwire it)")}. It is placed on clear, level ground ahead.";
+        }
+
+        /// <summary>Spawns a vehicle on clear ground ahead (public so the tour drives the same path as a click).</summary>
+        public OpResult SpawnVehicle(string defId)
+        {
+            var def = _gc.Session.Content.Vehicle(defId);
+            if (def == null) return OpResult.Fail("unknown", "Unknown vehicle.");
+            if (!_gc.FindVehicleSpot(def, 7f, out Vector3 spot, out float yaw))
+            {
+                _gc.Toast("No clear, level ground ahead for it.", Severity.Warning);
+                return OpResult.Fail("blocked", "No clear ground.");
+            }
+            var options = new VehicleSpawnOptions { FuelFraction = _spawnFuel, Condition = _spawnCondition, Locked = _lockedToggle.value, GiveKey = _keyToggle.value, Paint = _spawnPaint };
+            OpResult r = _gc.Session.Creative.SpawnVehicle(defId, spot.ToSim(), yaw, options, out _);
+            Report(r);
+            return r;
+        }
+
+        private Afterfall.Domain.Vehicles.VehicleState NearestSpawned()
+        {
+            Afterfall.Domain.Vehicles.VehicleState best = null;
+            float bestD = float.MaxValue;
+            foreach (var v in _gc.Session.World.Vehicles.Values)
+            {
+                if (!v.DebugSpawned) continue;
+                float d = Vector3.Distance(v.Position.ToUnity(), _gc.Player.transform.position);
+                if (d < bestD)
+                {
+                    bestD = d;
+                    best = v;
+                }
+            }
+            return best;
+        }
+
+        private void WithNearest(Action<EntityId> action)
+        {
+            var v = NearestSpawned();
+            if (v == null) _gc.Toast("You have not spawned a vehicle.", Severity.Warning);
+            else action(v.Id);
+        }
+
+        private void MoveNearest()
+        {
+            var v = NearestSpawned();
+            if (v == null)
+            {
+                _gc.Toast("You have not spawned a vehicle.", Severity.Warning);
+                return;
+            }
+            var def = _gc.Session.Content.Vehicle(v.DefId);
+            if (!_gc.FindVehicleSpot(def, 7f, out Vector3 spot, out float yaw)) _gc.Toast("No clear, level ground ahead for it.", Severity.Warning);
+            else Report(_gc.Session.Creative.MoveVehicle(v.Id, spot.ToSim(), yaw));
         }
 
         // ------------------------------------------------------------ tabs

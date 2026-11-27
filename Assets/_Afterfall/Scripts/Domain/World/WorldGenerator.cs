@@ -57,6 +57,7 @@ namespace Afterfall.Domain.World
             PlaceForestSpawns(layout, seed);
             // Added after the original content so every earlier seed, loot roll and spawn is unchanged.
             PlacePlan(layout, BuildingPlans.MillbrookApartments(), "millbrook", 206f, 322f, 180f);
+            PlaceVehicles(layout);
             return layout;
         }
 
@@ -486,8 +487,38 @@ namespace Afterfall.Domain.World
                     LootTable = f.LootTable, LockId = f.LockId, Locked = f.Locked
                 };
                 seed.KeysInside.AddRange(f.KeysInside);
+                seed.ItemsInside.AddRange(f.ItemsInside);
                 l.Fixtures.Add(seed);
             }
+        }
+
+        /// <summary>
+        /// Three abandoned vehicles, each reached a different way: a locked sedan whose key is in
+        /// the apartments, a pickup at the workshop with no key (hotwire it), and a quad bike at the
+        /// farm with its key still in the ignition but almost no fuel.
+        /// </summary>
+        private static void PlaceVehicles(WorldLayout l)
+        {
+            var sedan = new VehicleSeed
+            {
+                Key = "vehicle:millbrook_sedan", DefId = "sedan", Position = l.Ground(190f, 318f), Yaw = 8f, Paint = 0, Fuel = 22f,
+                Engine = 82f, Body = 71f, Tyres = 88f, Battery = 76f, Locked = true, LockId = BuildingPlans.SedanLock
+            };
+            sedan.TrunkItems.Add("fuel_can");
+            l.Vehicles.Add(sedan);
+            var pickup = new VehicleSeed
+            {
+                Key = "vehicle:hartley_pickup", DefId = "pickup", Position = l.Ground(411f, 287.5f), Yaw = 250f, Paint = 1, Fuel = 9f,
+                Engine = 68f, Body = 58f, Tyres = 74f, Battery = 64f, Locked = false, LockId = "Hartley's pickup · HW-0451"
+            };
+            pickup.TrunkItems.Add("scrap_metal");
+            pickup.TrunkItems.Add("mechanical_parts");
+            l.Vehicles.Add(pickup);
+            l.Vehicles.Add(new VehicleSeed
+            {
+                Key = "vehicle:dawson_atv", DefId = "atv", Position = l.Ground(262f, 123f), Yaw = 40f, Paint = 1, Fuel = 2.5f,
+                Engine = 77f, Body = 80f, Tyres = 70f, Battery = 58f, Locked = false, LockId = "Dawson quad bike", KeyInIgnition = true
+            });
         }
 
         // ------------------------------------------------------------------ helpers

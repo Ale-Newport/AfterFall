@@ -26,6 +26,8 @@ namespace Afterfall.Presentation
         private readonly Dictionary<EntityId, ZombieView> _zombies = new Dictionary<EntityId, ZombieView>();
         private readonly Dictionary<EntityId, ColonistView> _colonists = new Dictionary<EntityId, ColonistView>();
         private Transform _colonistsRoot;
+        private readonly Dictionary<EntityId, VehicleView> _vehicles = new Dictionary<EntityId, VehicleView>();
+        private Transform _vehiclesRoot;
         private int _version = -1;
         private float _zombieScan;
 
@@ -42,6 +44,7 @@ namespace Afterfall.Presentation
             _dropsRoot = Root("Drops");
             _zombiesRoot = Root("Infected");
             _colonistsRoot = Root("Survivors");
+            _vehiclesRoot = Root("Vehicles");
             Reconcile();
         }
 
@@ -53,6 +56,8 @@ namespace Afterfall.Presentation
         }
 
         public ZombieView ZombieViewOf(EntityId id) => _zombies.TryGetValue(id, out ZombieView v) ? v : null;
+        public VehicleView VehicleViewOf(EntityId id) => _vehicles.TryGetValue(id, out VehicleView v) ? v : null;
+        public IEnumerable<VehicleView> Vehicles => _vehicles.Values;
         public StructureView StructureViewOf(EntityId id) => _structures.TryGetValue(id, out StructureView v) ? v : null;
 
         private void LateUpdate()
@@ -135,6 +140,20 @@ namespace Afterfall.Presentation
             RemoveMissing(_colonists, w.Colonists);
             foreach (ColonistState c in w.Colonists.Values)
                 if (!_colonists.ContainsKey(c.Id)) _colonists[c.Id] = ColonistView.Create(_colonistsRoot, c, _gc);
+
+            // Vehicles: new ones get a body; one moved by a command (not by its own physics) is placed there.
+            RemoveMissing(_vehicles, w.Vehicles);
+            foreach (Afterfall.Domain.Vehicles.VehicleState v in w.Vehicles.Values)
+            {
+                Afterfall.Domain.Vehicles.VehicleDefinition def = _gc.Session.Content.Vehicle(v.DefId);
+                if (def == null) continue;
+                if (_vehicles.TryGetValue(v.Id, out VehicleView view))
+                {
+                    if (!view.Driven && (view.transform.position - v.Position.ToUnity()).sqrMagnitude > 1f) view.Place(v.Position, v.Yaw);
+                    continue;
+                }
+                _vehicles[v.Id] = VehicleView.Create(_gc, v, def, _vehiclesRoot);
+            }
 
             SyncZombieViews();
         }

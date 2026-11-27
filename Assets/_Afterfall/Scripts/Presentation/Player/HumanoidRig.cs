@@ -90,6 +90,8 @@ namespace Afterfall.Presentation
         private bool _fallForward;
         private int _variant;
         private float _hipX;
+        private bool _seated;
+        private float _seatFootDrop, _seatFootForward;
         private float _phase;
         private float _time;
         private float _swing = -1f;
@@ -219,6 +221,40 @@ namespace Afterfall.Presentation
             _dead = dead;
         }
 
+        /// <summary>
+        /// Sitting (driving): hips on the seat, feet forward on the pedals or footrests, hands
+        /// on the wheel or handlebars. The rig's origin is the seat's floor point.
+        /// </summary>
+        public void SetSeated(bool seated, float footDrop = 0f, float footForward = 0.5f)
+        {
+            _seated = seated;
+            _seatFootDrop = footDrop;
+            _seatFootForward = footForward;
+        }
+
+        public bool Seated => _seated;
+
+        private Pose SeatedPose()
+        {
+            float breath = Mathf.Sin(_time * 1.7f);
+            var pose = new Pose
+            {
+                Pelvis = new Vector3(0f, 0.3f, -0.02f),
+                PelvisRot = new Vector3(-18f, 0f, 0f),
+                ChestRot = new Vector3(2f + breath * 0.8f, 0f, 0f),
+                HeadRot = new Vector3(2f, Mathf.Sin(_time * 0.31f) * 6f, 0f),
+                FootL = new Vector3(-(_hipX + 0.04f), CharacterLayout.AnkleY - _seatFootDrop, _seatFootForward),
+                FootR = new Vector3(_hipX + 0.04f, CharacterLayout.AnkleY - _seatFootDrop, _seatFootForward),
+                FootPitchL = -12f,
+                FootPitchR = -12f,
+                ArmL = new Vector3(-58f, 0f, -14f),
+                ArmR = new Vector3(-58f, 0f, 14f),
+                ForeL = -32f,
+                ForeR = -32f
+            };
+            return pose;
+        }
+
         public void SetVisible(bool visible)
         {
             _visible = visible;
@@ -246,7 +282,7 @@ namespace Afterfall.Presentation
             _crouch = Mathf.MoveTowards(_crouch, crouching ? 1f : 0f, dt * 5f);
             _air = Mathf.MoveTowards(_air, grounded ? 0f : 1f, dt * 6f);
 
-            Pose pose = _shambling ? Shamble(speed, dt) : Locomotion(speed, dt);
+            Pose pose = _seated ? SeatedPose() : _shambling ? Shamble(speed, dt) : Locomotion(speed, dt);
             if (_swing >= 0f)
             {
                 _swing += dt * 3.2f;

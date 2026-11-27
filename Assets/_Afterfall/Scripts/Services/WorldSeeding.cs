@@ -45,8 +45,35 @@ namespace Afterfall.Services
                     }
                     foreach (string lockId in f.KeysInside)
                         if (content.Items.Contains(DoorRules.KeyItem)) s.Storage.TryAddStack(new ItemStack(DoorRules.KeyItem, 1, 0, lockId));
+                    foreach (string item in f.ItemsInside)
+                        if (content.Items.Contains(item)) s.Storage.AddUpTo(item, 1);
                 }
                 world.AddStructure(s);
+                created++;
+            }
+
+            var vehicles = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Afterfall.Domain.Vehicles.VehicleState v in world.Vehicles.Values)
+                if (!string.IsNullOrEmpty(v.SeedKey)) vehicles.Add(v.SeedKey);
+            foreach (VehicleSeed seed in world.Layout.Vehicles)
+            {
+                if (vehicles.Contains(seed.Key)) continue;
+                Afterfall.Domain.Vehicles.VehicleDefinition def = content.Vehicle(seed.DefId);
+                if (def == null) continue;
+                Afterfall.Domain.Vehicles.VehicleState v = VehicleService.Create(world, content, def, seed.Position, seed.Yaw);
+                v.SeedKey = seed.Key;
+                v.Paint = seed.Paint;
+                v.Fuel = Math.Min(def.FuelCapacity, seed.Fuel);
+                v.Engine = seed.Engine;
+                v.Body = seed.Body;
+                v.Tyres = seed.Tyres;
+                v.Battery = seed.Battery;
+                v.Locked = seed.Locked;
+                v.LockId = seed.LockId ?? "";
+                v.KeyInIgnition = seed.KeyInIgnition;
+                foreach (string item in seed.TrunkItems)
+                    if (content.Items.Contains(item)) v.Storage.AddUpTo(item, 1);
+                world.AddVehicle(v);
                 created++;
             }
             return created;

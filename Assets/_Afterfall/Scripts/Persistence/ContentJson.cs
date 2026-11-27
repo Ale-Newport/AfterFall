@@ -21,6 +21,7 @@ namespace Afterfall.Persistence
         public string ResourceNodes { get; set; }
         public string LootTables { get; set; }
         public string Archetypes { get; set; }
+        public string Vehicles { get; set; }
     }
 
     /// <summary>
@@ -41,6 +42,7 @@ namespace Afterfall.Persistence
             foreach (ResourceNodeDefinition n in Parse<ResourceNodeDefinition>(src.ResourceNodes, "resource_nodes")) db.AddNode(n);
             foreach (LootTable l in Parse<LootTable>(src.LootTables, "loot_tables")) db.AddLootTable(l);
             foreach (ZombieArchetype a in Parse<ZombieArchetype>(src.Archetypes, "archetypes")) db.Archetypes[a.Id] = a;
+            foreach (Afterfall.Domain.Vehicles.VehicleDefinition v in Parse<Afterfall.Domain.Vehicles.VehicleDefinition>(src.Vehicles, "vehicles")) db.Vehicles[v.Id] = v;
             return db;
         }
 
@@ -59,7 +61,7 @@ namespace Afterfall.Persistence
 
         public static readonly string[] FileNames =
         {
-            "items", "recipes", "buildings", "technologies", "resource_nodes", "loot_tables", "archetypes"
+            "items", "recipes", "buildings", "technologies", "resource_nodes", "loot_tables", "archetypes", "vehicles"
         };
 
         /// <summary>Builds sources from a lookup function (file name without extension → text).</summary>
@@ -73,7 +75,8 @@ namespace Afterfall.Persistence
                 Technologies = read("technologies"),
                 ResourceNodes = read("resource_nodes"),
                 LootTables = read("loot_tables"),
-                Archetypes = read("archetypes")
+                Archetypes = read("archetypes"),
+                Vehicles = read("vehicles")
             };
         }
     }
