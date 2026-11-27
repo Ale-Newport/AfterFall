@@ -685,7 +685,7 @@ namespace Afterfall.Services
         {
             zone = null;
             if (World.WorkZones.Count >= MaxWorkZones) return OpResult.Fail("too_many", $"At most {MaxWorkZones} gathering areas. Remove one first.");
-            if (center.X < 0 || center.Z < 0 || center.X > WorldLayout.WorldSize || center.Z > WorldLayout.WorldSize) return OpResult.Fail("outside", "Outside the valley.");
+            if (!World.Layout.IsInsideMap(center.X, center.Z)) return OpResult.Fail("outside", "Outside the map.");
             if (!World.Exploration.IsRevealed(center.X, center.Z)) return OpResult.Fail("unexplored", "You have not explored there yet.");
             if (World.Layout != null && World.Layout.IsWater(center.X, center.Z)) return OpResult.Fail("water", "That is open water.");
             zone = new WorkZone

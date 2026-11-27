@@ -50,7 +50,8 @@ namespace Afterfall.Tests.PlayMode
         {
             yield return StartGame(4321);
             GameController gc = Game;
-            Assert.IsNotNull(gc.Terrain);
+            Assert.IsNotNull(gc.TerrainTiles);
+            Assert.Greater(gc.TerrainTiles.LoadedTiles, 0);
             Assert.IsNotNull(Camera.main, "a main camera exists");
             Assert.Greater(Object.FindObjectsByType<ResourceNodeView>(FindObjectsSortMode.None).Length, 300);
             Vector3 p = gc.Player.transform.position;

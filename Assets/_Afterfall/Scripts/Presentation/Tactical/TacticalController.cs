@@ -266,8 +266,8 @@ namespace Afterfall.Presentation
             for (int z = 0; z < verts; z++)
                 for (int x = 0; x < verts; x++)
                 {
-                    float wx = Mathf.Min(x * ExplorationState.CellSize, WorldLayout.WorldSize);
-                    float wz = Mathf.Min(z * ExplorationState.CellSize, WorldLayout.WorldSize);
+                    float wx = Mathf.Min(x * ExplorationState.CellSize, l.Size);
+                    float wz = Mathf.Min(z * ExplorationState.CellSize, l.Size);
                     float h = Mathf.Max(l.HeightAt(wx, wz), l.WaterLevel) + 9f;
                     v[z * verts + x] = new Vector3(wx, h, wz);
                     uv[z * verts + x] = new Vector2(wx / (n * ExplorationState.CellSize), wz / (n * ExplorationState.CellSize));

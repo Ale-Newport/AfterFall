@@ -110,7 +110,7 @@ namespace Afterfall.Presentation
 
         private GameController _gc;
         private WorldLayout _layout;
-        private GroundWeights _weights;
+        private WorldWeights _weights;
         private Variant[] _variants;
         private float _maxFade;
         private int _seed;
@@ -145,7 +145,7 @@ namespace Afterfall.Presentation
             _gc = gc;
             _layout = gc.Session.World.Layout;
             _seed = gc.Session.World.Seed;
-            _weights = WorldBuilder.Weights;
+            _weights = gc.TerrainTiles != null ? gc.TerrainTiles.Weights : null;
             Material template = Resources.Load<Material>("Materials/AfterfallGroundCover");
             if (_weights == null || template == null || !template.shader.isSupported || !SystemInfo.supportsInstancing)
             {
@@ -265,7 +265,7 @@ namespace Afterfall.Presentation
             float reach = _maxFade + CellSize * 0.75f;
             int cx0 = Mathf.FloorToInt((center.x - reach) / CellSize), cx1 = Mathf.FloorToInt((center.x + reach) / CellSize);
             int cz0 = Mathf.FloorToInt((center.z - reach) / CellSize), cz1 = Mathf.FloorToInt((center.z + reach) / CellSize);
-            int maxCell = Mathf.CeilToInt(WorldLayout.WorldSize / CellSize) - 1;
+            int maxCell = Mathf.CeilToInt(_gc.Session.World.Layout.Size / CellSize) - 1;
 
             _remove.Clear();
             foreach (KeyValuePair<long, Cell> kv in _cells)

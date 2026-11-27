@@ -41,7 +41,8 @@ namespace Afterfall.Presentation
         public WorldSync Sync { get; private set; }
         public BuildController Build { get; private set; }
         public TacticalController Tactical { get; private set; }
-        public Terrain Terrain { get; private set; }
+        /// <summary>The terrain tiles streamed around the survivor.</summary>
+        public TerrainStreamer TerrainTiles { get; private set; }
         public AudioDirector Audio { get; private set; }
 
         /// <summary>Doors colonists open on their way and close behind them.</summary>
@@ -79,9 +80,12 @@ namespace Afterfall.Presentation
             ProceduralTextures.PrewarmCatalogue();
             _worldRoot = new GameObject("World").transform;
             _worldRoot.SetParent(transform, false);
-            Terrain = WorldBuilder.BuildTerrain(Session.World.Layout, Session.World.Seed, _worldRoot);
+            TerrainTiles = gameObject.AddComponent<TerrainStreamer>();
+            TerrainTiles.Initialize(this, Session.World.Layout, Session.World.Seed, _worldRoot);
+            // The ground around the survivor is built before play begins; the rest streams in.
+            TerrainTiles.BuildAround(Session.Player.Position.ToUnity(), WorldBuilder.TileSize * 0.75f);
             WorldBuilder.BuildWater(Session.World.Layout, _worldRoot);
-            WorldBuilder.BuildBoundary(_worldRoot);
+            WorldBuilder.BuildBoundary(Session.World.Layout, _worldRoot);
             yield return null;
             Ui.ShowLoading("Raising ruins…");
             yield return null;
@@ -486,7 +490,7 @@ namespace Afterfall.Presentation
         /// True when the world around a point is ready to stand in. The whole map is built at
         /// load today; sector streaming will answer this per sector, and teleports already wait on it.
         /// </summary>
-        public bool IsWorldReadyAt(Vector3 position) => Running;
+        public bool IsWorldReadyAt(Vector3 position) => Running && TerrainTiles != null && TerrainTiles.IsReadyAt(position);
 
         /// <summary>
         /// Teleports the survivor (developer tools): waits until the destination is ready, then lands
@@ -513,6 +517,7 @@ namespace Afterfall.Presentation
                 }
             }
             Teleporting = true;
+            TerrainTiles.Prefetch(target);
             float timeout = Time.realtimeSinceStartup + 30f;
             while (!IsWorldReadyAt(target) && Time.realtimeSinceStartup < timeout) yield return null;
             if (!IsWorldReadyAt(target))

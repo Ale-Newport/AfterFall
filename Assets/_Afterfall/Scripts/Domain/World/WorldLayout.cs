@@ -150,6 +150,23 @@ namespace Afterfall.Domain.World
         public bool Paved { get; set; } = true;
     }
 
+    /// <summary>A river: a centre line whose points carry the water surface height (falling downstream) and a width.</summary>
+    public sealed class RiverPath
+    {
+        public string Name { get; set; } = "";
+        public List<Vec3> Points { get; } = new List<Vec3>();
+        public float Width { get; set; } = 14f;
+    }
+
+    /// <summary>A lake or reservoir: a round body of water with a level.</summary>
+    public sealed class LakeInfo
+    {
+        public string Name { get; set; } = "";
+        public Vec3 Center { get; set; }
+        public float Radius { get; set; }
+        public float Level { get; set; }
+    }
+
     public sealed class NodeSeed
     {
         public string DefId { get; set; } = "";
@@ -263,6 +280,81 @@ namespace Afterfall.Domain.World
         public List<FixtureSeed> Fixtures { get; } = new List<FixtureSeed>();
         public List<PlacedPlan> Plans { get; } = new List<PlacedPlan>();
         public List<VehicleSeed> Vehicles { get; } = new List<VehicleSeed>();
+        public List<RiverPath> Rivers { get; } = new List<RiverPath>();
+        public List<LakeInfo> Lakes { get; } = new List<LakeInfo>();
+
+        /// <summary>Generator version that built this layout (1 = the 512 m valley, 2 = the 2 km region).</summary>
+        public int Version { get; set; } = 1;
+
+        /// <summary>Display name of the region.</summary>
+        public string RegionName { get; set; } = "Millbrook Valley";
+
+        private Dictionary<long, List<int>> _riverIndex;
+        private List<(int River, int Seg)> _riverSegs;
+        private const float RiverCell = 64f;
+
+        /// <summary>Indexes the rivers' segments by 64 m cells (call after rivers are final).</summary>
+        public void IndexWater()
+        {
+            _riverIndex = new Dictionary<long, List<int>>();
+            _riverSegs = new List<(int, int)>();
+            for (int r = 0; r < Rivers.Count; r++)
+            {
+                RiverPath river = Rivers[r];
+                for (int i = 0; i + 1 < river.Points.Count; i++)
+                {
+                    int id = _riverSegs.Count;
+                    _riverSegs.Add((r, i));
+                    Vec3 a = river.Points[i], b = river.Points[i + 1];
+                    float m = river.Width;
+                    int x0 = (int)Math.Floor((Math.Min(a.X, b.X) - m) / RiverCell), x1 = (int)Math.Floor((Math.Max(a.X, b.X) + m) / RiverCell);
+                    int z0 = (int)Math.Floor((Math.Min(a.Z, b.Z) - m) / RiverCell), z1 = (int)Math.Floor((Math.Max(a.Z, b.Z) + m) / RiverCell);
+                    for (int z = z0; z <= z1; z++)
+                        for (int x = x0; x <= x1; x++)
+                        {
+                            long k = ((long)x << 32) ^ (uint)z;
+                            if (!_riverIndex.TryGetValue(k, out List<int> list)) _riverIndex[k] = list = new List<int>();
+                            list.Add(id);
+                        }
+                }
+            }
+        }
+
+        /// <summary>
+        /// The water surface over a point, if any: the valley lake (below <see cref="WaterLevel"/>),
+        /// a river within its banks, or a lake. Thread-safe once <see cref="IndexWater"/> has run.
+        /// </summary>
+        public bool WaterAt(float x, float z, out float level)
+        {
+            level = WaterLevel;
+            float h = Height.Sample(x, z);
+            if (h < WaterLevel + 0.15f) return true;
+            foreach (LakeInfo lake in Lakes)
+            {
+                float dx = x - lake.Center.X, dz = z - lake.Center.Z;
+                if (dx * dx + dz * dz <= lake.Radius * lake.Radius && h < lake.Level + 0.15f)
+                {
+                    level = lake.Level;
+                    return true;
+                }
+            }
+            if (_riverIndex == null || _riverIndex.Count == 0) return false;
+            long k = ((long)(int)Math.Floor(x / RiverCell) << 32) ^ (uint)(int)Math.Floor(z / RiverCell);
+            if (!_riverIndex.TryGetValue(k, out List<int> segs)) return false;
+            foreach (int id in segs)
+            {
+                (int r, int i) = _riverSegs[id];
+                RiverPath river = Rivers[r];
+                float d = DistanceToSegmentXZ(x, z, river.Points[i], river.Points[i + 1], out float t);
+                if (d > river.Width * 0.5f) continue;
+                float lvl = river.Points[i].Y + (river.Points[i + 1].Y - river.Points[i].Y) * t;
+                if (h > lvl + 0.15f) continue;
+                level = lvl;
+                return true;
+            }
+            return false;
+        }
+
 
         /// <summary>The planned building and room at a world point (for room names and indoor checks), if any.</summary>
         public PlanRoom RoomAt(Vec3 p, out PlacedPlan building)
@@ -285,7 +377,7 @@ namespace Afterfall.Domain.World
 
         public float HeightAt(float x, float z) => Height.Sample(x, z);
         public Vec3 Ground(float x, float z) => new Vec3(x, Height.Sample(x, z), z);
-        public bool IsWater(float x, float z) => Height.Sample(x, z) < WaterLevel + 0.15f;
+        public bool IsWater(float x, float z) => WaterAt(x, z, out _);
 
         public bool IsInsideMap(float x, float z, float margin = 0f) =>
             x >= margin && z >= margin && x <= Size - margin && z <= Size - margin;

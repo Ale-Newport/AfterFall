@@ -336,11 +336,12 @@ namespace Afterfall.Domain.Weather
 
         private Vec3 OpenGroundPoint()
         {
-            Vec3 center = _world.Player?.Position ?? new Vec3(WorldLayout.WorldSize * 0.5f, 0f, WorldLayout.WorldSize * 0.5f);
+            float size = _world.Layout?.Size ?? WorldLayout.WorldSize;
+            Vec3 center = _world.Player?.Position ?? new Vec3(size * 0.5f, 0f, size * 0.5f);
             float a = _rng.Range(0f, (float)(Math.PI * 2.0));
             float d = _rng.Range(40f, 160f);
-            float x = Math.Max(2f, Math.Min(WorldLayout.WorldSize - 2f, center.X + (float)Math.Cos(a) * d));
-            float z = Math.Max(2f, Math.Min(WorldLayout.WorldSize - 2f, center.Z + (float)Math.Sin(a) * d));
+            float x = Math.Max(2f, Math.Min(size - 2f, center.X + (float)Math.Cos(a) * d));
+            float z = Math.Max(2f, Math.Min(size - 2f, center.Z + (float)Math.Sin(a) * d));
             return _world.Layout != null ? _world.Layout.Ground(x, z) : new Vec3(x, center.Y, z);
         }
 

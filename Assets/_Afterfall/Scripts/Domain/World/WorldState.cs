@@ -74,7 +74,7 @@ namespace Afterfall.Domain.World
         private readonly Dictionary<EntityId, Inventory> _inventories = new Dictionary<EntityId, Inventory>();
         private readonly Dictionary<EntityId, EntityId> _inventoryOwner = new Dictionary<EntityId, EntityId>();
 
-        public WorldState(int seed, GameSettings settings, SimulationClock clock, IdAllocator ids)
+        public WorldState(int seed, GameSettings settings, SimulationClock clock, IdAllocator ids, float worldSize = WorldLayout.WorldSize)
         {
             Seed = seed;
             Settings = settings;
@@ -86,7 +86,7 @@ namespace Afterfall.Domain.World
             ThreatRng = new DeterministicRandom((ulong)(uint)seed * 31UL + 7UL);
             FarmRng = new DeterministicRandom((ulong)(uint)seed * 977UL + 13UL);
             WeatherRng = new DeterministicRandom((ulong)(uint)seed * 6364136223846793005UL + 1442695040888963407UL);
-            Exploration = new ExplorationState(WorldLayout.WorldSize);
+            Exploration = new ExplorationState(worldSize);
         }
 
         public int Seed { get; }

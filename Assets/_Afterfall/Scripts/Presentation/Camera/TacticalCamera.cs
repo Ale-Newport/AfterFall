@@ -49,7 +49,7 @@ namespace Afterfall.Presentation
                 float zoom = input.TacZoom.ReadValue<float>();
                 if (Mathf.Abs(zoom) > 0.01f && !_gc.Build.IsPlacing) _distance = Mathf.Clamp(_distance * (zoom > 0 ? 0.88f : 1.14f), 18f, 160f);
             }
-            float s = WorldLayout.WorldSize;
+            float s = _gc.Session.World.Layout.Size;
             _focus.x = Mathf.Clamp(_focus.x, 0f, s);
             _focus.z = Mathf.Clamp(_focus.z, 0f, s);
             _focus.y = _gc.GroundHeight(_focus);

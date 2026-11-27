@@ -27,10 +27,7 @@ namespace Afterfall.Presentation
         /// <summary>Global vector mapping world XZ to <see cref="GroundTintId"/> UVs (xy scale, zw offset).</summary>
         public static readonly int GroundTintRectId = Shader.PropertyToID("_AfterfallGroundTintRect");
 
-        private const int TintResolution = 256;
 
-        /// <summary>The splat weights of the terrain built last (read by <see cref="GroundCover"/>).</summary>
-        public static GroundWeights Weights { get; private set; }
 
         private static TerrainLayer[] _layers;
         private static Task<LayerPixels[]> _pendingLayers;
@@ -38,40 +35,54 @@ namespace Afterfall.Presentation
         private static Material _terrainMaterial, _waterMaterial;
         private static Texture2D _ripples;
 
-        public static Terrain BuildTerrain(WorldLayout layout, int seed, Transform parent)
+        /// <summary>Side of one terrain tile in metres (heights at 1 m, splat at 0.5 m).</summary>
+        public const float TileSize = 512f;
+
+        /// <summary>Tiles across a layout (a 512 m valley is one tile).</summary>
+        public static int TilesAcross(WorldLayout layout) => Mathf.Max(1, Mathf.CeilToInt(layout.Size / TileSize - 0.001f));
+
+        /// <summary>Starts generating the terrain layer textures (call early; <see cref="BuildTile"/> waits for them).</summary>
+        public static void PrepareLayers()
+        {
+            bool fresh = _layers == null || _layers[0] == null || _layers[0].diffuseTexture == null;
+            if (fresh && _pendingLayers == null) _pendingLayers = Task.Run(GenerateLayerPixels);
+        }
+
+        /// <summary>
+        /// Builds one terrain tile from the layout's height field and an already painted splat
+        /// (<see cref="PaintSplat"/>, which can run on a worker thread). Main thread only.
+        /// </summary>
+        public static Terrain BuildTile(WorldLayout layout, int tx, int tz, GroundWeights weights, Transform parent)
         {
             HeightField hf = layout.Height;
+            int res = Mathf.RoundToInt(TileSize / hf.CellSize) + 1;
+            int gx0 = Mathf.RoundToInt(tx * TileSize / hf.CellSize), gz0 = Mathf.RoundToInt(tz * TileSize / hf.CellSize);
             var data = new TerrainData
             {
-                heightmapResolution = hf.Resolution,
+                heightmapResolution = res,
                 alphamapResolution = SplatResolution,
                 baseMapResolution = 1024
             };
-            data.size = new Vector3(hf.Size, hf.MaxHeight, hf.Size);
-            var heights = new float[hf.Resolution, hf.Resolution];
-            for (int z = 0; z < hf.Resolution; z++)
-                for (int x = 0; x < hf.Resolution; x++)
-                    heights[z, x] = hf.Heights[z * hf.Resolution + x] / hf.MaxHeight;
+            data.size = new Vector3(TileSize, hf.MaxHeight, TileSize);
+            var heights = new float[res, res];
+            for (int z = 0; z < res; z++)
+                for (int x = 0; x < res; x++)
+                    heights[z, x] = hf.Get(gx0 + x, gz0 + z) / hf.MaxHeight;
             data.SetHeights(0, 0, heights);
 
-            // The layer textures (pure C#) are generated while the splat is painted.
-            bool fresh = _layers == null || _layers[0] == null || _layers[0].diffuseTexture == null;
-            Task<LayerPixels[]> pixels = null;
-            if (fresh)
+            if (_layers == null || _layers[0] == null || _layers[0].diffuseTexture == null)
             {
-                pixels = _pendingLayers ?? Task.Run(GenerateLayerPixels);
+                Task<LayerPixels[]> pixels = _pendingLayers ?? Task.Run(GenerateLayerPixels);
                 _pendingLayers = null;
+                UploadLayers(pixels.Result);
             }
-            GroundWeights weights = PaintSplat(layout, seed);
-            if (pixels != null) UploadLayers(pixels.Result);
             data.terrainLayers = _layers;
             weights.CopyTo(data);
-            PublishGroundTint(weights);
-            Weights = weights;
 
             GameObject go = Terrain.CreateTerrainGameObject(data);
-            go.name = "Terrain";
+            go.name = $"Terrain {tx},{tz}";
             go.transform.SetParent(parent, false);
+            go.transform.position = new Vector3(tx * TileSize, 0f, tz * TileSize);
             go.layer = Layers.Terrain;
             Terrain t = go.GetComponent<Terrain>();
             t.materialTemplate = TerrainMaterial();
@@ -82,6 +93,9 @@ namespace Afterfall.Presentation
             t.drawInstanced = false;
             return t;
         }
+
+        /// <summary>Average colour of the layers, per layer (for the ground tint); null until the layers exist.</summary>
+        public static Color[] LayerMeans => _layerMeans;
 
         // ------------------------------------------------------------------ layers
 
@@ -193,13 +207,15 @@ namespace Afterfall.Presentation
         private sealed class Stamps
         {
             public readonly int Res;
-            public readonly float Cell;
+            public readonly float Cell, X0, Z0;
             public readonly float[] Forest, Dirt, Gravel, Rock, Asphalt;
 
-            public Stamps(int res)
+            public Stamps(int res, float x0, float z0, float size)
             {
                 Res = res;
-                Cell = WorldLayout.WorldSize / (res - 1);
+                X0 = x0;
+                Z0 = z0;
+                Cell = size / (res - 1);
                 Forest = new float[res * res];
                 Dirt = new float[res * res];
                 Gravel = new float[res * res];
@@ -223,15 +239,15 @@ namespace Afterfall.Presentation
             public void Rect(float[] mask, float cx, float cz, float hx, float hz, float yaw, float inner, float outer, float strength, int seed, float rough = 0.25f)
             {
                 float reach = Mathf.Sqrt(hx * hx + hz * hz) + outer + 1f;
-                int x0 = Mathf.Max(0, Mathf.FloorToInt((cx - reach) / Cell)), x1 = Mathf.Min(Res - 1, Mathf.CeilToInt((cx + reach) / Cell));
-                int z0 = Mathf.Max(0, Mathf.FloorToInt((cz - reach) / Cell)), z1 = Mathf.Min(Res - 1, Mathf.CeilToInt((cz + reach) / Cell));
+                int x0 = Mathf.Max(0, Mathf.FloorToInt((cx - reach - X0) / Cell)), x1 = Mathf.Min(Res - 1, Mathf.CeilToInt((cx + reach - X0) / Cell));
+                int z0 = Mathf.Max(0, Mathf.FloorToInt((cz - reach - Z0) / Cell)), z1 = Mathf.Min(Res - 1, Mathf.CeilToInt((cz + reach - Z0) / Cell));
                 // World offset to the prop's local frame (inverse of Unity's yaw rotation).
                 float rad = yaw * Mathf.Deg2Rad, cs = Mathf.Cos(rad), sn = Mathf.Sin(rad);
                 for (int z = z0; z <= z1; z++)
                 {
                     for (int x = x0; x <= x1; x++)
                     {
-                        float dx = x * Cell - cx, dz = z * Cell - cz;
+                        float dx = X0 + x * Cell - cx, dz = Z0 + z * Cell - cz;
                         float lx = Mathf.Abs(dx * cs - dz * sn) - hx, lz = Mathf.Abs(dx * sn + dz * cs) - hz;
                         float d = Mathf.Sqrt(Mathf.Max(lx, 0f) * Mathf.Max(lx, 0f) + Mathf.Max(lz, 0f) * Mathf.Max(lz, 0f));
                         d += Noise.Value(seed, x * Cell * 0.9f, z * Cell * 0.9f) * outer * rough;
@@ -243,11 +259,15 @@ namespace Afterfall.Presentation
             }
         }
 
-        private static Stamps BuildStamps(WorldLayout layout, int seed)
+        private static bool Near(float x, float z, float x0, float z0, float size, float margin) =>
+            x >= x0 - margin && z >= z0 - margin && x <= x0 + size + margin && z <= z0 + size + margin;
+
+        private static Stamps BuildStamps(WorldLayout layout, int seed, float ox, float oz, float size)
         {
-            var s = new Stamps(SplatResolution);
+            var s = new Stamps(SplatResolution, ox, oz, size);
             foreach (NodeSeed n in layout.Nodes)
             {
+                if (!Near(n.Position.X, n.Position.Z, ox, oz, size, 8f)) continue;
                 float x = n.Position.X, z = n.Position.Z, k = n.Scale;
                 switch (n.DefId)
                 {
@@ -267,6 +287,7 @@ namespace Afterfall.Presentation
             }
             foreach (PropPlacement p in layout.Props)
             {
+                if (!Near(p.Position.X, p.Position.Z, ox, oz, size, 40f)) continue;
                 float x = p.Position.X, z = p.Position.Z, hx = p.Size.X * 0.5f, hz = p.Size.Z * 0.5f;
                 switch (p.Kind)
                 {
@@ -330,17 +351,24 @@ namespace Afterfall.Presentation
             return t * t * (3f - 2f * t);
         }
 
-        private static GroundWeights PaintSplat(WorldLayout layout, int seed)
+        /// <summary>Paints the splat of one terrain tile (pure C#, safe on a worker thread).</summary>
+        public static GroundWeights PaintSplat(WorldLayout layout, int seed, float ox, float oz, float size)
         {
             int res = SplatResolution;
             int layers = TerrainSurfaces.Count;
-            var map = new GroundWeights(res, layers);
-            float cell = WorldLayout.WorldSize / (res - 1);
-            Stamps stamps = BuildStamps(layout, seed);
+            var map = new GroundWeights(res, layers, ox, oz, size);
+            float cell = size / (res - 1);
+            Stamps stamps = BuildStamps(layout, seed, ox, oz, size);
             var segments = new List<Segment>();
             foreach (RoadPath r in layout.Roads)
                 for (int i = 0; i + 1 < r.Points.Count; i++)
-                    segments.Add(new Segment { Ax = r.Points[i].X, Az = r.Points[i].Z, Bx = r.Points[i + 1].X, Bz = r.Points[i + 1].Z, HalfWidth = r.Width * 0.5f, Paved = r.Paved });
+                {
+                    Vec3 a = r.Points[i], b = r.Points[i + 1];
+                    // Only segments that reach this tile matter.
+                    float m = r.Width * 0.5f + 12f;
+                    if (Mathf.Max(a.X, b.X) < ox - m || Mathf.Min(a.X, b.X) > ox + size + m || Mathf.Max(a.Z, b.Z) < oz - m || Mathf.Min(a.Z, b.Z) > oz + size + m) continue;
+                    segments.Add(new Segment { Ax = a.X, Az = a.Z, Bx = b.X, Bz = b.Z, HalfWidth = r.Width * 0.5f, Paved = r.Paved });
+                }
             Segment[] segs = segments.ToArray();
 
             Parallel.For(0, res, z =>
@@ -348,7 +376,7 @@ namespace Afterfall.Presentation
                 var w = new float[layers];
                 for (int x = 0; x < res; x++)
                 {
-                    float wx = x * cell, wz = z * cell;
+                    float wx = ox + x * cell, wz = oz + z * cell;
                     Array.Clear(w, 0, layers);
                     PaintTexel(layout, seed, segs, stamps, x, z, wx, wz, w);
                     map.Set(x, z, w);
@@ -500,45 +528,52 @@ namespace Afterfall.Presentation
         }
 
         /// <summary>
-        /// Publishes the average ground colour per 2 m cell (from the splat weights and the layers'
-        /// mean colours) so ground cover can match the ground it grows from.
+        /// The average ground colour per 2 m cell across the whole map (sRGB), for the ground cover
+        /// shader to match the ground it grows from. Tiles fill their part as they are painted.
         /// </summary>
-        private static void PublishGroundTint(GroundWeights splat)
+        public static Texture2D CreateGroundTint(WorldLayout layout)
         {
-            int res = splat.Resolution, layers = splat.Layers;
-            int step = res / TintResolution;
-            var px = new Color32[TintResolution * TintResolution];
-            Color[] means = _layerMeans;
-            Parallel.For(0, TintResolution, ty =>
-            {
-                for (int tx = 0; tx < TintResolution; tx++)
-                {
-                    Color sum = Color.black;
-                    int n = 0;
-                    for (int y = ty * step; y < Mathf.Min(res, (ty + 1) * step); y++)
-                    {
-                        for (int x = tx * step; x < Mathf.Min(res, (tx + 1) * step); x++)
-                        {
-                            int o = (y * res + x) * layers;
-                            for (int l = 0; l < layers; l++) sum += means[l] * (splat.Data[o + l] * (1f / 255f));
-                            n++;
-                        }
-                    }
-                    sum /= Mathf.Max(1, n);
-                    px[ty * TintResolution + tx] = new Color(Mathf.LinearToGammaSpace(sum.r), Mathf.LinearToGammaSpace(sum.g), Mathf.LinearToGammaSpace(sum.b), 1f);
-                }
-            });
-            var tex = new Texture2D(TintResolution, TintResolution, TextureFormat.RGBA32, false, false)
+            int res = Mathf.Max(64, Mathf.CeilToInt(layout.Size / 2f));
+            var tex = new Texture2D(res, res, TextureFormat.RGBA32, false, false)
             {
                 name = "Ground tint",
                 wrapMode = TextureWrapMode.Clamp,
                 filterMode = FilterMode.Bilinear
             };
+            var px = new Color32[res * res];
+            for (int i = 0; i < px.Length; i++) px[i] = new Color32(96, 104, 64, 255);
             tex.SetPixels32(px);
-            tex.Apply(false, true);
+            tex.Apply(false, false);
             Shader.SetGlobalTexture(GroundTintId, tex);
-            float k = (TintResolution - 1f) / TintResolution / WorldLayout.WorldSize;
-            Shader.SetGlobalVector(GroundTintRectId, new Vector4(k, k, 0.5f / TintResolution, 0.5f / TintResolution));
+            float k = (res - 1f) / res / layout.Size;
+            Shader.SetGlobalVector(GroundTintRectId, new Vector4(k, k, 0.5f / res, 0.5f / res));
+            return tex;
+        }
+
+        /// <summary>Writes one painted tile's average ground colour into the map-wide tint texture.</summary>
+        public static void PublishGroundTint(GroundWeights splat, Texture2D tint, float worldSize)
+        {
+            int tres = tint.width;
+            float texel = worldSize / tres;
+            int x0 = Mathf.Clamp(Mathf.FloorToInt(splat.OriginX / texel), 0, tres - 1), z0 = Mathf.Clamp(Mathf.FloorToInt(splat.OriginZ / texel), 0, tres - 1);
+            int n = Mathf.Min(tres - x0, Mathf.CeilToInt(splat.Size / texel)), m = Mathf.Min(tres - z0, Mathf.CeilToInt(splat.Size / texel));
+            var px = new Color32[n * m];
+            Color[] means = _layerMeans;
+            int layers = splat.Layers;
+            var w = new float[layers];
+            for (int tz = 0; tz < m; tz++)
+            {
+                for (int tx = 0; tx < n; tx++)
+                {
+                    float wx = (x0 + tx + 0.5f) * texel, wz = (z0 + tz + 0.5f) * texel;
+                    splat.Sample(wx, wz, w);
+                    Color sum = Color.black;
+                    for (int l = 0; l < layers && l < means.Length; l++) sum += means[l] * w[l];
+                    px[tz * n + tx] = new Color(Mathf.LinearToGammaSpace(sum.r), Mathf.LinearToGammaSpace(sum.g), Mathf.LinearToGammaSpace(sum.b), 1f);
+                }
+            }
+            tint.SetPixels32(x0, z0, n, m, px);
+            tint.Apply(false, false);
         }
 
         // ------------------------------------------------------------------ water
@@ -580,9 +615,9 @@ namespace Afterfall.Presentation
         }
 
         /// <summary>Invisible walls at the map edge so the player cannot leave the playable region.</summary>
-        public static void BuildBoundary(Transform parent)
+        public static void BuildBoundary(WorldLayout layout, Transform parent)
         {
-            float s = WorldLayout.WorldSize;
+            float s = layout.Size;
             var root = new GameObject("Boundary").transform;
             root.SetParent(parent, false);
             void Wall(Vector3 c, Vector3 size)
@@ -625,13 +660,18 @@ namespace Afterfall.Presentation
         public readonly byte[] Data;
         /// <summary>World metres between texel centres.</summary>
         public readonly float Texel;
+        /// <summary>The tile's south-west corner and side in world metres.</summary>
+        public readonly float OriginX, OriginZ, Size;
 
-        public GroundWeights(int resolution, int layers)
+        public GroundWeights(int resolution, int layers, float originX, float originZ, float size)
         {
             Resolution = resolution;
             Layers = layers;
             Data = new byte[resolution * resolution * layers];
-            Texel = WorldLayout.WorldSize / (resolution - 1);
+            OriginX = originX;
+            OriginZ = originZ;
+            Size = size;
+            Texel = size / (resolution - 1);
         }
 
         /// <summary>Stores normalised weights for one texel.</summary>
@@ -647,7 +687,7 @@ namespace Afterfall.Presentation
         /// <summary>Bilinear weights (0..1) at a world position.</summary>
         public void Sample(float x, float z, float[] w)
         {
-            float fx = Mathf.Clamp(x / Texel, 0f, Resolution - 1.001f), fz = Mathf.Clamp(z / Texel, 0f, Resolution - 1.001f);
+            float fx = Mathf.Clamp((x - OriginX) / Texel, 0f, Resolution - 1.001f), fz = Mathf.Clamp((z - OriginZ) / Texel, 0f, Resolution - 1.001f);
             int ix = (int)fx, iz = (int)fz;
             float tx = fx - ix, tz = fz - iz;
             int o00 = (iz * Resolution + ix) * Layers, o10 = o00 + Layers, o01 = o00 + Resolution * Layers, o11 = o01 + Layers;
