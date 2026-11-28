@@ -313,6 +313,9 @@ namespace Afterfall.Persistence
         /// <summary>Seeded chunks whose untouched fittings are dropped (see WorldState.DormantChunks).</summary>
         public List<long> DormantChunks { get; set; } = new List<long>();
 
+        /// <summary>Seeded floors of city buildings (see WorldState.SeededFloors).</summary>
+        public List<string> SeededFloors { get; set; } = new List<string>();
+
         public List<string> DiscoveredPois { get; set; } = new List<string>();
         public ThreatState Threat { get; set; }
 

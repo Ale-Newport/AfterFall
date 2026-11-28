@@ -346,6 +346,11 @@ namespace Afterfall.Domain.World
         /// <summary>Counts chunks generated, so views know to look for new content.</summary>
         public int ChunkVersion { get; private set; }
 
+        private int _fixedRoads = -1;
+
+        /// <summary>How many of <see cref="Roads"/> are the world's fixed roads; the streets of generated chunks follow them.</summary>
+        public int FixedRoadCount => _fixedRoads < 0 ? Roads.Count : _fixedRoads;
+
         public IEnumerable<ChunkContent> GeneratedChunks => _chunks.Values;
         public int GeneratedChunkCount => _chunks.Count;
 
@@ -435,6 +440,7 @@ namespace Afterfall.Domain.World
             Fixtures.AddRange(c.Fixtures);
             Vehicles.AddRange(c.Vehicles);
             ZombieSpawnPoints.AddRange(c.ZombieSpawns);
+            if (_fixedRoads < 0) _fixedRoads = Roads.Count;
             Roads.AddRange(c.Streets);
             Plans.AddRange(c.Plans);
             ChunkVersion++;

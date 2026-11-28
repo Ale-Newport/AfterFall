@@ -22,6 +22,7 @@ namespace Afterfall.Presentation.UI
         private readonly UiManager _ui;
         private readonly GameController _gc;
         private readonly VisualElement _viewport, _image, _detail, _fog, _symbols;
+        private readonly MapLine _route;
         private readonly Label _cursorInfo, _waypointInfo, _exploreInfo, _zoomInfo;
         private readonly TextField _markerName;
         private readonly VisualElement _markerList;
@@ -47,6 +48,7 @@ namespace Afterfall.Presentation.UI
             _image = _viewport.Put(UiKit.Div("map-layer"));
             _detail = _viewport.Put(UiKit.Div("map-layer"));
             _fog = _viewport.Put(UiKit.Div("map-layer"));
+            _route = _viewport.Put(new MapLine { LineWidth = 5f });
             _symbols = _viewport.Put(UiKit.Div("map-layer"));
             foreach (VisualElement e in new[] { _image, _detail, _fog, _symbols }) e.pickingMode = PickingMode.Ignore;
             _viewport.RegisterCallback<PointerDownEvent>(OnDown);
@@ -104,6 +106,9 @@ namespace Afterfall.Presentation.UI
         /// <summary>Current view (centre and zoom) for tests and the tour.</summary>
         public MapView View => new MapView(_cx, _cz, _mpp, _viewport.resolvedStyle.width, _viewport.resolvedStyle.height);
 
+        /// <summary>Points of the route drawn on the map (tests and the tour).</summary>
+        public int RoutePoints => _route.PointCount;
+
         public void Refresh()
         {
             WorldState w = _gc.Session.World;
@@ -115,7 +120,11 @@ namespace Afterfall.Presentation.UI
                 Vec3 me = _gc.Session.Player.Position;
                 float d = Vec3.DistanceXZ(me, nav.Waypoint);
                 float b = MapGeometry.Bearing(me, nav.Waypoint);
-                _waypointInfo.text = $"{nav.WaypointLabel}: {MapGeometry.Distance(d)} {MapGeometry.Cardinal(b)} ({b:0}°)";
+                Afterfall.Domain.World.RoadRoute route = _gc.Session.Routes.Route;
+                string way = route == null ? (_gc.Session.Routes.Planning ? "\nPlanning the way…" : "")
+                    : route.Direct ? "\nNo road helps: straight across country."
+                    : $"\nBy road: {MapGeometry.Distance(_gc.Session.Routes.Remaining)} to go ({MapGeometry.Distance(route.OffRoad)} of it off the road).\n{_gc.Session.Routes.Guidance()}";
+                _waypointInfo.text = $"{nav.WaypointLabel}: {MapGeometry.Distance(d)} {MapGeometry.Cardinal(b)} ({b:0}°){way}";
             }
             else _waypointInfo.text = "None set.";
             int known = 0;
@@ -160,6 +169,13 @@ namespace Afterfall.Presentation.UI
             }
             // Textures have row 0 at the south edge; UI images draw row 0 at the bottom too, so no flip is needed.
             _zoomInfo.text = string.Format(CultureInfo.InvariantCulture, "Scale: 100 px = {0}", MapGeometry.Distance(100f * _mpp));
+
+            // The way to the waypoint, from the survivor's place on it.
+            _route.Begin();
+            Afterfall.Domain.World.RoadRoute way = _gc.Session.Routes.Route;
+            if (way != null)
+                _route.AddRoute(way.Points, view, vw, vh);
+            _route.End();
 
             _symbols.Clear();
             MapSymbols.Collect(_gc, _gc.Maps.RevealAll, _found);

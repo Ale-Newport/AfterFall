@@ -408,6 +408,14 @@ namespace Afterfall.Presentation
             return pieces;
         }
 
+        /// <summary>Bakes a kit without caching it (one-off geometry, such as a city building's floors); the caller destroys the meshes.</summary>
+        public static List<Piece> Fresh(string name, Action<PropKit> fill)
+        {
+            var kit = new PropKit();
+            fill(kit);
+            return kit.Bake(name);
+        }
+
         /// <summary>Instantiates the pieces under <paramref name="parent"/> (renderers only, no colliders).</summary>
         public static void Spawn(Transform parent, List<Piece> pieces)
         {

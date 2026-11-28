@@ -47,6 +47,9 @@ namespace Afterfall.Presentation
         /// <summary>Low-poly stand-ins for the trees beyond the real tree views (chunked worlds only).</summary>
         public FarTrees FarTrees { get; private set; }
 
+        /// <summary>The city's real buildings around the survivor, with their floors and lifts (chunked worlds only).</summary>
+        public CityBuildingViews CityBuildings { get; private set; }
+
         /// <summary>
         /// The anchor of everything placed in world coordinates (terrain, props, the city, water,
         /// entities): it sits at minus the floating origin, so its children keep world-space local positions.
@@ -117,6 +120,8 @@ namespace Afterfall.Presentation
                 Chunks.Initialize(this, Session.World.Layout, _worldRoot);
                 FarTrees = gameObject.AddComponent<FarTrees>();
                 FarTrees.Initialize(this, Session.World.Layout, _worldRoot);
+                CityBuildings = gameObject.AddComponent<CityBuildingViews>();
+                CityBuildings.Initialize(this, Session.World.Layout, _worldRoot);
                 DayNightCycle.FogScale = 0.4f;
             }
             else
@@ -289,8 +294,13 @@ namespace Afterfall.Presentation
             if (moved) _navCenter = c;
             _surface.center = _navCenter;
             _surface.navMeshData.position = _worldRoot.position;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             _navOp = _surface.UpdateNavMesh(_surface.navMeshData);
+            SlowestNavStartMs = Mathf.Max(SlowestNavStartMs, (float)sw.Elapsed.TotalMilliseconds);
         }
+
+        /// <summary>The longest the main thread spent starting a NavMesh rebake (collecting its sources), in ms (performance checks).</summary>
+        public float SlowestNavStartMs { get; set; }
 
         private void Subscribe()
         {
@@ -332,6 +342,7 @@ namespace Afterfall.Presentation
             if (Player.Vehicle != null) UpdateVehicleInput();
             else UpdateInteraction();
             Maps?.Update();
+            Session.Routes.Update(Player.transform.position.ToSim(), Time.unscaledDeltaTime);
             Doors?.Update();
             UpdateFloatingOrigin();
             UpdateNavWindow();

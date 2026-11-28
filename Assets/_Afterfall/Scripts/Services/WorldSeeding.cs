@@ -23,13 +23,10 @@ namespace Afterfall.Services
         /// <summary>Creates the given keyed fixtures and vehicles that the world does not have yet; returns how many.</summary>
         public static int SeedFixtures(WorldState world, ContentDatabase content, List<FixtureSeed> fixtures, List<VehicleSeed> vehicleSeeds)
         {
-            var present = new HashSet<string>(StringComparer.Ordinal);
-            foreach (Structure s in world.Structures.Values)
-                if (!string.IsNullOrEmpty(s.SeedKey)) present.Add(s.SeedKey);
             int created = 0;
             foreach (FixtureSeed f in fixtures)
             {
-                if (present.Contains(f.Key)) continue;
+                if (world.HasStructureKey(f.Key)) continue;
                 BuildingDefinition def = content.Building(f.DefId);
                 if (def == null) continue;
                 Structure s = StructureFactory.Create(world, def, f.Position, f.Yaw, StructureState.Complete);

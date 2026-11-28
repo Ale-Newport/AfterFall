@@ -47,7 +47,14 @@ Preview without Unity: `dotnet run -c Release --project tools/dotnet/ArtPreview 
 - The crafting progress panel moved above it.
 
 ## Waypoint marker
-`WaypointIndicator` projects the waypoint (2 m above the ground) to the screen. In view, a diamond with the name and distance sits over it; out of view or behind the camera, an arrow is pinned to the screen edge pointing toward it.
+`WaypointIndicator` projects the waypoint (2 m above the ground) to the screen. In view, a diamond with the name and distance sits over it; out of view or behind the camera, an arrow is pinned to the screen edge pointing toward it. When the way by road is much longer than the straight line, the label gives both.
+
+## The way by road
+- `RoadNetwork` (Domain/World) turns the drivable roads (not the railways) into a graph: every road is split where it crosses another or where it ends against one (T-junctions, streets meeting at chunk edges), and points closer than 0.35 m are one junction. Tracks cost 1.3 times their length; going across country costs 3 times its length.
+- A route joins the network at the roads near the start (the nearest and any within 150 m more of it), runs A* along the graph and leaves it at the roads near the destination, unless walking or driving straight there is cheaper. Turns are named at junctions from the heading 20 m either side (bear, turn, sharp; left or right), plus where the route leaves the road and the arrival.
+- `RoutePlanner` (Services, `GameSession.Routes`) builds the network on a worker from the roads known (the world's roads and the streets of the chunks made so far; it is rebuilt at most every 20 s as more streets appear), plans the route on a worker when the waypoint changes, follows the survivor's progress along it, and plans again from where they are after 2 s more than 35 m off it. Nothing is saved: the route follows from the waypoint.
+- The world map and the minimap draw it as a gold line under the symbols (`MapLine`, the vector painter; only the stretches near the view are given each frame). The minimap's caption names the next turn and the distance left ("Turn left in 300 m · 12.4 km to go"); the map's side panel gives the distance by road and how much of it is off the road.
+- In the basin the network has about 23 500 junctions and bends before any chunk streets; it builds in 40–60 ms and a 64 km route is planned in about 10 ms (headless, Apple M2 Max).
 
 ## Strategic view
 The strategic camera keeps its own fog plane over the 3D world (from the same `ExplorationState`) for local management. The world map is for regional travel. Both use world coordinates and the same discovery data, so what is explored in one is explored in the other.
@@ -60,8 +67,9 @@ The overview (2048², 32 m per pixel) is drawn from cached coarse grids (heights
 
 ## Not done yet
 - Detail tiles: one overview covers the 2 km region; at close zoom it is coarser than in the valley. Worlds beyond 2 km need the same rasterizer per tile, cached and loaded by zoom level.
-- Road-aware route planning for vehicles.
+- Routes use the streets of generated chunks only; across ungenerated parts of the city they follow the ring roads and avenues.
+- No spoken or arrow guidance on the road itself; the turn is named under the minimap.
 
 ## Tests
-- Headless (`MapTests`): projection round trips at several rotations; north-up and heading-up orientation; the raster shows the lake as water, the main road, a building footprint and woodland; a tile matches the whole map at its seams; rendering is deterministic. `CreativeTests` covers waypoint and marker persistence and the waypoint rules.
+- Headless (`MapTests`): projection round trips at several rotations; north-up and heading-up orientation; the raster shows the lake as water, the main road, a building footprint and woodland; a tile matches the whole map at its seams; rendering is deterministic. `CreativeTests` covers waypoint and marker persistence and the waypoint rules. `RouteTests` (5): routes follow the roads and turn left or right at a crossing that is not a point of either road; road ends meeting another road are joined; railways are never driven; across country only when quicker; the paved road beats the track; a 64 km route between basin towns follows the roads within 1.6 times the straight line; the planner follows progress and plans again after straying.
 - In the build (tour, `MapScene`): the map is drawn; only discovered places show in Survival; clicking sets a waypoint at a distant place; right-clicking places a marker; the player marker is at the survivor's position; facing the waypoint shows its marker on screen; walking toward it reduces the distance; facing away pins the marker to the edge; the minimap rotates.

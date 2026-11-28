@@ -198,6 +198,17 @@ namespace Afterfall.Domain.World
         /// </summary>
         public HashSet<long> DormantChunks { get; } = new HashSet<long>();
 
+        /// <summary>
+        /// Floors of the city's buildings whose doors and furniture are in the world ("planId:f12"),
+        /// seeded when someone comes near; untouched floors are dropped again far away (see CityInteriors).
+        /// </summary>
+        public HashSet<string> SeededFloors { get; } = new HashSet<string>(StringComparer.Ordinal);
+
+        private readonly Dictionary<string, EntityId> _structureKeys = new Dictionary<string, EntityId>(StringComparer.Ordinal);
+
+        /// <summary>True when a structure generated from this seed key is in the world.</summary>
+        public bool HasStructureKey(string key) => _structureKeys.ContainsKey(key);
+
         private readonly Dictionary<string, EntityId> _nodeKeys = new Dictionary<string, EntityId>(StringComparer.Ordinal);
 
         public bool HasNodeKey(string key) => _nodeKeys.ContainsKey(key);
@@ -227,6 +238,7 @@ namespace Afterfall.Domain.World
             if (Structures.TryGetValue(s.Id, out Structure old)) StructureGrid.Remove(old.Id, old.Position);
             Structures[s.Id] = s;
             StructureGrid.Add(s.Id, s.Position);
+            if (!string.IsNullOrEmpty(s.SeedKey)) _structureKeys[s.SeedKey] = s.Id;
             _sortedStructureIds = null;
             Ids.EnsureAbove(s.Id);
             RegisterStructureInventories(s);
@@ -261,6 +273,7 @@ namespace Afterfall.Domain.World
             if (s.Heater != null) UnregisterInventory(s.Heater.Fuel);
             Structures.Remove(id);
             StructureGrid.Remove(id, s.Position);
+            if (!string.IsNullOrEmpty(s.SeedKey) && _structureKeys.TryGetValue(s.SeedKey, out EntityId keyed) && keyed == id) _structureKeys.Remove(s.SeedKey);
             _sortedStructureIds = null;
             int removed = PowerLinks.RemoveAll(l => l.Involves(id));
             if (s.Power != null || removed > 0) MarkPowerTopologyChanged();

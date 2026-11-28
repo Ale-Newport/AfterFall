@@ -98,6 +98,9 @@ namespace Afterfall.Domain.World
         public int Floor;
         public string Kind = "";
         public float X, Z, Yaw;
+
+        /// <summary>Colour variant (fabrics, plants, wood) so the same furniture differs from room to room.</summary>
+        public int Variant;
     }
 
     /// <summary>
@@ -113,6 +116,13 @@ namespace Afterfall.Domain.World
         public float Width, Depth;
         public int Floors;
         public float FloorHeight = 3.2f;
+
+        /// <summary>The outer walls' finish: "brick" (the default), "render", "concrete", "stone" or "corrugated"; and its colour variant.</summary>
+        public string Facade = "brick";
+        public int FacadeTint;
+
+        /// <summary>A lift serves every floor (city buildings of five floors or more).</summary>
+        public bool Lift;
         public float SlabThickness = 0.2f;
 
         /// <summary>Height of the ground floor's surface above the building origin.</summary>
@@ -353,7 +363,7 @@ namespace Afterfall.Domain.World
             return f;
         }
 
-        private static void Decor(BuildingPlan p, int floor, string kind, float x, float z, float yaw) =>
-            p.Decor.Add(new PlanDecor { Floor = floor, Kind = kind, X = x, Z = z, Yaw = yaw });
+        private static void Decor(BuildingPlan p, int floor, string kind, float x, float z, float yaw, int variant = 0) =>
+            p.Decor.Add(new PlanDecor { Floor = floor, Kind = kind, X = x, Z = z, Yaw = yaw, Variant = variant });
     }
 }

@@ -19,6 +19,7 @@ namespace Afterfall.Presentation.UI
 
         private readonly GameController _gc;
         private readonly VisualElement _disc, _image, _detail, _fog, _symbols, _north;
+        private readonly MapLine _route;
         private readonly Label _info;
         private readonly List<MapSymbol> _found = new List<MapSymbol>();
         private int _zoom = 2;
@@ -34,6 +35,7 @@ namespace Afterfall.Presentation.UI
             _image = _disc.Put(UiKit.Div("map-layer"));
             _detail = _disc.Put(UiKit.Div("map-layer"));
             _fog = _disc.Put(UiKit.Div("map-layer"));
+            _route = _disc.Put(new MapLine());
             _symbols = _disc.Put(UiKit.Div("map-layer"));
             _north = Root.Put(UiKit.Text("N", "minimap-north"));
             _info = Root.Put(UiKit.Text("", "minimap-info"));
@@ -131,6 +133,13 @@ namespace Afterfall.Presentation.UI
             _north.style.left = Size * 0.5f + dir.x * (Size * 0.5f - 2f) - 8f;
             _north.style.top = Size * 0.5f + dir.y * (Size * 0.5f - 2f) - 10f;
 
+            // The way to the waypoint, rebuilt every frame from the route near the disc.
+            _route.Begin();
+            Afterfall.Domain.World.RoadRoute way = _gc.Session.Routes.Route;
+            if (way != null)
+                _route.AddRoute(way.Points, view, Size, Size, 10f);
+            _route.End();
+
             MapSymbols.Collect(_gc, maps.RevealAll, _found);
             float radius = Size * 0.5f - 9f;
             int used = 0;
@@ -153,9 +162,10 @@ namespace Afterfall.Presentation.UI
             string place = w.Layout.PoiAt(me.x, me.z) is PoiInfo poi && w.Exploration.DiscoveredPois.Contains(poi.Id) ? poi.Name : "";
             PlanRoom room = w.Layout.RoomAt(me.ToSim(), out PlacedPlan building);
             if (room != null) place = $"{building.Plan.Name} — {room.Name}";
-            string waypoint = nav.HasWaypoint
-                ? $"{nav.WaypointLabel} · {MapGeometry.Distance(Vec3.DistanceXZ(new Vec3(me.x, 0f, me.z), nav.Waypoint))}\u00A0{MapGeometry.Cardinal(MapGeometry.Bearing(new Vec3(me.x, 0f, me.z), nav.Waypoint))}"
-                : "";
+            string guidance = _gc.Session.Routes.Guidance();
+            string waypoint = !nav.HasWaypoint ? ""
+                : guidance != null ? $"{nav.WaypointLabel} · {guidance}"
+                : $"{nav.WaypointLabel} · {MapGeometry.Distance(Vec3.DistanceXZ(new Vec3(me.x, 0f, me.z), nav.Waypoint))}\u00A0{MapGeometry.Cardinal(MapGeometry.Bearing(new Vec3(me.x, 0f, me.z), nav.Waypoint))}";
             _info.text = string.Join("\n", new[] { place, waypoint }).Trim('\n');
             UiKit.Show(_info, _info.text.Length > 0);
         }

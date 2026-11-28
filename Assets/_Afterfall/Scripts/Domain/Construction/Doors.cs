@@ -44,6 +44,7 @@ namespace Afterfall.Domain.Construction
                 if (!HasKey(keys, s)) return OpResult.Fail("locked", $"Locked. It needs the key to {LockName(s)}.");
                 s.DoorLocked = false;
                 s.DoorOpen = true;
+                s.Touched = true; // a seeded door no longer as it was made
                 return OpResult.Success($"Unlocked {LockName(s)} with its key and opened the door.");
             }
             s.DoorOpen = true;
@@ -60,6 +61,7 @@ namespace Afterfall.Domain.Construction
             if (locked && s.DoorOpen) return OpResult.Fail("open", "Close the door before locking it.");
             if (!HasKey(keys, s)) return OpResult.Fail("no_key", $"You need the key to {LockName(s)}.");
             s.DoorLocked = locked;
+            s.Touched = true;
             return OpResult.Success(locked ? $"Locked {LockName(s)}." : $"Unlocked {LockName(s)}.");
         }
 

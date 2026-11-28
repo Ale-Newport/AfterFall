@@ -61,6 +61,7 @@ Shader "Afterfall/Surface"
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
                 half4 color : COLOR;
+                float2 uv : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -92,6 +93,13 @@ Shader "Afterfall/Surface"
                 half3 normalWS = TransformObjectToWorldNormal(input.normalOS);
                 float3 positionWS = AfterfallApplyWind(restWS);
                 AfterfallMappingSpace(input.positionOS.xyz, input.normalOS, restWS, normalWS, output.mapPos, output.mapNormal);
+                // Facade mode: the mesh's UVs (metres along and up the wall) place the texture, so a
+                // building's window grid starts at its own corner whatever its position and turn.
+                if (_ObjectSpace > 1.5)
+                {
+                    output.mapPos = float3(input.uv, 0.0);
+                    output.mapNormal = half3(0.0h, 0.0h, 1.0h);
+                }
 
                 output.positionWS = positionWS;
                 output.normalWS = normalWS;
@@ -119,7 +127,7 @@ Shader "Afterfall/Surface"
                 half3 mappedNormal;
                 half cavity;
                 AfterfallSampleTriplanar(input.mapPos, normalize(input.mapNormal), detail, mappedNormal, cavity);
-                half3 normalWS = _ObjectSpace > 0.5 ? TransformObjectToWorldNormal(mappedNormal) : mappedNormal;
+                half3 normalWS = _ObjectSpace > 1.5 ? normalize(input.normalWS) : _ObjectSpace > 0.5 ? TransformObjectToWorldNormal(mappedNormal) : mappedNormal;
 
                 SurfaceData surfaceData = (SurfaceData)0;
                 surfaceData.albedo = _BaseColor.rgb * detail.rgb * input.color.rgb;

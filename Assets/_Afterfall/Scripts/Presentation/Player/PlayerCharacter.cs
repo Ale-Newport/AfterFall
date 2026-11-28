@@ -111,6 +111,9 @@ namespace Afterfall.Presentation
             return p;
         }
 
+        /// <summary>True while the survivor stands on something (the character controller's ground contact).</summary>
+        public bool IsGrounded => _cc != null && _cc.isGrounded;
+
         public void Teleport(Vector3 position)
         {
             if (Flight != null && Flight.Active)

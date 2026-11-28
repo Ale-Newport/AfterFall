@@ -26,7 +26,25 @@ namespace Afterfall.Presentation
             public GameObject Props, Detail, Skyline;
             public Task<CityMesher.Prepared> Pending;
             public bool PendingDetail;
+
+            /// <summary>The detailed mesh must be made again (a building in it now stands for real, or no longer does).</summary>
+            public bool Dirty;
+
+            /// <summary>Counts detailed meshes put in place (the city buildings wait for theirs before going).</summary>
+            public int Version;
         }
+
+        /// <summary>The plan ids of the buildings standing for real in a chunk (left out of its merged mesh).</summary>
+        public System.Func<long, HashSet<string>> Excluded;
+
+        /// <summary>Asks for a chunk's detailed mesh to be made again (with the current exclusions).</summary>
+        public void Rebuild(long chunkKey)
+        {
+            if (_views.TryGetValue(chunkKey, out View v)) v.Dirty = true;
+        }
+
+        /// <summary>How many detailed meshes a chunk has had (0 when it has none).</summary>
+        public int DetailVersion(long chunkKey) => _views.TryGetValue(chunkKey, out View v) && v.Detail != null ? v.Version : -1;
 
         private GameController _gc;
         private WorldLayout _layout;
@@ -80,12 +98,12 @@ namespace Afterfall.Presentation
                 v.Pending = null;
                 if (v.PendingDetail)
                 {
-                    if (v.Detail == null)
-                    {
-                        v.Detail = CityMesher.Finish(prep, _root);
-                        MarkNavDirty(kv.Key);
-                    }
-                    if (v.Skyline != null) Destroy(v.Skyline);
+                    // A rebuild replaces the old mesh only now that the new one is ready (no gap).
+                    if (v.Detail != null) DestroyMeshes(v.Detail);
+                    v.Detail = CityMesher.Finish(prep, _root);
+                    v.Version++;
+                    MarkNavDirty(kv.Key);
+                    if (v.Skyline != null) DestroyMeshes(v.Skyline);
                     v.Skyline = null;
                 }
                 else if (v.Detail == null && v.Skyline == null) v.Skyline = CityMesher.Finish(prep, _root);
@@ -140,10 +158,12 @@ namespace Afterfall.Presentation
                 }
                 if (c.Blocks.Count > 0 && v.Pending == null)
                 {
-                    if (d < CityDetailRadius && v.Detail == null)
+                    if (d < CityDetailRadius && (v.Detail == null || v.Dirty))
                     {
                         v.PendingDetail = true;
-                        v.Pending = Task.Run(() => CityMesher.PrepareDetailed(c));
+                        v.Dirty = false;
+                        HashSet<string> skip = Excluded != null ? new HashSet<string>(Excluded(c.Key)) : null;
+                        v.Pending = Task.Run(() => CityMesher.PrepareDetailed(c, skip));
                     }
                     else if (d >= CityDetailRadius && d < SkylineRadius && v.Detail == null && v.Skyline == null)
                     {
@@ -166,12 +186,12 @@ namespace Afterfall.Presentation
                 }
                 if (v.Detail != null && d > CityDetailDrop)
                 {
-                    Destroy(v.Detail);
+                    DestroyMeshes(v.Detail);
                     v.Detail = null;
                 }
                 if (v.Skyline != null && (d > SkylineDrop || v.Detail != null))
                 {
-                    Destroy(v.Skyline);
+                    DestroyMeshes(v.Skyline);
                     v.Skyline = null;
                 }
                 // Leaving detail range: the skyline takes over (next scan prepares it).
@@ -187,6 +207,13 @@ namespace Afterfall.Presentation
         }
 
         private readonly HashSet<long> _navProps = new HashSet<long>();
+
+        /// <summary>Destroys a built chunk mesh object and its meshes (they are made per chunk, not shared).</summary>
+        private static void DestroyMeshes(GameObject go)
+        {
+            foreach (MeshFilter mf in go.GetComponentsInChildren<MeshFilter>()) Destroy(mf.sharedMesh);
+            Destroy(go);
+        }
 
         private void MarkNavDirty(long key)
         {

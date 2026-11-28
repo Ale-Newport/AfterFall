@@ -75,7 +75,10 @@ namespace Afterfall.Presentation.UI
             float shift = p.x < 220f ? 0f : p.x > panelSize.x - 220f ? -100f : -50f;
             _label.style.translate = new Translate(Length.Percent(shift), 0f);
             float metres = Vec3.DistanceXZ(_gc.Session.Player.Position, nav.Waypoint);
-            _label.text = $"{nav.WaypointLabel} · {MapGeometry.Distance(metres)}";
+            RoadRoute route = _gc.Session.Routes.Route;
+            _label.text = route != null && !route.Direct && _gc.Session.Routes.Remaining > metres + 50f
+                ? $"{nav.WaypointLabel} · {MapGeometry.Distance(metres)} ({MapGeometry.Distance(_gc.Session.Routes.Remaining)} by road)"
+                : $"{nav.WaypointLabel} · {MapGeometry.Distance(metres)}";
         }
     }
 }

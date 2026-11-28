@@ -54,6 +54,8 @@ namespace Afterfall.Persistence
             dto.SeededChunks.Sort();
             dto.DormantChunks.AddRange(w.DormantChunks);
             dto.DormantChunks.Sort();
+            dto.SeededFloors.AddRange(w.SeededFloors);
+            dto.SeededFloors.Sort(StringComparer.Ordinal);
             foreach (WorldDrop d in Sorted(w.Drops))
                 dto.Drops.Add(new DropDto { Id = d.Id.Value, Position = d.Position, Contents = ToDto(d.Contents), Label = d.Label, IsBelongings = d.IsBelongings });
             foreach (ZombieState z in Sorted(w.Zombies))
@@ -430,6 +432,7 @@ namespace Afterfall.Persistence
             UnpackBits(dto.ExploredCells, w.Exploration.Revealed);
             foreach (long chunk in dto.SeededChunks ?? new List<long>()) w.SeededChunks.Add(chunk);
             foreach (long chunk in dto.DormantChunks ?? new List<long>()) w.DormantChunks.Add(chunk);
+            foreach (string floor in dto.SeededFloors ?? new List<string>()) w.SeededFloors.Add(floor);
             foreach (string poi in dto.DiscoveredPois) w.Exploration.DiscoveredPois.Add(poi);
             if (dto.Threat != null) CopyThreat(dto.Threat, w.Threat);
             if (dto.Weather != null) CopyWeather(dto.Weather, w.Weather);

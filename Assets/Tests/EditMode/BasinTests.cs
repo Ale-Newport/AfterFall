@@ -254,5 +254,138 @@ namespace Afterfall.Tests
             Assert.IsFalse(again.Touched);
             Assert.IsFalse(w.DormantChunks.Contains(ChunkOfKey(again.SeedKey)));
         }
+
+        [Test]
+        public void Basin_EveryCityBuilding_IsARealBuildingWithEveryFloorReachableAndFurnished()
+        {
+            WorldLayout l = WorldGenerator.Generate(Seed, 3);
+            var blocks = new List<PropPlacement>();
+            foreach ((int x, int z) in new[] { (78, 59), (77, 59), (65, 66), (100, 58), (60, 58) })
+                blocks.AddRange(l.EnsureChunk(x, z).Blocks);
+            Assert.Greater(blocks.Count, 100);
+            var kinds = new HashSet<string>();
+            var sw = Stopwatch.StartNew();
+            int floors = 0, fixtures = 0, decor = 0, tallest = 0, houses = 0, homes = 0, pictures = 0;
+            foreach (PropPlacement b in blocks)
+            {
+                Assert.IsTrue(BuildingPlans.IsCityBlock(b.Kind), b.Kind);
+                PlacedPlan pp = BuildingPlans.PlaceCityBlock(b);
+                BuildingPlan p = pp.Plan;
+                Assert.IsNotNull(p, b.Kind);
+                kinds.Add(b.Kind);
+                BuildingPlans.CityShape shape = BuildingPlans.ShapeOf(b);
+                Assert.AreEqual(shape.Floors, p.Floors);
+                // The building fits its block (a block too shallow for a stair gets the 9 m a stair needs).
+                Assert.LessOrEqual(p.Width, Math.Max(b.Size.X, 9f) + 0.01f, "the building fits its block");
+                Assert.LessOrEqual(p.Depth, Math.Max(b.Size.Z, 9f) + 0.01f);
+                // Terraces and semis are rows of houses, each with its own front door and stair.
+                int entrances = p.Fixtures.Count(f => f.Floor == 0 && f.Key.EndsWith("door:entrance", StringComparison.Ordinal));
+                Assert.GreaterOrEqual(entrances, 1, $"{p.Name}: a way in");
+                Assert.AreEqual(Math.Max(0, p.Floors - 1) * entrances, p.Stairs.Count, $"{p.Name}: a flight up from every floor but the top, in every house");
+                if (b.Kind == "city_terrace" || b.Kind == "city_semi")
+                {
+                    houses++;
+                    homes += entrances;
+                    Assert.AreEqual(entrances, p.Rooms.Count(r => r.Floor == 0 && r.Name.EndsWith("hall", StringComparison.Ordinal)), $"{p.Name}: a hall behind every front door");
+                    foreach (PlanRoom r in p.Rooms.Where(r => !r.Name.EndsWith("hall", StringComparison.Ordinal) && !r.Name.EndsWith("landing", StringComparison.Ordinal)))
+                        Assert.Less(Math.Min(r.X1 - r.X0, r.Z1 - r.Z0), 9f, $"{p.Name}: {r.Name} is a room, not a hangar");
+                    Assert.IsTrue(p.Rooms.Any(r => r.Name.Contains("bedroom")), $"{p.Name}: somewhere to sleep");
+                    Assert.IsTrue(p.Rooms.Any(r => r.Name.Contains("kitchen")) || p.Rooms.Any(r => r.Name == "Shop"), $"{p.Name}: a kitchen");
+                }
+                pictures += p.Decor.Count(d => d.Kind == "picture");
+                floors += p.Floors;
+                fixtures += p.Fixtures.Count;
+                decor += p.Decor.Count;
+                tallest = Math.Max(tallest, p.Floors);
+                float hx = p.Width * 0.5f, hz = p.Depth * 0.5f;
+                var keys = new HashSet<string>();
+                foreach (PlanFixture f in p.Fixtures)
+                {
+                    Assert.IsTrue(keys.Add(f.Key), $"{p.Name}: unique fixture key {f.Key}");
+                    Assert.IsTrue(Math.Abs(f.X) <= hx && Math.Abs(f.Z) <= hz, $"{p.Name}: {f.Key} inside the building");
+                    Assert.IsTrue(f.Floor >= 0 && f.Floor < p.Floors);
+                }
+                foreach (PlanDecor d in p.Decor)
+                    Assert.IsTrue(Math.Abs(d.X) <= hx && Math.Abs(d.Z) <= hz, $"{p.Name}: {d.Kind} inside the building");
+                // Nothing stands on a stair flight, nor in a doorway.
+                foreach (PlanStair st in p.Stairs)
+                {
+                    float x0 = Math.Min(st.X0, st.X1), x1 = Math.Max(st.X0, st.X1), z0 = Math.Min(st.ZStart, st.ZEnd), z1 = Math.Max(st.ZStart, st.ZEnd);
+                    foreach (PlanDecor d in p.Decor)
+                        if (d.Floor == st.FromFloor || d.Floor == st.FromFloor + 1)
+                            Assert.IsFalse(d.X > x0 && d.X < x1 && d.Z > z0 && d.Z < z1, $"{p.Name}: {d.Kind} on the stair of floor {st.FromFloor}");
+                }
+                foreach (PlanFixture door in p.Fixtures.Where(f => f.DefId.StartsWith("door", StringComparison.Ordinal)))
+                {
+                    foreach (PlanFixture f in p.Fixtures)
+                        if (f != door && f.Floor == door.Floor && !f.DefId.StartsWith("door", StringComparison.Ordinal))
+                            Assert.Greater(Math.Sqrt((f.X - door.X) * (f.X - door.X) + (f.Z - door.Z) * (f.Z - door.Z)), 0.85, $"{p.Name}: {f.Key} blocks {door.Key}");
+                    foreach (PlanDecor d in p.Decor)
+                        if (d.Floor == door.Floor && d.Kind != "rug")
+                            Assert.Greater(Math.Sqrt((d.X - door.X) * (d.X - door.X) + (d.Z - door.Z) * (d.Z - door.Z)), 0.85, $"{p.Name}: {d.Kind} blocks {door.Key}");
+                }
+                foreach (PlanFixture door in p.Fixtures.Where(f => f.Locked))
+                    Assert.IsTrue(p.Fixtures.Any(f => f.KeysInside.Contains(door.LockId)), $"{p.Name}: the key to {door.LockId} is in the building");
+                // Every floor has rooms, and windows on its outer walls.
+                for (int f = 0; f < p.Floors; f++)
+                {
+                    Assert.IsTrue(p.Rooms.Any(r => r.Floor == f), $"{p.Name}: rooms on floor {f}");
+                    Assert.IsTrue(p.Walls.Any(w => w.Floor == f && w.Exterior && w.Openings.Any(o => o.Kind == PlanOpeningKind.Window)), $"{p.Name}: windows on floor {f}");
+                }
+                if (p.Floors >= 2) Assert.IsTrue(p.Fixtures.Any(f => f.Floor == p.Floors - 1) || p.Decor.Any(d => d.Floor == p.Floors - 1), $"{p.Name}: the top floor is furnished");
+            }
+            TestContext.WriteLine($"{blocks.Count} buildings ({string.Join(", ", kinds)}), {floors} floors, {fixtures} fixtures, {decor} decor ({pictures} pictures); {houses} rows of houses holding {homes} homes; tallest {tallest} floors; {sw.ElapsedMilliseconds} ms");
+            Assert.Greater(homes, houses, "rows of houses are divided into homes");
+            Assert.Greater(pictures, blocks.Count, "pictures on the walls");
+            Assert.GreaterOrEqual(kinds.Count, 4);
+            Assert.Greater(tallest, 20, "real skyscrapers");
+        }
+
+        [Test]
+        public void Basin_CityBuildingFloors_AreSeededWhenReached_AndDroppedUntouched()
+        {
+            GameSession s = NewBasinGame();
+            WorldState w = s.World;
+            TravelTo(s, 39980f, 30250f);
+            PropPlacement tower = w.Layout.EnsureChunk(78, 59).Blocks.Where(b => b.Kind == "city_tower").OrderByDescending(b => b.Size.Y).First();
+            PlacedPlan pp = BuildingPlans.PlaceCityBlock(tower);
+            Assert.Greater(pp.Plan.Floors, 10);
+            s.City.Activate(pp);
+            int before = w.Structures.Count;
+            int made = s.City.SeedFloors(pp, 0, 3);
+            Assert.AreEqual(pp.Plan.Fixtures.Count(f => f.Floor <= 3), made, "every door and piece of furniture of the reached floors");
+            Assert.AreEqual(0, s.City.SeedFloors(pp, 0, 3), "seeded once");
+            Assert.AreEqual(before + made, w.Structures.Count);
+            // Inside, on floor 2, the survivor is under a roof in a named room.
+            Vec3 inside = pp.ToWorld(pp.Plan.Width * 0.25f, 0f, 2);
+            Assert.IsTrue(Afterfall.Domain.Weather.Climate.IsSheltered(w, s.Content, inside + new Vec3(0, 0.1f, 0)), "a city building is shelter");
+            Assert.IsNotNull(w.Layout.RoomAt(inside + new Vec3(0, 0.1f, 0), out PlacedPlan at));
+            Assert.AreEqual(pp.Plan.Id, at.Plan.Id);
+
+            // Loot a container on floor 3, remember one on floor 1.
+            Structure looted = w.Structures.Values.First(st => st.SeedKey.StartsWith(pp.Plan.Id + ":f3:", StringComparison.Ordinal) && st.Storage != null && !st.Storage.IsEmpty);
+            ItemStack item = Enumerable.Range(0, looted.Storage.SlotCount).Select(looted.Storage.GetSlot).First(x => !x.IsEmpty);
+            looted.Storage.TryRemove(item.ItemId, 1);
+            Structure kept = w.Structures.Values.First(st => st.SeedKey.StartsWith(pp.Plan.Id + ":f1:", StringComparison.Ordinal) && st.Storage != null && !st.Storage.IsEmpty);
+            string keptKey = kept.SeedKey;
+            string Loot(Structure st) => string.Join(",", Enumerable.Range(0, st.Storage.SlotCount).Select(st.Storage.GetSlot).Where(x => !x.IsEmpty).Select(x => $"{x.ItemId}x{x.Quantity}{x.Tag}").OrderBy(x => x, StringComparer.Ordinal));
+            string keptLoot = Loot(kept);
+
+            TravelTo(s, 20000f, 30250f, 12);
+            Assert.IsFalse(w.SeededFloors.Contains(CityInteriors.FloorKey(pp.Plan.Id, 1)), "an untouched floor far away is dropped");
+            Assert.IsFalse(w.HasStructureKey(keptKey));
+            Assert.IsTrue(w.SeededFloors.Contains(CityInteriors.FloorKey(pp.Plan.Id, 3)), "the looted floor is kept");
+            Assert.IsTrue(w.Structures.ContainsKey(looted.Id));
+
+            string text = SaveSerializer.Serialize(w, "t", 1);
+            WorldState loaded = SaveSerializer.Deserialize(text, TestSupport.Content, new List<string>());
+            CollectionAssert.AreEquivalent(w.SeededFloors, loaded.SeededFloors);
+
+            TravelTo(s, 39980f, 30250f);
+            s.City.SeedFloors(pp, 0, 3);
+            Structure again = w.Structures.Values.First(st => st.SeedKey == keptKey);
+            Assert.AreEqual(keptLoot, Loot(again), "made again the same");
+            Assert.AreEqual(1, w.Structures.Values.Count(st => st.SeedKey == looted.SeedKey), "the looted container is not made twice");
+        }
     }
 }

@@ -82,6 +82,21 @@ namespace Afterfall.Presentation
             return m;
         }
 
+        /// <summary>
+        /// A city facade: the surface's texture placed by the mesh's UVs (metres along and up the wall,
+        /// see MeshBuilder.FacadeQuad) instead of triplanar projection, so the window grid starts at
+        /// each building's corner.
+        /// </summary>
+        public static Material Facade(Art.Surface surface, Color tint)
+        {
+            string key = $"facade:{surface.Key}:{ColorUtility.ToHtmlStringRGBA(tint)}";
+            if (Cache.TryGetValue(key, out Material m)) return m;
+            m = new Material(Surface(surface, tint)) { name = key, enableInstancing = true };
+            m.SetFloat(ObjectSpace, 2f);
+            Cache[key] = m;
+            return m;
+        }
+
         public static Material Emissive(Color color, Color emission)
         {
             string key = $"emi:{ColorUtility.ToHtmlStringRGBA(color)}:{ColorUtility.ToHtmlStringRGBA(emission)}";

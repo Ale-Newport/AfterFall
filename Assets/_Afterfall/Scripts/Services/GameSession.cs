@@ -49,6 +49,8 @@ namespace Afterfall.Services
             Zombies = new ZombieSystem(World, Content, Events);
             Threats = new ThreatDirector(World, Content, Events, Zombies);
             Colony = new ColonySystem(World, Content, Events, Construction);
+            City = new CityInteriors(this);
+            Routes = new RoutePlanner(this);
             Zombies.ColonistHit += (id, dmg) => Colony.DamageColonist(id, dmg, "the infected");
             Colony.DamageZombie = (id, amount, from) => Zombies.Damage(id, amount, from);
             Farming = new Afterfall.Domain.Farming.FarmingSystem(World, Content, Events, Tech);
@@ -110,6 +112,12 @@ namespace Afterfall.Services
         public MachineSystem Machines { get; }
         public ZombieSystem Zombies { get; }
         public ThreatDirector Threats { get; }
+        /// <summary>The city's buildings in the simulation: active plans and floor-by-floor fittings.</summary>
+        public CityInteriors City { get; }
+
+        /// <summary>The way by road to the waypoint (map, minimap and HUD guidance).</summary>
+        public RoutePlanner Routes { get; }
+
         public ColonySystem Colony { get; }
         public Afterfall.Domain.Farming.FarmingSystem Farming { get; }
         public WeatherSystem Weather { get; }

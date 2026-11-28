@@ -1,17 +1,17 @@
 # Progress log
 
-_Last updated: 2026-11-28 (session 8: the 64 km Kessel Basin and its follow-ups — floating origin, city interiors, street furniture, distant trees; character variety, LODs, faces and motion-captured gait)._
+_Last updated: 2026-11-28 (session 8: the 64 km Kessel Basin and its follow-ups — floating origin, real enterable city buildings and houses, routes by road, street furniture, distant trees; character variety, LODs, faces and motion-captured gait; colony professions)._
 
 ## Snapshot
 | | |
 |---|---|
 | Branch | `main` (every commit pushed to `origin`). Latest release: `v0.1.1` |
 | Unity version | 6000.3.28f1 (arm64), installed through Unity Hub 3.22.6 with a Personal license |
-| Last headless tests | 2026-11-28: **216/216 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on Linux, Windows and macOS on each push. |
-| Last Unity EditMode run | 2026-11-28: **216/216 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
+| Last headless tests | 2026-11-28: **230/230 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on Linux, Windows and macOS on each push. |
+| Last Unity EditMode run | 2026-11-28: **230/230 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
 | Last Unity PlayMode run | 2026-11-28: **7/7 passed** (5 smoke tests plus 2 Input System integration tests; the Input System package's 2 Windows mouse tests skip themselves on macOS). |
-| Last player builds | 2026-11-27: macOS (universal), no errors. 2026-11-20: Windows x64 (Mono), attached to the v0.1.1 release with the macOS build |
-| Last scripted tour of the build | 2026-11-27 (macOS, with every world-expansion scene and a new game in the 2 km region): **0 failed checks, 0 errors logged**, valley new game in 2.5 s, region in 7.6 s; region frames 8.3–8.4 ms average in every town. 2026-11-24: new game in 2.4 s, frames 8.3–8.6 ms average at the start camp, in the strategic view, in the rain and at night (vsync-capped, Apple M2 Max, 1600×900). 2026-11-20 (v0.1.1): Windows (GitHub-hosted `windows-latest`, WARP software rendering, 800×450, patience 25): **0 failed checks, 0 errors logged**, 46 minutes. |
+| Last player builds | 2026-11-28: macOS (universal), no errors. 2026-11-20: Windows x64 (Mono), attached to the v0.1.1 release with the macOS build |
+| Last scripted tour of the build | 2026-11-28: the full tour and the basin tour (`-afterfall-tour-basin`, with the city's real buildings and a route by road): **0 failed checks, 0 errors logged**. 2026-11-27 (macOS, with every world-expansion scene and a new game in the 2 km region): **0 failed checks, 0 errors logged**, valley new game in 2.5 s, region in 7.6 s; region frames 8.3–8.4 ms average in every town. 2026-11-24: new game in 2.4 s, frames 8.3–8.6 ms average at the start camp, in the strategic view, in the rain and at night (vsync-capped, Apple M2 Max, 1600×900). 2026-11-20 (v0.1.1): Windows (GitHub-hosted `windows-latest`, WARP software rendering, 800×450, patience 25): **0 failed checks, 0 errors logged**, 46 minutes. |
 | Last model gallery | 2026-11-28: characters section (14 models, faces, walk and run strips), 0 errors logged, reviewed by eye. 2026-11-09: **151 screenshots, 0 errors logged** (all sections). |
 | Human playtest of the acceptance loop | **not yet** |
 | Windows build | built (v0.1.1); the full scripted tour passes on a GitHub-hosted runner; **never run on a real Windows PC with a GPU** |
@@ -118,6 +118,15 @@ Conveyors and pipes, disasters other than storms and cold snaps (fires, floods, 
 ## The Kessel Basin (session 8, 2026-11-28)
 - World version 3: 64 × 64 km generated in chunks on demand (`BasinWorld`, `TiledHeightField`, `ChunkStreaming`), Greater Millbrook in its corner, biomes (mountains with snow, moor, lakes, badlands, farmland, marsh, coast), twelve villages and towns, rivers, roads and rail with bridges, and Kesselmouth, a London-sized city of towers, mansion blocks, terraces, semis, docks and parks. Spatial indexes, compact saves (untouched nodes are not saved), streamed views, merged city meshes, a skyline, far terrain, snow and sand layers, a local detail map. See WORLD_GENERATION.md.
 - Tests: 215 headless (4 new `BasinTests`); the basin tour in the macOS build: 0 failures, 0 errors, 8.3–8.4 ms average at every stop.
+
+## Real city buildings and routes by road (session 8, continued)
+- **Every Kesselmouth building is real**: each city block (towers up to 72 floors, mansion blocks, terraces, semis, wharf sheds, churches) is a building you can walk into, with a stair up from every floor, a lift in towers and tall blocks (pick the floor), and every floor laid out and furnished for its use: lobbies, open-plan offices, meeting rooms and staff kitchens, flats with a bedroom, bathroom corner, living room and kitchen, hotel rooms, shops, cafés, warehouses with racking and pallets, a nave with pews. No glass-only facades: the windows drawn from afar are the real windows, in the same bays.
+- **Houses**: terraces and semis are rows of houses between party walls, each with its own front door, hall, stair and landing, and rooms furnished by where they are: front room (television, sofa, coffee table on a rug, armchair, books, lamp), kitchen-diner (fridge, cupboards, cooker, washing machine, table and chairs), dining room or study in between; main bedroom, bedrooms or a box room, and a bathroom upstairs. Pictures hang on inner walls (never over windows, doors or stairs); coats hang in the hall.
+- **Streaming**: within 45 m the real building replaces the merged stand-in; its floors are built one per frame around the survivor and their doors and furniture seeded into the world on first visit (`CityInteriors`), and dropped again far away when untouched.
+- **Routes by road**: a waypoint now gets a way there along the roads (`RoadNetwork`, `RoutePlanner`): drawn on the world map and the minimap, with the next turn and the distance left under the minimap. It crosses country to the main roads when the streets near by are not joined to them yet, and plans again when the survivor strays. See MAP_SYSTEM.md.
+- **Fix found by the tour**: taking the lift could leave the survivor a floor below the one chosen: the periodic scan, still seeing them on the floor they were leaving, could drop the destination floor while the lift got it ready. During a ride the destination's floors are kept and built first.
+- Measured in the basin tour: the slowest floor to build (an office floor of desks) takes 28 ms on the main thread, one frame; frames settle at 8.3 ms average inside a 60-floor tower.
+- Verified: 230 headless tests (new: `RouteTests` 6; houses, stairs per house and pictures in `BasinTests`); Unity EditMode 230/230 and PlayMode 7/7; the full tour; the basin tour: through a tower's front door, the lift to floors 30 and 59 with a NavMesh path from the lift to the corridor, inside a terrace house, a 15 km route to Ashby Cross drawn on the map and the minimap.
 
 ## Saves, vehicles and colony orders (session 8, continued)
 - **Dormant fittings**: in the basin, a seeded chunk far from the survivor and every colonist (beyond 1.2 km) whose containers and fittings are all untouched (contents, searched, doors, damage) drops them; the save keeps only the chunk's key in `DormantChunks`, and they are remade identically (loot rolls per key) when someone comes back. A seeded structure is marked `Touched` when its contents change. Headless: a save of 1 096 KB in the city falls to 254 KB 20 km away (14 dormant chunks); the untouched container comes back with the same loot; a looted chunk keeps everything.
@@ -293,7 +302,7 @@ Bugs that only showed up in the engine, all fixed:
 - Not yet measured (needs playtests): time to first construction, time to first machine output, playtime without critical bugs.
 
 ## Next development tasks
-0. **World expansion follow-ups**: road-aware vehicle routing; more motion capture (idles, turns, crouch-walk).
+0. **World expansion follow-ups**: more motion capture (idles, turns, crouch-walk); colonists driving.
 1. **Playtest the acceptance scenario** ([#1](https://github.com/Ale-Newport/AfterFall/issues/1), docs/TESTING.md) by hand in the editor or the macOS build, including a session into days 2–3 for storms and a cold snap. Tune movement, camera, harvest and colonist pacing, day length, and weather balance. Record time to first construction and to first machine output.
 2. Morale; more than two recruitable survivors; weapon wear for guards.
 3. Conveyors (automation level 3) between storage and machines.

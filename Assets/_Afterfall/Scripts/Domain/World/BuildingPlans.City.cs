@@ -20,6 +20,7 @@ namespace Afterfall.Domain.World
         {
             if (string.IsNullOrEmpty(id)) return null;
             string[] parts = id.Split('|');
+            if (parts[0] == CityBlockKind) return CityBlockPlan(id, parts);
             if (parts.Length < 4) return null;
             int.TryParse(parts[3], out int floors);
             switch (parts[0])

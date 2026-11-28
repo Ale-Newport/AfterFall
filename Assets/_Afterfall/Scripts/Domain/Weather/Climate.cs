@@ -154,6 +154,9 @@ namespace Afterfall.Domain.Weather
                 if (Inside(p, s.Position, s.Yaw, def.SizeX * 0.5f + 0.2f, def.SizeZ * 0.5f + 0.2f)) return true;
             }
             if (w.Layout == null) return false;
+            // Inside a planned building (the city's buildings, apartments, stations…) on one of its floors.
+            foreach (PlacedPlan plan in w.Layout.Plans)
+                if (plan.ToPlan(p, out _, out _, out _)) return true;
             foreach (PropPlacement prop in w.Layout.Props)
             {
                 if (!IndoorKinds.Contains(prop.Kind)) continue;

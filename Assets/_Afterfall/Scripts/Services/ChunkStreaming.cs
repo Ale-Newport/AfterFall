@@ -54,6 +54,7 @@ namespace Afterfall.Services
             {
                 _pruneTimer = PruneInterval;
                 PruneFittings(p);
+                _session.City.Prune(p);
             }
         }
 

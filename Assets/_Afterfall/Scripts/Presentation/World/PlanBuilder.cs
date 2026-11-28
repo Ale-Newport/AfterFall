@@ -37,10 +37,104 @@ namespace Afterfall.Presentation
         public static void Build(Transform t, BuildingPlan plan)
         {
             if (plan == null) return;
-            List<PropKit.Piece> pieces = PropKit.Cached("plan:" + plan.Id, kit => Visuals(kit, plan));
+            List<PropKit.Piece> pieces = PropKit.Cached("plan:" + plan.Id, kit => Visuals(kit, plan, -1));
             PropKit.Spawn(t, pieces);
-            Colliders(t, plan);
+            Colliders(t, plan, -1);
         }
+
+        /// <summary>
+        /// One floor of a building (a city building is built a floor or three at a time around the
+        /// survivor): its slab, walls, rooms, stair up, rails and furniture, with colliders. The meshes
+        /// are not cached: destroy them with the floor.
+        /// </summary>
+        public static void BuildFloor(Transform t, BuildingPlan plan, int floor)
+        {
+            List<PropKit.Piece> pieces = PropKit.Fresh($"{plan.Name} floor {floor}", kit => Visuals(kit, plan, floor));
+            PropKit.Spawn(t, pieces);
+            Colliders(t, plan, floor);
+        }
+
+        /// <summary>True for a city building, whose outer walls wear its facade texture (painted windows fall in the real openings).</summary>
+        private static bool FacadeWalls(BuildingPlan p) => CitySurfaces.FacadeOf(p.Facade) != null && p.Id.StartsWith(BuildingPlans.CityBlockKind + "|", StringComparison.Ordinal);
+
+        public static Material FacadeMaterial(BuildingPlan p) => MaterialLibrary.Facade(CitySurfaces.FacadeOf(p.Facade), Color.white);
+
+        /// <summary>The facade's colour (a vertex colour) for a building's finish and tint, shared with the far views.</summary>
+        public static Color FacadeTint(string facade, int tint)
+        {
+            switch (facade)
+            {
+                case "brick": return new[] { new Color(0.78f, 0.42f, 0.32f), new Color(0.86f, 0.72f, 0.52f), new Color(0.62f, 0.44f, 0.34f), new Color(0.74f, 0.48f, 0.36f), new Color(0.92f, 0.88f, 0.8f), new Color(0.66f, 0.34f, 0.26f), new Color(0.8f, 0.62f, 0.46f), new Color(0.88f, 0.82f, 0.72f) }[tint & 7];
+                case "render": return new[] { new Color(0.95f, 0.93f, 0.86f), new Color(0.9f, 0.86f, 0.72f), new Color(0.82f, 0.88f, 0.9f), new Color(0.94f, 0.84f, 0.8f), new Color(0.86f, 0.9f, 0.82f), new Color(0.98f, 0.96f, 0.92f), new Color(0.9f, 0.8f, 0.68f), new Color(0.84f, 0.84f, 0.86f) }[tint & 7];
+                case "concrete": return new[] { new Color(0.86f, 0.86f, 0.84f), new Color(0.78f, 0.79f, 0.8f), new Color(0.9f, 0.88f, 0.82f), new Color(0.72f, 0.74f, 0.76f) }[tint & 3];
+                case "stone": return new[] { new Color(0.92f, 0.88f, 0.78f), new Color(0.84f, 0.82f, 0.78f), new Color(0.88f, 0.84f, 0.72f), new Color(0.8f, 0.8f, 0.8f) }[tint & 3];
+                default: return new Color(0.7f, 0.72f, 0.7f);
+            }
+        }
+
+        /// <summary>
+        /// A city building's outside where its floors are not built: facades (with the texture's
+        /// windows) below <paramref name="from"/> and above <paramref name="to"/>, the roof and its
+        /// plant, plaster inside, and caps closing the built floors off from the empty ones.
+        /// </summary>
+        public static void BuildShell(Transform t, BuildingPlan p, int from, int to)
+        {
+            List<PropKit.Piece> pieces = PropKit.Fresh($"{p.Name} shell", kit =>
+            {
+                float hx = p.Width * 0.5f, hz = p.Depth * 0.5f;
+                Material face = FacadeMaterial(p);
+                Color tint = FacadeTint(p.Facade, p.FacadeTint);
+                var spans = new List<(float Y0, float Y1)>();
+                if (from > 0) spans.Add((-0.75f, p.FloorY(from) - p.SlabThickness));
+                if (to < p.Floors - 1) spans.Add((p.FloorY(to + 1) - p.SlabThickness, p.TotalHeight));
+                foreach ((float y0, float y1) in spans)
+                {
+                    MeshBuilder f = kit[face];
+                    f.Color = tint;
+                    float ow = BuildingPlans.BayOffset(p.Width), od = BuildingPlans.BayOffset(p.Depth);
+                    f.FacadeQuad(new Vector3(-hx, 0f, hz), new Vector3(hx, 0f, hz), y0, y1, Vector3.forward, -ow);
+                    f.FacadeQuad(new Vector3(-hx, 0f, -hz), new Vector3(hx, 0f, -hz), y0, y1, Vector3.back, -ow);
+                    f.FacadeQuad(new Vector3(-hx, 0f, -hz), new Vector3(-hx, 0f, hz), y0, y1, Vector3.left, -od);
+                    f.FacadeQuad(new Vector3(hx, 0f, -hz), new Vector3(hx, 0f, hz), y0, y1, Vector3.right, -od);
+                    // Plaster behind, so the empty floors read as walls from inside too.
+                    MeshBuilder pl = kit[Plaster];
+                    pl.Color = new Color(0.8f, 0.8f, 0.8f, 0.9f);
+                    float h = y1 - y0, c = (y0 + y1) * 0.5f;
+                    pl.Box(new Vector3(0f, c, hz - Ext), new Vector3(p.Width, h, 0.1f));
+                    pl.Box(new Vector3(0f, c, -hz + Ext), new Vector3(p.Width, h, 0.1f));
+                    pl.Box(new Vector3(-hx + Ext, c, 0f), new Vector3(0.1f, h, p.Depth));
+                    pl.Box(new Vector3(hx - Ext, c, 0f), new Vector3(0.1f, h, p.Depth));
+                }
+                // Caps above and below the built floors.
+                MeshBuilder slab = kit[Concrete];
+                slab.Color = new Color(0.85f, 0.85f, 0.85f, 0.9f);
+                if (to < p.Floors - 1) slab.Box(new Vector3(0f, p.FloorY(to + 1) + 0.12f, 0f), new Vector3(p.Width - 0.1f, 0.24f, p.Depth - 0.1f));
+                if (from > 0) slab.Box(new Vector3(0f, p.FloorY(from) - p.SlabThickness - 0.12f, 0f), new Vector3(p.Width - 0.1f, 0.24f, p.Depth - 0.1f));
+                Roof(kit, p);
+            });
+            PropKit.Spawn(t, pieces);
+            var root = new GameObject("Colliders").transform;
+            root.SetParent(t, false);
+            float hx2 = p.Width * 0.5f, hz2 = p.Depth * 0.5f;
+            void Span(float y0, float y1)
+            {
+                float h = y1 - y0, c = (y0 + y1) * 0.5f;
+                Shapes.NotWalkable(Box(root, "Facade", new Vector3(0f, c, hz2 - Ext * 0.5f), new Vector3(p.Width, h, Ext)));
+                Shapes.NotWalkable(Box(root, "Facade", new Vector3(0f, c, -hz2 + Ext * 0.5f), new Vector3(p.Width, h, Ext)));
+                Shapes.NotWalkable(Box(root, "Facade", new Vector3(-hx2 + Ext * 0.5f, c, 0f), new Vector3(Ext, h, p.Depth)));
+                Shapes.NotWalkable(Box(root, "Facade", new Vector3(hx2 - Ext * 0.5f, c, 0f), new Vector3(Ext, h, p.Depth)));
+            }
+            if (from > 0) Span(-0.75f, p.FloorY(from) - p.SlabThickness);
+            if (to < p.Floors - 1)
+            {
+                Span(p.FloorY(to + 1) - p.SlabThickness, p.TotalHeight);
+                Box(root, "Cap", new Vector3(0f, p.FloorY(to + 1) + 0.12f, 0f), new Vector3(p.Width, 0.24f, p.Depth));
+                Shapes.NotWalkable(Box(root, "Roof", new Vector3(0f, p.RoofY - p.SlabThickness * 0.5f, 0f), new Vector3(p.Width, p.SlabThickness, p.Depth)));
+            }
+            if (from > 0) Box(root, "Cap", new Vector3(0f, p.FloorY(from) - p.SlabThickness - 0.12f, 0f), new Vector3(p.Width, 0.24f, p.Depth));
+        }
+
+        private const float Ext = 0.3f;
 
         // ------------------------------------------------------------ geometry shared by visuals and colliders
 
@@ -126,12 +220,15 @@ namespace Afterfall.Presentation
 
         // ------------------------------------------------------------ visuals
 
-        private static void Visuals(PropKit kit, BuildingPlan p)
+        private static void Visuals(PropKit kit, BuildingPlan p, int only)
         {
             float hx = p.Width * 0.5f, hz = p.Depth * 0.5f;
-            // Slabs: a foundation, one per upper floor (with stair holes) and the roof.
+            bool facade = FacadeWalls(p);
+            // Slabs: a foundation, one per upper floor (with stair holes) and the roof. A single floor
+            // builds its own slab, and the roof when it is the top floor.
             for (int f = 0; f <= p.Floors; f++)
             {
+                if (only >= 0 && f != only && !(f == p.Floors && only == p.Floors - 1)) continue;
                 float top = p.FloorY(f), bottom = f == 0 ? -0.75f : top - p.SlabThickness;
                 MeshBuilder slab = kit[Concrete];
                 slab.Color = new Color(0.92f, 0.92f, 0.92f, 0.95f);
@@ -152,8 +249,9 @@ namespace Afterfall.Presentation
             // Floor finishes and ceilings per room.
             foreach (PlanRoom room in p.Rooms)
             {
+                if (only >= 0 && room.Floor != only) continue;
                 Rect area = Rect.MinMaxRect(Mathf.Min(room.X0, room.X1), Mathf.Min(room.Z0, room.Z1), Mathf.Max(room.X0, room.X1), Mathf.Max(room.Z0, room.Z1));
-                Material finish = room.Finish == "tiles" ? Tiles : room.Finish == "concrete" ? Concrete : Planks;
+                Material finish = room.Finish == "tiles" ? Tiles : room.Finish == "concrete" ? Concrete : room.Finish == "carpet" ? Carpet(room.Floor + (int)(room.X0 * 7f)) : room.Finish == "lino" ? Lino : Planks;
                 MeshBuilder fb = kit[finish];
                 fb.Color = new Color(1f, 1f, 1f, 0.9f);
                 float y = p.FloorY(room.Floor);
@@ -169,15 +267,17 @@ namespace Afterfall.Presentation
             // Walls: brick outside and plaster inside for the shell, plaster both sides inside.
             foreach (PlanWall w in p.Walls)
             {
+                if (only >= 0 && w.Floor != only) continue;
                 foreach (Piece pc in Pieces(p, w))
                 {
                     if (w.Exterior)
                     {
                         float o = Outward(w);
                         WallBox(w, pc, o * (w.Thickness * 0.5f - 0.11f), 0.22f, out Vector3 c, out Vector3 s);
-                        MeshBuilder brick = kit[Brick];
+                        MeshBuilder brick = kit[facade ? Concrete : WallMaterial(p)];
                         brick.Color = new Color(1f, 1f, 1f, 1f);
                         brick.Box(c, s, null, Bevel);
+                        if (facade) FacadeFace(kit, p, w, pc);
                         // The inner plaster stops at the slab above (the brick carries on to the parapet).
                         Piece inner = pc;
                         inner.V0 = Mathf.Max(pc.V0, p.FloorY(w.Floor));
@@ -201,12 +301,58 @@ namespace Afterfall.Presentation
                 foreach (PlanOpening o in w.Openings) OpeningTrim(kit, p, w, o);
             }
 
-            foreach (PlanStair s in p.Stairs) Stair(kit, p, s);
-            foreach (PlanRail r in p.Rails) Rail(kit, p.FloorY(r.Floor), new Vector3(r.X0, 0f, r.Z0), new Vector3(r.X1, 0f, r.Z1));
-            Roof(kit, p);
-            Entrance(kit, p);
-            foreach (PlanDecor d in p.Decor) Decor(kit, p, d);
+            foreach (PlanStair s in p.Stairs)
+                if (only < 0 || s.FromFloor == only) Stair(kit, p, s);
+            foreach (PlanRail r in p.Rails)
+                if (only < 0 || r.Floor == only) Rail(kit, p.FloorY(r.Floor), new Vector3(r.X0, 0f, r.Z0), new Vector3(r.X1, 0f, r.Z1));
+            if (only < 0) Roof(kit, p);
+            if (only <= 0) Entrance(kit, p);
+            foreach (PlanDecor d in p.Decor)
+                if (only < 0 || d.Floor == only) Decor(kit, p, d);
         }
+
+        /// <summary>The outer face of a city building's wall piece in its facade texture (UVs from the building's corner, up from its base).</summary>
+        private static void FacadeFace(PropKit kit, BuildingPlan p, PlanWall w, Piece pc)
+        {
+            MeshBuilder f = kit[FacadeMaterial(p)];
+            f.Color = FacadeTint(p.Facade, p.FacadeTint);
+            float o = Outward(w), face = w.Thickness * 0.5f + 0.004f;
+            if (w.AlongX)
+            {
+                float z = w.Z0 + o * face, x0 = Mathf.Min(w.X0, w.X1);
+                float u0 = (x0 + p.Width * 0.5f) - BuildingPlans.BayOffset(p.Width);
+                f.FacadeQuad(new Vector3(x0 + pc.U0, 0f, z), new Vector3(x0 + pc.U1, 0f, z), pc.V0, pc.V1, new Vector3(0f, 0f, o), u0 + pc.U0);
+            }
+            else
+            {
+                float x = w.X0 + o * face, z0 = Mathf.Min(w.Z0, w.Z1);
+                float u0 = (z0 + p.Depth * 0.5f) - BuildingPlans.BayOffset(p.Depth);
+                f.FacadeQuad(new Vector3(x, 0f, z0 + pc.U0), new Vector3(x, 0f, z0 + pc.U1), pc.V0, pc.V1, new Vector3(o, 0f, 0f), u0 + pc.U0);
+            }
+        }
+
+        private static Material WallMaterial(BuildingPlan p)
+        {
+            switch (p.Facade)
+            {
+                case "stone": return Mat(Surface.Stone, new Color(0.78f, 0.75f, 0.68f));
+                case "corrugated": return Mat(PropSurfaces.CorrugatedHorizontal, new Color(0.62f, 0.64f, 0.62f), 0.35f, 0.5f);
+                case "render": return Mat(Surface.Plaster, new Color(0.86f, 0.84f, 0.78f));
+                case "concrete": return Concrete;
+                default: return Brick;
+            }
+        }
+
+        private static Material Lino => Mat(CitySurfaces.Lino, new Color(0.66f, 0.68f, 0.62f), 0.5f);
+
+        private static readonly Color[] Fabrics =
+        {
+            new Color(0.36f, 0.42f, 0.5f), new Color(0.55f, 0.32f, 0.28f), new Color(0.42f, 0.48f, 0.34f), new Color(0.6f, 0.52f, 0.4f), new Color(0.3f, 0.3f, 0.34f), new Color(0.58f, 0.44f, 0.52f)
+        };
+
+        private static Material Carpet(int variant) => Mat(CitySurfaces.Carpet, Color.Lerp(Fabrics[((variant % Fabrics.Length) + Fabrics.Length) % Fabrics.Length], Color.white, 0.25f));
+
+        private static Material FabricOf(int variant) => Mat(Surface.Fabric, Fabrics[((variant % Fabrics.Length) + Fabrics.Length) % Fabrics.Length]);
 
         private static void OpeningTrim(PropKit kit, BuildingPlan p, PlanWall w, PlanOpening o)
         {
@@ -367,10 +513,75 @@ namespace Afterfall.Presentation
             switch (d.Kind)
             {
                 case "sofa":
-                    Box(Fabric, new Vector3(0f, 0.22f, 0f), new Vector3(2.0f, 0.44f, 0.85f), 0.06f);
-                    Box(Fabric, new Vector3(0f, 0.6f, -0.33f), new Vector3(2.0f, 0.5f, 0.2f), 0.06f, 0.9f);
-                    Box(Fabric, new Vector3(-0.93f, 0.55f, 0f), new Vector3(0.2f, 0.3f, 0.85f), 0.05f, 0.92f);
-                    Box(Fabric, new Vector3(0.93f, 0.55f, 0f), new Vector3(0.2f, 0.3f, 0.85f), 0.05f, 0.92f);
+                {
+                    Material cloth = d.Variant == 0 ? Fabric : FabricOf(d.Variant);
+                    Box(cloth, new Vector3(0f, 0.22f, 0f), new Vector3(2.0f, 0.44f, 0.85f), 0.06f);
+                    Box(cloth, new Vector3(0f, 0.6f, -0.33f), new Vector3(2.0f, 0.5f, 0.2f), 0.06f, 0.9f);
+                    Box(cloth, new Vector3(-0.93f, 0.55f, 0f), new Vector3(0.2f, 0.3f, 0.85f), 0.05f, 0.92f);
+                    Box(cloth, new Vector3(0.93f, 0.55f, 0f), new Vector3(0.2f, 0.3f, 0.85f), 0.05f, 0.92f);
+                    break;
+                }
+                case "armchair":
+                {
+                    Material cloth = FabricOf(d.Variant + 2);
+                    Box(cloth, new Vector3(0f, 0.22f, 0f), new Vector3(0.85f, 0.44f, 0.8f), 0.06f);
+                    Box(cloth, new Vector3(0f, 0.62f, -0.3f), new Vector3(0.85f, 0.55f, 0.2f), 0.06f, 0.9f);
+                    Box(cloth, new Vector3(-0.36f, 0.55f, 0f), new Vector3(0.14f, 0.28f, 0.8f), 0.04f, 0.92f);
+                    Box(cloth, new Vector3(0.36f, 0.55f, 0f), new Vector3(0.14f, 0.28f, 0.8f), 0.04f, 0.92f);
+                    break;
+                }
+                case "tv":
+                    Box(Wood, new Vector3(0f, 0.25f, 0f), new Vector3(1.4f, 0.5f, 0.4f), 0.01f, 0.8f);
+                    Box(Steel, new Vector3(0f, 0.85f, 0f), new Vector3(1.1f, 0.65f, 0.06f), 0.01f, 0.25f);
+                    break;
+                case "plant":
+                {
+                    Box(Porcelain, new Vector3(0f, 0.2f, 0f), new Vector3(0.4f, 0.4f, 0.4f), 0.04f, 0.6f + 0.06f * (d.Variant % 4));
+                    MeshBuilder leaves = kit[Mat(Surface.Foliage, new Color(0.3f, 0.45f, 0.22f))];
+                    leaves.Color = new Color(0.8f + 0.04f * (d.Variant % 5), 0.9f, 0.8f, 0.95f);
+                    leaves.Box(o + r * new Vector3(0f, 0.75f, 0f), new Vector3(0.55f, 0.7f, 0.55f), r, 0.2f);
+                    break;
+                }
+                case "kitchen":
+                    Box(Wood, new Vector3(0f, 0.43f, 0f), new Vector3(1.8f, 0.86f, 0.6f), 0.01f, 0.95f);
+                    Box(Porcelain, new Vector3(0f, 0.89f, 0f), new Vector3(1.84f, 0.04f, 0.64f), 0.005f, 0.85f);
+                    Box(Steel, new Vector3(0.4f, 0.92f, 0f), new Vector3(0.5f, 0.02f, 0.4f), 0f, 0.9f);
+                    Box(Wood, new Vector3(0f, 1.75f, -0.12f), new Vector3(1.8f, 0.7f, 0.35f), 0.01f, 0.9f);
+                    break;
+                case "desk":
+                    Box(Wood, new Vector3(0f, 0.73f, 0f), new Vector3(1.4f, 0.04f, 0.7f), 0.005f, 0.85f + 0.03f * (d.Variant % 4));
+                    Box(Wood, new Vector3(-0.62f, 0.36f, 0f), new Vector3(0.05f, 0.72f, 0.66f), 0.005f, 0.8f);
+                    Box(Wood, new Vector3(0.62f, 0.36f, 0f), new Vector3(0.05f, 0.72f, 0.66f), 0.005f, 0.8f);
+                    Box(Steel, new Vector3(0f, 0.97f, 0.15f), new Vector3(0.55f, 0.38f, 0.04f), 0.005f, 0.3f);
+                    break;
+                case "whiteboard":
+                    Box(Porcelain, new Vector3(0f, 1.5f, 0f), new Vector3(2.0f, 1.1f, 0.04f), 0.005f, 1.05f);
+                    Box(Steel, new Vector3(0f, 0.93f, 0.05f), new Vector3(2.0f, 0.04f, 0.08f), 0f, 0.8f);
+                    break;
+                case "bathtub":
+                    Box(Porcelain, new Vector3(0f, 0.3f, 0f), new Vector3(1.7f, 0.6f, 0.75f), 0.08f);
+                    Box(Steel, new Vector3(0f, 0.58f, 0f), new Vector3(1.5f, 0.03f, 0.55f), 0f, 0.55f);
+                    break;
+                case "pew":
+                    Box(Wood, new Vector3(0f, 0.45f, 0f), new Vector3(3.4f, 0.06f, 0.45f), 0.01f, 0.8f);
+                    Box(Wood, new Vector3(0f, 0.75f, -0.2f), new Vector3(3.4f, 0.55f, 0.05f), 0.01f, 0.75f);
+                    Box(Wood, new Vector3(-1.68f, 0.45f, 0f), new Vector3(0.06f, 0.9f, 0.5f), 0.01f, 0.7f);
+                    Box(Wood, new Vector3(1.68f, 0.45f, 0f), new Vector3(0.06f, 0.9f, 0.5f), 0.01f, 0.7f);
+                    break;
+                case "altar":
+                    Box(Mat(Surface.Stone, new Color(0.8f, 0.78f, 0.72f)), new Vector3(0f, 0.5f, 0f), new Vector3(2.2f, 1.0f, 0.9f), 0.03f);
+                    Box(Mat(Surface.Fabric, new Color(0.85f, 0.82f, 0.74f)), new Vector3(0f, 1.01f, 0f), new Vector3(2.3f, 0.02f, 1.0f), 0f);
+                    break;
+                case "pallet":
+                    Box(Wood, new Vector3(0f, 0.07f, 0f), new Vector3(1.2f, 0.14f, 1.0f), 0.01f, 0.8f);
+                    Box(Mat(Surface.Fabric, new Color(0.72f, 0.66f, 0.54f)), new Vector3(0f, 0.6f, 0f), new Vector3(1.1f, 0.92f, 0.95f), 0.05f, 0.85f + 0.05f * (d.Variant % 3));
+                    break;
+                case "lift":
+                    // Lift doors and a call panel on the wall (the lift itself is a fast way between floors).
+                    Box(Steel, new Vector3(0f, 1.1f, 0.03f), new Vector3(1.3f, 2.2f, 0.05f), 0.005f, 0.95f);
+                    Box(Steel, new Vector3(0f, 1.1f, 0.06f), new Vector3(0.02f, 2.15f, 0.02f), 0f, 0.6f);
+                    Box(Trim, new Vector3(0f, 2.3f, 0.03f), new Vector3(1.5f, 0.14f, 0.06f), 0f, 0.9f);
+                    Box(Steel, new Vector3(0.85f, 1.2f, 0.03f), new Vector3(0.12f, 0.25f, 0.03f), 0f, 0.7f);
                     break;
                 case "table":
                 case "dining":
@@ -394,7 +605,7 @@ namespace Afterfall.Presentation
                     Box(Wood, new Vector3(0f, 0.27f, 0f), new Vector3(0.45f, 0.54f, 0.4f), 0.01f);
                     break;
                 case "rug":
-                    Box(Fabric, new Vector3(0f, 0.008f, 0f), new Vector3(2.2f, 0.012f, 1.5f), 0f, 0.7f);
+                    Box(d.Variant == 0 ? Fabric : FabricOf(d.Variant + 1), new Vector3(0f, 0.008f, 0f), new Vector3(2.2f, 0.012f, 1.5f), 0f, 0.7f);
                     break;
                 case "mailboxes":
                     Box(Steel, new Vector3(0f, 1.2f, 0f), new Vector3(1.2f, 0.8f, 0.3f), 0.01f);
@@ -415,6 +626,47 @@ namespace Afterfall.Presentation
                     foreach (float sx in new[] { -1.15f, 1.15f })
                         Box(Steel, new Vector3(sx, 0.75f, 0f), new Vector3(0.05f, 1.5f, 0.7f), 0f, 0.8f);
                     break;
+                case "coffee_table":
+                    Box(Wood, new Vector3(0f, 0.42f, 0f), new Vector3(1.0f, 0.05f, 0.55f), 0.01f, 0.9f);
+                    Box(Wood, new Vector3(0f, 0.12f, 0f), new Vector3(0.9f, 0.03f, 0.45f), 0.005f, 0.8f);
+                    foreach (float sx in new[] { -0.44f, 0.44f })
+                        foreach (float sz in new[] { -0.22f, 0.22f })
+                            Box(Wood, new Vector3(sx, 0.2f, sz), new Vector3(0.05f, 0.4f, 0.05f), 0.005f, 0.85f);
+                    Box(Porcelain, new Vector3(0.22f, 0.5f, 0.05f), new Vector3(0.12f, 0.1f, 0.12f), 0.02f, 0.75f);
+                    break;
+                case "sideboard":
+                    Box(Wood, new Vector3(0f, 0.4f, 0f), new Vector3(1.6f, 0.8f, 0.45f), 0.01f, 0.82f);
+                    foreach (float sx in new[] { -0.4f, 0.4f })
+                        Box(Trim, new Vector3(sx, 0.42f, 0.23f), new Vector3(0.74f, 0.6f, 0.01f), 0f, 0.7f);
+                    Box(Porcelain, new Vector3(-0.5f, 0.92f, 0f), new Vector3(0.16f, 0.24f, 0.16f), 0.04f, 0.6f + 0.05f * (d.Variant % 4));
+                    Box(Wood, new Vector3(0.35f, 1.02f, -0.12f), new Vector3(0.34f, 0.42f, 0.04f), 0.005f, 0.5f);
+                    break;
+                case "picture":
+                {
+                    // A framed landscape on the wall: sky over fields, a darker band of hills between.
+                    Box(Wood, new Vector3(0f, 1.55f, 0.015f), new Vector3(0.92f, 0.7f, 0.03f), 0.005f, 0.55f + 0.1f * (d.Variant % 3));
+                    MeshBuilder sky = kit[FabricOf(d.Variant + 3)];
+                    sky.Color = new Color(1f, 1f, 1f, 0.95f);
+                    sky.Box(o + r * new Vector3(0f, 1.69f, 0.032f), new Vector3(0.78f, 0.28f, 0.006f), r, 0f);
+                    Box(FabricOf(d.Variant + 7), new Vector3(0f, 1.5f, 0.033f), new Vector3(0.78f, 0.1f, 0.006f), 0f, 0.55f);
+                    Box(FabricOf(d.Variant), new Vector3(0f, 1.395f, 0.032f), new Vector3(0.78f, 0.17f, 0.006f), 0f, 0.85f);
+                    break;
+                }
+                case "lamp":
+                {
+                    Box(Steel, new Vector3(0f, 0.015f, 0f), new Vector3(0.3f, 0.03f, 0.3f), 0.01f, 0.4f);
+                    Box(Steel, new Vector3(0f, 0.78f, 0f), new Vector3(0.03f, 1.5f, 0.03f), 0f, 0.5f);
+                    MeshBuilder shade = kit[Mat(Surface.Fabric, new Color(0.93f, 0.86f, 0.7f))];
+                    shade.Color = new Color(0.9f + 0.03f * (d.Variant % 4), 0.9f, 0.85f, 0.95f);
+                    shade.Box(o + r * new Vector3(0f, 1.55f, 0f), new Vector3(0.42f, 0.3f, 0.42f), r, 0.06f);
+                    break;
+                }
+                case "coat_rack":
+                    Box(Wood, new Vector3(0f, 1.72f, 0.02f), new Vector3(0.9f, 0.12f, 0.03f), 0.005f, 0.8f);
+                    for (int i = 0; i < 4; i++) Box(Steel, new Vector3(-0.33f + i * 0.22f, 1.68f, 0.07f), new Vector3(0.03f, 0.03f, 0.08f), 0f, 0.5f);
+                    Box(FabricOf(d.Variant), new Vector3(-0.22f, 1.25f, 0.1f), new Vector3(0.36f, 0.85f, 0.14f), 0.05f, 0.8f);
+                    Box(FabricOf(d.Variant + 4), new Vector3(0.2f, 1.32f, 0.1f), new Vector3(0.32f, 0.7f, 0.13f), 0.05f, 0.75f);
+                    break;
             }
         }
 
@@ -430,13 +682,14 @@ namespace Afterfall.Presentation
 
         // ------------------------------------------------------------ colliders
 
-        private static void Colliders(Transform t, BuildingPlan p)
+        private static void Colliders(Transform t, BuildingPlan p, int only)
         {
             var root = new GameObject("Colliders").transform;
             root.SetParent(t, false);
             float hx = p.Width * 0.5f, hz = p.Depth * 0.5f;
             for (int f = 0; f <= p.Floors; f++)
             {
+                if (only >= 0 && f != only && !(f == p.Floors && only == p.Floors - 1)) continue;
                 float top = p.FloorY(f), bottom = f == 0 ? -0.75f : top - p.SlabThickness;
                 int i = 0;
                 foreach (Rect r in Subtract(Rect.MinMaxRect(-hx, -hz, hx, hz), HolesOn(p, f)))
@@ -449,6 +702,7 @@ namespace Afterfall.Presentation
             int n = 0;
             foreach (PlanWall w in p.Walls)
             {
+                if (only >= 0 && w.Floor != only) continue;
                 foreach (Piece pc in Pieces(p, w))
                 {
                     WallBox(w, pc, 0f, w.Thickness, out Vector3 c, out Vector3 s);
@@ -465,6 +719,7 @@ namespace Afterfall.Presentation
             }
             foreach (PlanStair s in p.Stairs)
             {
+                if (only >= 0 && s.FromFloor != only) continue;
                 float run = Mathf.Abs(s.ZEnd - s.ZStart), dir = Mathf.Sign(s.ZEnd - s.ZStart);
                 float len = Mathf.Sqrt(run * run + p.FloorHeight * p.FloorHeight) + 0.3f;
                 float angle = Mathf.Atan2(p.FloorHeight, run) * Mathf.Rad2Deg;
@@ -497,6 +752,7 @@ namespace Afterfall.Presentation
             }
             foreach (PlanRail r in p.Rails)
             {
+                if (only >= 0 && r.Floor != only) continue;
                 Vector3 a = new Vector3(r.X0, p.FloorY(r.Floor) + 0.5f, r.Z0), b = new Vector3(r.X1, p.FloorY(r.Floor) + 0.5f, r.Z1);
                 Vector3 d = b - a;
                 Vector3 size = Mathf.Abs(d.x) > Mathf.Abs(d.z) ? new Vector3(Mathf.Abs(d.x), 1f, 0.06f) : new Vector3(0.06f, 1f, Mathf.Abs(d.z));
@@ -504,9 +760,18 @@ namespace Afterfall.Presentation
             }
             foreach (PlanDecor d in p.Decor)
             {
+                if (only >= 0 && d.Floor != only) continue;
                 Vector3 size;
                 switch (d.Kind)
                 {
+                    case "armchair": size = new Vector3(0.9f, 0.85f, 0.85f); break;
+                    case "kitchen": size = new Vector3(1.8f, 0.9f, 0.6f); break;
+                    case "desk": size = new Vector3(1.4f, 0.75f, 0.7f); break;
+                    case "bathtub": size = new Vector3(1.7f, 0.6f, 0.75f); break;
+                    case "pew": size = new Vector3(3.4f, 0.9f, 0.55f); break;
+                    case "altar": size = new Vector3(2.2f, 1.0f, 0.9f); break;
+                    case "pallet": size = new Vector3(1.2f, 1.1f, 1.0f); break;
+                    case "plant": size = new Vector3(0.5f, 1.2f, 0.5f); break;
                     case "sofa": size = new Vector3(2.0f, 0.85f, 0.85f); break;
                     case "table": size = new Vector3(1.4f, 0.75f, 0.8f); break;
                     case "dining": size = new Vector3(1.4f, 0.75f, 1.9f); break;
@@ -516,6 +781,9 @@ namespace Afterfall.Presentation
                     case "mailboxes": size = new Vector3(1.2f, 1.6f, 0.3f); break;
                     case "toilet": size = new Vector3(0.42f, 0.72f, 0.66f); break;
                     case "nightstand": size = new Vector3(0.45f, 0.54f, 0.4f); break;
+                    case "tv": size = new Vector3(1.4f, 0.5f, 0.4f); break;
+                    case "coffee_table": size = new Vector3(1.0f, 0.45f, 0.55f); break;
+                    case "sideboard": size = new Vector3(1.6f, 0.8f, 0.45f); break;
                     default: continue;
                 }
                 GameObject c = Box(root, "Decor_" + d.Kind, new Vector3(d.X, p.FloorY(d.Floor) + size.y * 0.5f, d.Z), size);

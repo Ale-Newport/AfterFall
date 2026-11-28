@@ -165,7 +165,9 @@ namespace Afterfall.Presentation
         private readonly List<Vector3> _v = new List<Vector3>();
         private readonly List<Vector3> _n = new List<Vector3>();
         private readonly List<Color> _c = new List<Color>();
+        private readonly List<Vector2> _uv = new List<Vector2>();
         private readonly List<int> _t = new List<int>();
+        private bool _hasUV;
 
         public Color Color = Color.white;
         public Matrix4x4 Matrix = Matrix4x4.identity;
@@ -180,7 +182,32 @@ namespace Afterfall.Presentation
             _v.Add(Matrix.MultiplyPoint3x4(p));
             _n.Add(Unit(Matrix.MultiplyVector(n), Vector3.up));
             _c.Add(c);
+            _uv.Add(Vector2.zero);
             return _v.Count - 1;
+        }
+
+        /// <summary>
+        /// A facade rectangle with UVs in metres (for the surface shader's facade mode): from
+        /// <paramref name="a"/> to <paramref name="b"/> along the ground, <paramref name="y0"/> to
+        /// <paramref name="y1"/> up, its front facing <paramref name="outward"/>; u starts at
+        /// <paramref name="u0"/> at <paramref name="a"/> and v is the height itself.
+        /// </summary>
+        public void FacadeQuad(Vector3 a, Vector3 b, float y0, float y1, Vector3 outward, float u0, float vBase = 0f)
+        {
+            Vector3 p0 = new Vector3(a.x, y0, a.z), p1 = new Vector3(b.x, y0, b.z), p2 = new Vector3(b.x, y1, b.z), p3 = new Vector3(a.x, y1, a.z);
+            float len = Vector3.Distance(new Vector3(a.x, 0f, a.z), new Vector3(b.x, 0f, b.z));
+            var uv = new[] { new Vector2(u0, y0 - vBase), new Vector2(u0 + len, y0 - vBase), new Vector2(u0 + len, y1 - vBase), new Vector2(u0, y1 - vBase) };
+            Vector3[] q = { p0, p1, p2, p3 };
+            Vector3 n = Vector3.Cross(p1 - p0, p3 - p0);
+            int[] order = Vector3.Dot(Matrix.MultiplyVector(n), Matrix.MultiplyVector(outward)) >= 0f ? new[] { 0, 1, 2, 0, 2, 3 } : new[] { 0, 2, 1, 0, 3, 2 };
+            int start = _v.Count;
+            for (int k = 0; k < 4; k++)
+            {
+                Vertex(q[k], outward);
+                _uv[_uv.Count - 1] = uv[k];
+            }
+            foreach (int k in order) _t.Add(start + k);
+            _hasUV = true;
         }
 
         /// <summary>
@@ -507,6 +534,7 @@ namespace Afterfall.Presentation
             m.SetVertices(_v);
             m.SetNormals(_n);
             m.SetColors(_c);
+            if (_hasUV) m.SetUVs(0, _uv);
             m.SetTriangles(_t, 0);
             m.RecalculateBounds();
             return m;
