@@ -122,6 +122,8 @@ Conveyors and pipes, disasters other than storms and cold snaps (fires, floods, 
 ## Basin follow-ups and characters (session 8, 2026-11-28)
 - Floating origin for the 64 km world; NavMesh window rebaked only for new ground inside it; railway stations, blocks of flats and supermarkets that can be entered; street furniture; distant trees (WORLD_EXPANSION_PROGRESS.md, phase 8).
 - Characters: seven more models (14), clothes tinted per instance, decimated LOD1 parts with a `LODGroup`, blinking and five expressions from MakeHuman's CC0 expression units, and a motion-captured walk and run from the CMU database (CHARACTER_PIPELINE.md).
+- Hand playtest of the basin (keyboard and mouse in the macOS build): new game, walking, sprinting, the map, the developer teleport to Kesselmouth, the platform and ticket hall of Kesselmouth Central. It found two bugs, both fixed: containers could be searched through walls (interaction now needs a clear line of sight from the survivor's eyes; the basin tour checks the locked ticket office from outside), and the platform canopy's posts stood in front of the station's doors.
+- The tour reports the frame rate by the wall clock as well: on Metal `unscaledDeltaTime` can report the display's interval while frames run far slower (seen when other processes saturated the machine).
 - Verified: 216 headless tests; Unity EditMode 216/216 and PlayMode 7/7; macOS build; the basin tour with 0 failures and 0 errors (inside a station, a block of flats and a supermarket; distant trees; a save after crossing the basin 5.2 MB); the model gallery's characters (line-up, faces, walk and run strips).
 
 ## World expansion (session 7, 2026-11-27)

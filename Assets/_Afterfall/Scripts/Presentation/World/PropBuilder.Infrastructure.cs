@@ -143,12 +143,13 @@ namespace Afterfall.Presentation
             paint.Color = Tone(0.95f);
             paint.Box(new Vector3(trackSide * (w * 0.5f - 0.75f), 0.022f, 0f), new Vector3(0.12f, 0.01f, len - 0.4f));
 
-            // The canopy over the middle half, its posts along the far side.
+            // The canopy over the middle half, its posts along the far side, midway between the
+            // station's doors (which are 6 m either side of its middle) so none stands in a doorway.
             float cl = len * 0.5f, back = -trackSide * (w * 0.5f - 0.6f);
-            int posts = Mathf.Max(2, Mathf.RoundToInt(cl / 6f) + 1);
+            int posts = Mathf.Max(2, Mathf.RoundToInt(cl / 6f));
             for (int i = 0; i < posts; i++)
             {
-                float z = -cl * 0.5f + i * cl / (posts - 1);
+                float z = -cl * 0.5f + (i + 0.5f) * cl / posts;
                 steel.Color = Vary(1701, i, 0.1f);
                 steel.Box(new Vector3(back, 1.65f, z), new Vector3(0.16f, 3.3f, 0.16f));
                 steel.Box(new Vector3(back * 0.35f, 3.25f, z), new Vector3(w * 0.68f, 0.14f, 0.12f), Quaternion.Euler(0f, 0f, trackSide * -4f));
@@ -156,9 +157,9 @@ namespace Afterfall.Presentation
             roof.Color = Tone(0.95f);
             roof.Box(new Vector3(back * 0.3f, 3.42f, 0f), new Vector3(w * 0.85f, 0.08f, cl + 0.6f), Quaternion.Euler(0f, 0f, trackSide * -4f), 0.01f);
             // Benches between the posts and a sign board at each end of the canopy.
-            for (int i = 0; i + 1 < posts; i += 2)
+            for (int i = 1; i < posts; i += 2)
             {
-                float z = -cl * 0.5f + (i + 0.5f) * cl / (posts - 1);
+                float z = -cl * 0.5f + i * cl / posts;
                 steel.Color = Tone(0.8f);
                 steel.Box(new Vector3(back + trackSide * 0.55f, 0.45f, z), new Vector3(0.45f, 0.06f, 1.6f));
                 steel.Box(new Vector3(back + trackSide * 0.35f, 0.75f, z), new Vector3(0.05f, 0.5f, 1.6f));

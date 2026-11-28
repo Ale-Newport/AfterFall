@@ -504,7 +504,7 @@ namespace Afterfall.Presentation
             if (Physics.Raycast(ray, out RaycastHit hit, camToPlayer + 3.5f, Layers.InteractMask, QueryTriggerInteraction.Collide))
             {
                 IInteractable it = hit.collider.GetComponentInParent<IInteractable>();
-                if (it != null && Vector3.Distance(Player.transform.position, hit.point) <= GameSession.InteractRange + 1.2f) return it;
+                if (it != null && Vector3.Distance(Player.transform.position, hit.point) <= GameSession.InteractRange + 1.2f && InSight(it, hit.point)) return it;
             }
             // Fallback: nearest interactable in front of the player (helps at close range).
             Collider[] near = Physics.OverlapSphere(Player.transform.position + Player.transform.forward * 1.2f + Vector3.up, 1.6f, Layers.Mask(Layers.Interactable, Layers.Resource, Layers.Structure), QueryTriggerInteraction.Collide);
@@ -515,6 +515,7 @@ namespace Afterfall.Presentation
                 IInteractable it = c.GetComponentInParent<IInteractable>();
                 if (it == null) continue;
                 float d = Vector3.Distance(Player.transform.position, it.FocusPoint);
+                if (d >= bestD || !InSight(it, c.ClosestPoint(Player.transform.position + Vector3.up * 1.2f))) continue;
                 if (d < bestD)
                 {
                     bestD = d;
@@ -522,6 +523,44 @@ namespace Afterfall.Presentation
                 }
             }
             return best;
+        }
+
+        /// <summary>Interactables within 3 m of the survivor, with their distance and whether they are in sight (tour diagnostics).</summary>
+        public string DescribeNearbyTargets()
+        {
+            var sb = new System.Text.StringBuilder();
+            Vector3 eye = Player.transform.position + Vector3.up * 1.2f;
+            var seen = new HashSet<IInteractable>();
+            foreach (Collider c in Physics.OverlapSphere(Player.transform.position + Vector3.up, 3f, Layers.Mask(Layers.Interactable, Layers.Resource, Layers.Structure), QueryTriggerInteraction.Collide))
+            {
+                IInteractable it = c.GetComponentInParent<IInteractable>();
+                if (it == null || !seen.Add(it)) continue;
+                Vector3 p = c.ClosestPoint(eye);
+                sb.Append($"{((Component)it).name} {Vector3.Distance(Player.transform.position, it.FocusPoint):0.0} m, in sight {InSight(it, p)}; ");
+            }
+            return sb.Length > 0 ? sb.ToString() : "nothing within 3 m";
+        }
+
+        /// <summary>
+        /// True when nothing solid (a wall, a closed door, the ground) stands between the survivor's
+        /// eyes and a point on the target, so nothing is searched or used through a wall.
+        /// </summary>
+        private bool InSight(IInteractable target, Vector3 point)
+        {
+            Vector3 eye = Player.transform.position + Vector3.up * 1.5f;
+            Vector3 to = point - eye;
+            float dist = to.magnitude;
+            if (dist < 0.05f) return true;
+            RaycastHit[] hits = Physics.RaycastAll(eye, to / dist, dist, Layers.SolidMask | Layers.Mask(Layers.Vehicle), QueryTriggerInteraction.Ignore);
+            foreach (RaycastHit h in hits)
+            {
+                IInteractable owner = h.collider.GetComponentInParent<IInteractable>();
+                if (owner == target) continue;
+                if (dist - h.distance < 0.3f) continue; // the ground or a shelf right at the target
+                if (h.collider.transform.IsChildOf(Player.transform)) continue;
+                return false;
+            }
+            return true;
         }
 
         private bool NearWater()

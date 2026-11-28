@@ -143,6 +143,42 @@ namespace Afterfall.Presentation
                     $"Inside {label}: room {(room != null ? room.Name : "none")}, {fixtures} doors and fittings, on the NavMesh {onMesh}");
                 yield return Capture($"99i{n++}_basin_{plan.Plan.Id.Substring(0, plan.Plan.Id.IndexOf('|'))}");
             }
+
+            // Nothing is searched through a wall: outside the locked ticket office the desk inside is not offered,
+            // while in the ticket hall the locker in front of the survivor is.
+            if (station != null)
+            {
+                string Prompt() => gc.CurrentPrompt ?? "none";
+                IEnumerator Stand(float px, float pz, float localYaw)
+                {
+                    Vec3 at = station.ToWorld(px, pz, 0);
+                    at = new Vec3(at.X, Mathf.Max(at.Y, l.HeightAt(at.X, at.Z)) + 0.05f, at.Z); // outside, the ground may be above the floor
+                    gc.Player.Teleport(at.ToUnity());
+                    float yaw = station.Yaw + localYaw;
+                    gc.Player.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+                    gc.CameraRig.Look(yaw, 10f);
+                    yield return Seconds(0.8f);
+                }
+                // Back to the station first, waiting for its ground and buildings to load.
+                gc.TeleportTo(station.ToWorld(0f, 2.5f, 0).ToUnity(), "the station", false);
+                yield return null;
+                float back = Time.realtimeSinceStartup + P(60f);
+                while (gc.Teleporting && Time.realtimeSinceStartup < back) yield return null;
+                yield return Seconds(3f);
+                yield return Stand(14.45f, -4.7f, -90f); // against the east wall outside, the office desk 1.4 m away behind it
+                yield return Seconds(1f);
+                string outside = Prompt();
+                Line($"  outside the office: survivor at {Fmt(gc.Player.transform.position.ToWorld())}; {gc.DescribeNearbyTargets()}");
+                yield return Capture("99i8_basin_outside_office");
+                yield return Stand(5.6f, 3.9f, 0f);     // in the hall, facing a locker
+                float until = Time.realtimeSinceStartup + P(3f);
+                while (!Prompt().Contains("Locker") && Time.realtimeSinceStartup < until) yield return null;
+                string inside = Prompt();
+                Line($"  in the hall: survivor at {Fmt(gc.Player.transform.position.ToWorld())}; {gc.DescribeNearbyTargets()}");
+                yield return Capture("99i9_basin_hall_locker");
+                Check(!outside.Contains("Desk") && inside.Contains("Locker"),
+                    $"Interaction needs a clear line of sight: outside the office wall the prompt is \"{outside}\"; facing the hall locker it is \"{inside}\"");
+            }
         }
     }
 }
