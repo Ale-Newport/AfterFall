@@ -65,7 +65,7 @@ namespace Afterfall.Presentation.UI
                 into.Add(new MapSymbol { Kind = m.Kind == MarkerKind.Bookmark ? MapSymbolKind.Bookmark : MapSymbolKind.Marker, X = m.Position.X, Z = m.Position.Z, Label = m.Name, Ref = m.Id });
             if (w.Navigation.HasWaypoint)
                 into.Add(new MapSymbol { Kind = MapSymbolKind.Waypoint, X = w.Navigation.Waypoint.X, Z = w.Navigation.Waypoint.Z, Label = w.Navigation.WaypointLabel });
-            Vector3 p0 = gc.Player.transform.position;
+            Vector3 p0 = gc.Player.transform.position.ToWorld();
             float heading = gc.Player.Flight.Active ? gc.CameraRig.ViewTransform.eulerAngles.y : gc.Player.transform.eulerAngles.y;
             into.Add(new MapSymbol { Kind = MapSymbolKind.Player, X = p0.x, Z = p0.z, Label = "You", Heading = heading });
         }

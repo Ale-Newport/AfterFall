@@ -14,7 +14,7 @@ namespace Afterfall.Presentation
     /// </summary>
     public static class CityMesher
     {
-        private static Material Brick, Render, Stone, Slate, Tiles, Glass, Metal, Wood, Skyline;
+        private static Material Brick, Render, Stone, Slate, Tiles, Glass, Metal, Wood, Skyline, Paint;
 
         /// <summary>Makes the shared materials (main thread, before any preparation on workers).</summary>
         public static void Prepare()
@@ -29,6 +29,7 @@ namespace Afterfall.Presentation
             Metal = MaterialLibrary.Surface(Surface.Corrugated, Color.white);
             Wood = MaterialLibrary.Surface(Surface.Plain, Color.white, 0.2f);
             Skyline = MaterialLibrary.Surface(Surface.Plain, Color.white, 0.18f);
+            Paint = MaterialLibrary.Surface(Surface.PaintedMetal, Color.white, 0.35f, 0.3f);
         }
 
         /// <summary>A chunk's buildings computed off the main thread, waiting to become meshes and colliders.</summary>
@@ -96,7 +97,134 @@ namespace Afterfall.Presentation
                 }
                 prep.Colliders.Add((pos + Vector3.up * (h * 0.5f - 0.75f), rot, new Vector3(w, h + 1.5f, d)));
             }
+            foreach (RoadPath r in c.Streets) StreetFurniture(kit, r, prep.Origin);
             return prep;
+        }
+
+        /// <summary>
+        /// Lamp posts along both pavements of a street, with bins, benches, and on the main roads bus
+        /// shelters and telephone boxes. Render-only (people walk round them; nothing paths through them).
+        /// </summary>
+        private static void StreetFurniture(Kit kit, RoadPath r, Vector3 origin)
+        {
+            bool main = r.Width >= 11f;
+            int n = 0;
+            for (int s = 0; s + 1 < r.Points.Count; s++)
+            {
+                Vector3 a = new Vector3(r.Points[s].X, r.Points[s].Y, r.Points[s].Z) - origin, b = new Vector3(r.Points[s + 1].X, r.Points[s + 1].Y, r.Points[s + 1].Z) - origin;
+                Vector3 dir = b - a;
+                dir.y = 0f;
+                float len = dir.magnitude;
+                if (len < 24f) continue;
+                dir /= len;
+                Vector3 right = new Vector3(dir.z, 0f, -dir.x);
+                int seed = Mathf.Abs(Mathf.RoundToInt(a.x * 5.3f + origin.x) * 17 + Mathf.RoundToInt(a.z * 2.9f + origin.z));
+                // Clear of the junctions at both ends.
+                for (float t = 12f; t < len - 12f; t += main ? 24f : 28f, n++)
+                {
+                    float side = (n & 1) == 0 ? 1f : -1f;
+                    Vector3 kerb = Vector3.Lerp(a, b, t / len) + right * side * (r.Width * 0.5f + 0.5f);
+                    float yaw = Mathf.Atan2(-right.x * side, -right.z * side) * Mathf.Rad2Deg; // facing the road
+                    kit.Matrix = Matrix4x4.TRS(kerb, Quaternion.Euler(0f, yaw, 0f), Vector3.one);
+                    Lamp(kit);
+                    float roll = Hash(seed, n);
+                    Vector3 along = dir * (roll < 0.5f ? 3f : -3f);
+                    if (main && n % 9 == 4)
+                    {
+                        kit.Matrix = Matrix4x4.TRS(kerb + right * side * 1.3f + dir * 6f, Quaternion.Euler(0f, yaw, 0f), Vector3.one);
+                        Shelter(kit);
+                    }
+                    else if (main && n % 13 == 7)
+                    {
+                        kit.Matrix = Matrix4x4.TRS(kerb + right * side * 1.4f + along, Quaternion.Euler(0f, yaw + 180f, 0f), Vector3.one);
+                        PhoneBox(kit);
+                    }
+                    else if (n % 4 == 2)
+                    {
+                        kit.Matrix = Matrix4x4.TRS(kerb + right * side * 1.1f + along, Quaternion.Euler(0f, yaw, 0f), Vector3.one);
+                        Bench(kit, roll);
+                    }
+                    else if (n % 3 == 1)
+                    {
+                        kit.Matrix = Matrix4x4.TRS(kerb + right * side * 0.2f + along * 0.6f, Quaternion.Euler(0f, yaw + roll * 90f, 0f), Vector3.one);
+                        Bin(kit, roll);
+                    }
+                }
+            }
+            kit.Matrix = Matrix4x4.identity;
+        }
+
+        private static readonly Color LampGreen = new Color(0.03f, 0.06f, 0.045f), BinGreen = new Color(0.025f, 0.07f, 0.04f), Grey = new Color(0.22f, 0.23f, 0.23f);
+
+        /// <summary>A street lamp, local +Z towards the road: a tapered post and an arm with its lantern over the kerb.</summary>
+        private static void Lamp(Kit kit)
+        {
+            MeshBuilder p = kit[Paint];
+            p.Color = LampGreen;
+            p.Cylinder(new Vector3(0f, 0f, 0f), new Vector3(0f, 0.5f, 0f), 0.16f, 0.12f, 8);
+            p.Cylinder(new Vector3(0f, 0.5f, 0f), new Vector3(0f, 6.2f, 0f), 0.08f, 0.055f, 6);
+            p.Cylinder(new Vector3(0f, 6.1f, 0f), new Vector3(0f, 6.25f, 1.1f), 0.04f, 0.035f, 5);
+            p.Box(new Vector3(0f, 6.18f, 1.25f), new Vector3(0.36f, 0.12f, 0.55f));
+            MeshBuilder g = kit[Glass];
+            g.Color = new Color(0.8f, 0.78f, 0.66f);
+            g.Box(new Vector3(0f, 6.08f, 1.25f), new Vector3(0.28f, 0.08f, 0.45f));
+        }
+
+        private static void Bin(Kit kit, float roll)
+        {
+            MeshBuilder p = kit[Paint];
+            p.Color = Tone(BinGreen, 0.85f + roll * 0.3f);
+            p.Cylinder(new Vector3(0f, 0f, 0f), new Vector3(0f, 0.85f, 0f), 0.27f, 0.3f, 10);
+            p.Color = Grey;
+            p.Cylinder(new Vector3(0f, 0.85f, 0f), new Vector3(0f, 0.95f, 0f), 0.32f, 0.26f, 10);
+        }
+
+        /// <summary>A park bench facing the road (+Z): two cast frames and timber slats.</summary>
+        private static void Bench(Kit kit, float roll)
+        {
+            MeshBuilder p = kit[Paint];
+            p.Color = LampGreen;
+            for (int s = -1; s <= 1; s += 2)
+            {
+                p.Box(new Vector3(s * 0.72f, 0.22f, 0.05f), new Vector3(0.06f, 0.44f, 0.5f));
+                p.Box(new Vector3(s * 0.72f, 0.62f, -0.2f), new Vector3(0.06f, 0.5f, 0.06f), Quaternion.Euler(-12f, 0f, 0f));
+            }
+            MeshBuilder w = kit[Wood];
+            w.Color = Tone(new Color(0.26f, 0.16f, 0.09f), 0.85f + roll * 0.3f);
+            for (int i = 0; i < 3; i++) w.Box(new Vector3(0f, 0.45f, -0.12f + i * 0.14f), new Vector3(1.6f, 0.04f, 0.11f));
+            for (int i = 0; i < 2; i++) w.Box(new Vector3(0f, 0.62f + i * 0.17f, -0.24f - i * 0.035f), new Vector3(1.6f, 0.11f, 0.035f), Quaternion.Euler(-12f, 0f, 0f));
+        }
+
+        /// <summary>A bus shelter, open towards the road (+Z): a steel frame, glass back and sides, a flat roof and a seat.</summary>
+        private static void Shelter(Kit kit)
+        {
+            MeshBuilder p = kit[Paint];
+            p.Color = Grey;
+            foreach (float x in new[] { -1.8f, 1.8f })
+                foreach (float z in new[] { -0.7f, 0.7f })
+                    p.Box(new Vector3(x, 1.25f, z), new Vector3(0.08f, 2.5f, 0.08f));
+            p.Box(new Vector3(0f, 2.55f, 0f), new Vector3(3.9f, 0.1f, 1.7f));
+            p.Box(new Vector3(0f, 0.5f, -0.5f), new Vector3(2.8f, 0.05f, 0.35f));
+            MeshBuilder g = kit[Glass];
+            g.Color = new Color(0.55f, 0.6f, 0.62f);
+            g.Box(new Vector3(0f, 1.3f, -0.7f), new Vector3(3.5f, 2.2f, 0.03f));
+            g.Box(new Vector3(-1.8f, 1.3f, 0f), new Vector3(0.03f, 2.2f, 1.3f));
+            g.Box(new Vector3(1.8f, 1.3f, 0f), new Vector3(0.03f, 2.2f, 1.3f));
+        }
+
+        private static void PhoneBox(Kit kit)
+        {
+            MeshBuilder p = kit[Paint];
+            p.Color = new Color(0.42f, 0.02f, 0.015f);
+            for (int sx = -1; sx <= 1; sx += 2)
+                for (int sz = -1; sz <= 1; sz += 2)
+                    p.Box(new Vector3(sx * 0.45f, 1.25f, sz * 0.45f), new Vector3(0.1f, 2.5f, 0.1f));
+            p.Box(new Vector3(0f, 2.55f, 0f), new Vector3(1.05f, 0.2f, 1.05f));
+            p.Box(new Vector3(0f, 2.72f, 0f), new Vector3(0.9f, 0.14f, 0.9f));
+            p.Box(new Vector3(0f, 0.05f, 0f), new Vector3(1.05f, 0.1f, 1.05f));
+            MeshBuilder g = kit[Glass];
+            g.Color = new Color(0.5f, 0.52f, 0.5f);
+            g.Box(new Vector3(0f, 1.3f, 0f), new Vector3(0.84f, 2.2f, 0.84f));
         }
 
         /// <summary>The chunk's buildings as plain boxes in one mesh, for the skyline far away (worker thread).</summary>
@@ -120,7 +248,7 @@ namespace Afterfall.Presentation
         {
             var root = new GameObject(prep.Name);
             root.transform.SetParent(parent, false);
-            root.transform.position = prep.Origin;
+            root.transform.localPosition = prep.Origin; // under the world anchor
             if (prep.Kit != null)
             {
                 prep.Kit.Spawn(root.transform, "City", true);

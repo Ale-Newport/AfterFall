@@ -90,7 +90,7 @@ namespace Afterfall.Presentation.UI
             _reveal.RegisterValueChangedCallback(e => _gc.Maps.RevealAll = e.newValue && _gc.Session.Creative.Enabled);
             side.Add(Legend());
 
-            Vector3 p = _gc.Player.transform.position;
+            Vector3 p = _gc.Player.transform.position.ToWorld();
             _cx = p.x;
             _cz = p.z;
             // The basin opens wider (a city block is ~100 m, the basin 64 km).
@@ -189,7 +189,7 @@ namespace Afterfall.Presentation.UI
 
         private void CenterOnPlayer()
         {
-            Vector3 p = _gc.Player.transform.position;
+            Vector3 p = _gc.Player.transform.position.ToWorld();
             _cx = p.x;
             _cz = p.z;
             Layout();

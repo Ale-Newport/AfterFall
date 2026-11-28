@@ -90,7 +90,7 @@ namespace Afterfall.Presentation.UI
             MapTextures maps = _gc.Maps;
             WorldState w = _gc.Session.World;
             float mpp = Zooms[_zoom];
-            Vector3 me = _gc.Player.transform.position;
+            Vector3 me = _gc.Player.transform.position.ToWorld();
             float heading = _gc.CameraRig.ViewTransform.eulerAngles.y;
             bool rotate = _gc.Settings.MinimapRotate;
             float rot = rotate ? heading : 0f;

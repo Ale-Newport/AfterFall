@@ -53,8 +53,9 @@ namespace Afterfall.Presentation
         {
             spot = p;
             var layout = gc.Session.World.Layout;
-            if (!layout.IsInsideMap(p.x, p.z, 3f)) return false;
-            float ground = layout.HeightAt(p.x, p.z);
+            Vector3 w = p.ToWorld();
+            if (!layout.IsInsideMap(w.x, w.z, 3f)) return false;
+            float ground = layout.HeightAt(w.x, w.z);
             float top = Mathf.Max(castFromY, ground + 0.5f);
             var origin = new Vector3(p.x, top, p.z);
             int n = Physics.RaycastNonAlloc(origin, Vector3.down, Hits, top - ground + 3f, StandMask, QueryTriggerInteraction.Ignore);
@@ -62,7 +63,7 @@ namespace Afterfall.Presentation
             {
                 // Nothing below (above the terrain collider's reach): use the height field.
                 spot = new Vector3(p.x, ground + 0.05f, p.z);
-                return !layout.IsWater(p.x, p.z) && Fits(spot);
+                return !layout.IsWater(w.x, w.z) && Fits(spot);
             }
             var sorted = new List<RaycastHit>(n);
             for (int i = 0; i < n; i++) sorted.Add(Hits[i]);
@@ -71,7 +72,7 @@ namespace Afterfall.Presentation
             {
                 if (hit.normal.y < 0.7f || IsNotWalkable(hit.collider)) continue;
                 Vector3 feet = hit.point + Vector3.up * 0.05f;
-                if (layout.WaterAt(feet.x, feet.z, out float level) && feet.y < level + 0.3f) return false;
+                if (layout.WaterAt(feet.x + Conversions.Origin.x, feet.z + Conversions.Origin.z, out float level) && feet.y < level + 0.3f) return false;
                 if (!Fits(feet)) continue;
                 spot = feet;
                 return true;

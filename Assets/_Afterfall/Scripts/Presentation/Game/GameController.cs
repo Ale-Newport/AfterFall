@@ -41,10 +41,19 @@ namespace Afterfall.Presentation
         public WorldSync Sync { get; private set; }
         public BuildController Build { get; private set; }
         public TacticalController Tactical { get; private set; }
-        /// <summary>The terrain tiles streamed around the survivor.</summary>
         /// <summary>Props, the city and the far terrain of a chunked world (null otherwise).</summary>
         public ChunkViews Chunks { get; private set; }
 
+        /// <summary>Low-poly stand-ins for the trees beyond the real tree views (chunked worlds only).</summary>
+        public FarTrees FarTrees { get; private set; }
+
+        /// <summary>
+        /// The anchor of everything placed in world coordinates (terrain, props, the city, water,
+        /// entities): it sits at minus the floating origin, so its children keep world-space local positions.
+        /// </summary>
+        public Transform WorldRoot => _worldRoot;
+
+        /// <summary>The terrain tiles streamed around the survivor.</summary>
         public TerrainStreamer TerrainTiles { get; private set; }
         public AudioDirector Audio { get; private set; }
 
@@ -82,9 +91,17 @@ namespace Afterfall.Presentation
             yield return null;
             ProceduralTextures.PrewarmCatalogue();
             _worldRoot = new GameObject("World").transform;
+            // The basin starts with its floating origin near the survivor (a save may be far from the corner).
+            Vec3 start = Session.Player.Position;
+            Conversions.Origin = Session.World.Layout.IsChunked
+                ? new Vector3(Mathf.Round(start.X / OriginStep) * OriginStep, 0f, Mathf.Round(start.Z / OriginStep) * OriginStep)
+                : Vector3.zero;
+            _worldRoot.position = -Conversions.Origin;
+            Shader.SetGlobalVector("_AfterfallOrigin", new Vector4(Conversions.Origin.x, 0f, Conversions.Origin.z, 0f));
             _worldRoot.SetParent(transform, false);
             TerrainTiles = gameObject.AddComponent<TerrainStreamer>();
             TerrainTiles.Initialize(this, Session.World.Layout, Session.World.Seed, _worldRoot);
+            WorldBuilder.ShiftGroundTint(Session.World.Layout, Conversions.Origin);
             // The ground around the survivor is built before play begins; the rest streams in.
             TerrainTiles.BuildAround(Session.Player.Position.ToUnity(), WorldBuilder.TileSize * 0.75f);
             CharacterModels.Preload();
@@ -98,6 +115,8 @@ namespace Afterfall.Presentation
                 // The basin: props, the city and the far terrain stream around the camera.
                 Chunks = gameObject.AddComponent<ChunkViews>();
                 Chunks.Initialize(this, Session.World.Layout, _worldRoot);
+                FarTrees = gameObject.AddComponent<FarTrees>();
+                FarTrees.Initialize(this, Session.World.Layout, _worldRoot);
                 DayNightCycle.FogScale = 0.4f;
             }
             else
@@ -171,28 +190,81 @@ namespace Afterfall.Presentation
             if (Session.World.Layout.Size > NavWindow)
             {
                 _surface.collectObjects = CollectObjects.Volume;
-                _navCenter = NavWindowCenter(Player.transform.position);
+                _navCenter = NavWindowCenter(Player.transform.position.ToWorld());
                 _surface.center = _navCenter;
                 _surface.size = new Vector3(NavWindow, Session.World.Layout.MaxHeight + 120f, NavWindow);
             }
-            _surface.navMeshData = new NavMeshData(_surface.agentTypeID);
+            // The data is built relative to the world anchor, so its tiles are in world coordinates
+            // and stay valid when the floating origin moves the anchor.
+            _surface.navMeshData = new NavMeshData(_surface.agentTypeID) { position = _worldRoot.position };
             _surface.AddData();
             _navOp = _surface.UpdateNavMesh(_surface.navMeshData);
             while (_navOp != null && !_navOp.isDone) yield return null;
             NavReady = true;
         }
 
+        // ------------------------------------------------------------------ floating origin (the 64 km basin)
+
+        private const float OriginShiftDistance = 2048f, OriginStep = 512f;
+
+        /// <summary>How many times the floating origin has moved (diagnostics, the tour).</summary>
+        public int OriginShifts { get; private set; }
+
+        /// <summary>
+        /// Keeps Unity's coordinates small in the basin: once the survivor is more than 2 km from Unity's
+        /// origin, the world anchor, the survivor and the camera move back by a multiple of 512 m and the
+        /// origin moves forward by as much. The NavMesh is re-registered, agents re-placed, ground cover
+        /// rebuilt and the shaders' world-space offsets updated; nothing in the simulation changes.
+        /// </summary>
+        private void UpdateFloatingOrigin()
+        {
+            if (!Session.World.Layout.IsChunked || Player == null || _worldRoot == null) return;
+            Vector3 p = Player.transform.position;
+            if (Mathf.Abs(p.x) < OriginShiftDistance && Mathf.Abs(p.z) < OriginShiftDistance) return;
+            ShiftOrigin(new Vector3(Mathf.Round(p.x / OriginStep) * OriginStep, 0f, Mathf.Round(p.z / OriginStep) * OriginStep));
+        }
+
+        /// <summary>Moves the floating origin by <paramref name="delta"/> (Unity metres, x and z).</summary>
+        public void ShiftOrigin(Vector3 delta)
+        {
+            Conversions.Origin += delta;
+            _worldRoot.position = -Conversions.Origin;
+            if (Player.Vehicle == null) Player.Teleport(Player.transform.position - delta); // at the wheel the survivor moves with the vehicle (under the anchor)
+            CameraRig.OnWorldShifted(Player.transform, -delta);
+            Shader.SetGlobalVector("_AfterfallOrigin", new Vector4(Conversions.Origin.x, 0f, Conversions.Origin.z, 0f));
+            WorldBuilder.ShiftGroundTint(Session.World.Layout, Conversions.Origin);
+            Physics.SyncTransforms();
+            if (_surface != null)
+            {
+                _surface.RemoveData();
+                _surface.AddData();
+            }
+            Sync.OnWorldShifted();
+            GetComponent<GroundCover>()?.OnWorldShifted();
+            OriginShifts++;
+        }
+
         /// <summary>Side of the square NavMesh window baked around the survivor in a large world.</summary>
         public const float NavWindow = 512f;
         private const float NavRecenter = 80f;
         private Vector3 _navCenter;
-        private int _navTiles = -1;
+        private readonly List<Rect> _navDirty = new List<Rect>();
+        private float _navNextBake;
 
         public bool NavWindowed => _surface != null && _surface.collectObjects == CollectObjects.Volume;
 
         /// <summary>Centre of the NavMesh window (large worlds) and whether a (re)bake is running.</summary>
         public Vector3 NavWindowCentre => _navCenter;
         public bool NavBaking => _navOp != null && !_navOp.isDone;
+
+        /// <summary>
+        /// New walkable ground or obstacles (a terrain tile, a city chunk's buildings) arrived in a world
+        /// rectangle: the NavMesh window is rebaked if it overlaps.
+        /// </summary>
+        public void MarkNavDirty(Rect world)
+        {
+            if (NavWindowed) _navDirty.Add(world);
+        }
 
         private Vector3 NavWindowCenter(Vector3 p)
         {
@@ -201,17 +273,22 @@ namespace Afterfall.Presentation
                 Mathf.Clamp(Mathf.Round(p.z / 16f) * 16f, half, size - half));
         }
 
-        /// <summary>Moves the NavMesh window when the survivor has gone far enough from its centre.</summary>
+        /// <summary>Moves the NavMesh window when the survivor has gone far enough from its centre, or rebakes it for new ground in it (at most every 1.5 s).</summary>
         private void UpdateNavWindow()
         {
             if (!NavReady || !NavWindowed || (_navOp != null && !_navOp.isDone)) return;
-            Vector3 c = NavWindowCenter(Player.transform.position);
-            // A terrain tile that arrived since the last bake is new ground for the window.
-            bool newGround = TerrainTiles != null && TerrainTiles.Version != _navTiles;
-            if (!newGround && Mathf.Abs(c.x - _navCenter.x) < NavRecenter && Mathf.Abs(c.z - _navCenter.z) < NavRecenter) return;
-            if (TerrainTiles != null) _navTiles = TerrainTiles.Version;
-            if (Mathf.Abs(c.x - _navCenter.x) >= NavRecenter || Mathf.Abs(c.z - _navCenter.z) >= NavRecenter) _navCenter = c;
+            Vector3 c = NavWindowCenter(Player.transform.position.ToWorld());
+            bool moved = Mathf.Abs(c.x - _navCenter.x) >= NavRecenter || Mathf.Abs(c.z - _navCenter.z) >= NavRecenter;
+            var window = new Rect(_navCenter.x - NavWindow * 0.5f, _navCenter.z - NavWindow * 0.5f, NavWindow, NavWindow);
+            bool newGround = false;
+            foreach (Rect r in _navDirty)
+                if (r.Overlaps(window)) newGround = true;
+            if (!moved && !(newGround && Time.unscaledTime >= _navNextBake)) return;
+            _navDirty.Clear();
+            _navNextBake = Time.unscaledTime + 1.5f;
+            if (moved) _navCenter = c;
             _surface.center = _navCenter;
+            _surface.navMeshData.position = _worldRoot.position;
             _navOp = _surface.UpdateNavMesh(_surface.navMeshData);
         }
 
@@ -256,6 +333,7 @@ namespace Afterfall.Presentation
             else UpdateInteraction();
             Maps?.Update();
             Doors?.Update();
+            UpdateFloatingOrigin();
             UpdateNavWindow();
 
             if (!Session.Paused && !IsDead)
@@ -453,7 +531,8 @@ namespace Afterfall.Presentation
             for (int i = 0; i < 8; i++)
             {
                 float a = i * Mathf.PI / 4f;
-                if (l.IsWater(p.x + Mathf.Cos(a) * 2.5f, p.z + Mathf.Sin(a) * 2.5f)) return true;
+                Vector3 w = p.ToWorld();
+                if (l.IsWater(w.x + Mathf.Cos(a) * 2.5f, w.z + Mathf.Sin(a) * 2.5f)) return true;
             }
             return false;
         }
@@ -515,7 +594,8 @@ namespace Afterfall.Presentation
 
         // ------------------------------------------------------------------ helpers
 
-        public float GroundHeight(Vector3 p) => Session.World.Layout.HeightAt(p.x, p.z);
+        /// <summary>Ground height under a Unity position.</summary>
+        public float GroundHeight(Vector3 p) => Session.World.Layout.HeightAt(p.x + Conversions.Origin.x, p.z + Conversions.Origin.z);
 
         public void Toast(string message, Severity severity = Severity.Info) => Ui.Toast(message, severity);
 
@@ -752,7 +832,8 @@ namespace Afterfall.Presentation
                     float a = (k % 2 == 0 ? 1 : -1) * (k / 2) * 25f;
                     Vector3 p = t.position + Quaternion.Euler(0f, a, 0f) * t.forward * d;
                     var layout = Session.World.Layout;
-                    if (!layout.IsInsideMap(p.x, p.z, 6f) || layout.IsWater(p.x, p.z) || layout.Height.SlopeDegrees(p.x, p.z) > 18f) continue;
+                    Vector3 wp = p.ToWorld();
+                    if (!layout.IsInsideMap(wp.x, wp.z, 6f) || layout.IsWater(wp.x, wp.z) || layout.Height.SlopeDegrees(wp.x, wp.z) > 18f) continue;
                     p.y = GroundHeight(p);
                     Quaternion rot = Quaternion.Euler(0f, yaw, 0f);
                     Vector3 half = new Vector3(def.SizeX * 0.5f + 0.3f, def.SizeY * 0.5f, def.SizeZ * 0.5f + 0.3f);

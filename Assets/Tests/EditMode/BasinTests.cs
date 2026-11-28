@@ -156,5 +156,51 @@ namespace Afterfall.Tests
             Assert.AreEqual(structures, loaded.Structures.Count, "Millbrook was seeded already");
             Assert.AreEqual(1, loaded.ResourceNodes.Values.Count(n => n.SeedKey == treeKey), "the felled tree is not made again");
         }
+
+        [Test]
+        public void Basin_CityHasStationsFlatsAndSupermarkets_WithOpenableDoors()
+        {
+            WorldLayout l = WorldGenerator.Generate(Seed, 3);
+            var b = (BasinWorld)l.Chunks;
+            var stations = b.Stations.ToList();
+            Assert.GreaterOrEqual(stations.Count, 6, "stations along the three lines: " + string.Join(", ", stations.Select(s => s.Name)));
+            Assert.IsTrue(stations.Any(s => s.Name == "Kesselmouth Central"), "a central station where the lines meet");
+            Assert.IsTrue(stations.Any(s => s.Name == "Harrowgate Station"), "and one at the end of the western line");
+
+            // Every station is built, with its platform, in the chunk that holds it.
+            var plans = new List<PlacedPlan>();
+            foreach ((Vec3 centre, string name) in stations)
+            {
+                ChunkContent c = l.EnsureChunk(WorldLayout.ChunkOf(centre.X), WorldLayout.ChunkOf(centre.Z));
+                PlacedPlan st = c.Plans.FirstOrDefault(p => p.Plan.Id.StartsWith(BuildingPlans.StationKind + "|", StringComparison.Ordinal));
+                Assert.IsNotNull(st, name);
+                Assert.IsTrue(c.Props.Any(p => p.Kind == "platform"), name + " has a platform");
+                foreach (PropPlacement blk in c.Blocks)
+                    Assert.Greater(Vec3.DistanceXZ(blk.Position, centre), Math.Max(blk.Size.X, blk.Size.Z) * 0.5f, $"no city building stands in {name}");
+                plans.Add(st);
+            }
+
+            // A stretch of the city has blocks of flats and a supermarket.
+            for (int z = 56; z <= 62; z++)
+                for (int x = 70; x <= 104; x++)
+                    plans.AddRange(l.EnsureChunk(x, z).Plans.Where(p => p.Plan.Id.Contains("|")));
+            plans = plans.GroupBy(p => p.Plan.Id).Select(g => g.First()).ToList(); // the stretch holds some of the stations again
+            var flats = plans.Where(p => p.Plan.Id.StartsWith(BuildingPlans.FlatsKind + "|", StringComparison.Ordinal)).ToList();
+            Assert.Greater(flats.Count, 10, "blocks of flats");
+            Assert.IsTrue(flats.Any(f => f.Plan.Floors >= 5), "some of them five storeys or more");
+            Assert.IsTrue(plans.Any(p => p.Plan.Id.StartsWith(BuildingPlans.SupermarketKind + "|", StringComparison.Ordinal)), "a supermarket");
+
+            var keys = new HashSet<string>();
+            foreach (PlacedPlan pp in plans)
+            {
+                BuildingPlan plan = pp.Plan;
+                Assert.AreEqual(Math.Max(0, plan.Floors - 1), plan.Stairs.Count, plan.Name + ": a flight up from every floor but the top");
+                Assert.AreEqual(plan.Id, BuildingPlans.Get(plan.Id).Id, "the view rebuilds the same plan from its id");
+                foreach (PlanFixture f in plan.Fixtures) Assert.IsTrue(keys.Add(f.Key), "fixture keys are unique across buildings: " + f.Key);
+                // Every locked door's key is inside the building, in a container that is not behind that door.
+                foreach (PlanFixture door in plan.Fixtures.Where(f => f.Locked))
+                    Assert.IsTrue(plan.Fixtures.Any(f => f.KeysInside.Contains(door.LockId) && !f.Key.Contains(door.Key.Substring(door.Key.LastIndexOf(':') + 1).Replace("door:", ""))), $"{plan.Name}: the key to {door.LockId} is in the building");
+            }
+        }
     }
 }

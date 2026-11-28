@@ -1,0 +1,179 @@
+{
+  "name": "infected_m4",
+  "role": "infected",
+  "female": false,
+  "rig": "game_engine",
+  "bones": 53,
+  "parts": [
+    {
+      "mesh": "infected_m4_eyebrow005",
+      "kind": "lashes",
+      "albedo": "Textures/eyebrow005",
+      "normal": "",
+      "triangles": 192,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "pain",
+        "snarl"
+      ]
+    },
+    {
+      "mesh": "infected_m4_eyelashes01",
+      "kind": "lashes",
+      "albedo": "Textures/eyelashes01",
+      "normal": "",
+      "triangles": 368,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl"
+      ]
+    },
+    {
+      "mesh": "infected_m4_fedora_cocked",
+      "kind": "cloth",
+      "albedo": "Textures/fedora_diffuse",
+      "normal": "Textures/fedora_normal",
+      "triangles": 1244,
+      "lod": 0,
+      "expressions": [
+        "pain",
+        "snarl"
+      ]
+    },
+    {
+      "mesh": "infected_m4_fedora_cocked_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/fedora_diffuse",
+      "normal": "Textures/fedora_normal",
+      "triangles": 273,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m4_skin",
+      "kind": "skin",
+      "albedo": "Textures/middleage_lightskinned_male_diffuse2",
+      "normal": "",
+      "triangles": 2132,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl",
+        "mouth_open"
+      ]
+    },
+    {
+      "mesh": "infected_m4_skin_lod1",
+      "kind": "skin",
+      "albedo": "Textures/middleage_lightskinned_male_diffuse2",
+      "normal": "",
+      "triangles": 426,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m4_eyes",
+      "kind": "eyes",
+      "albedo": "Textures/brown_eye",
+      "normal": "",
+      "triangles": 172,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m4_eyes_lod1",
+      "kind": "eyes",
+      "albedo": "Textures/brown_eye",
+      "normal": "",
+      "triangles": 86,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m4_male_casualsuit03",
+      "kind": "cloth",
+      "albedo": "Textures/male_casualsuit03_diffuse",
+      "normal": "Textures/male_casualsuit03_normal",
+      "triangles": 4800,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m4_male_casualsuit03_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/male_casualsuit03_diffuse",
+      "normal": "Textures/male_casualsuit03_normal",
+      "triangles": 1055,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m4_shoes01",
+      "kind": "cloth",
+      "albedo": "Textures/shoes01_diffuse",
+      "normal": "Textures/shoes01_normal",
+      "triangles": 3320,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m4_shoes01_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/shoes01_diffuse",
+      "normal": "Textures/shoes01_normal",
+      "triangles": 730,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m4_hair",
+      "kind": "hair",
+      "albedo": "Textures/short02_diffuse",
+      "normal": "",
+      "triangles": 3344,
+      "lod": 0,
+      "expressions": [
+        "pain",
+        "snarl",
+        "mouth_open"
+      ]
+    },
+    {
+      "mesh": "infected_m4_hair_lod1",
+      "kind": "hair",
+      "albedo": "Textures/short02_diffuse",
+      "normal": "",
+      "triangles": 1169,
+      "lod": 1,
+      "expressions": []
+    }
+  ],
+  "triangles": 15572,
+  "lod1_triangles": 3739,
+  "expressions": [
+    "blink",
+    "smile",
+    "pain",
+    "snarl",
+    "mouth_open"
+  ],
+  "assets": {
+    "proxy": "male1591",
+    "skin": "middleage_asian_male",
+    "hair": "short02",
+    "eyebrows": "eyebrow005",
+    "eyelashes": "eyelashes01",
+    "clothes": [
+      "male_casualsuit03",
+      "fedora_cocked",
+      "shoes01"
+    ]
+  },
+  "source": "MakeHuman system assets (CC0) via MPFB 2.0.17"
+}

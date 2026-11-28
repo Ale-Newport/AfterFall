@@ -82,7 +82,7 @@ namespace Afterfall.Presentation
             GameObject go = Terrain.CreateTerrainGameObject(data);
             go.name = $"Terrain {tx},{tz}";
             go.transform.SetParent(parent, false);
-            go.transform.position = new Vector3(tx * TileSize, 0f, tz * TileSize);
+            go.transform.localPosition = new Vector3(tx * TileSize, 0f, tz * TileSize);
             go.layer = Layers.Terrain;
             Terrain t = go.GetComponent<Terrain>();
             t.materialTemplate = TerrainMaterial();
@@ -337,6 +337,12 @@ namespace Afterfall.Presentation
                     case "city_tower":
                     case "city_church":
                         s.Paved(s.Asphalt, x, z, hx, hz, p.Yaw, 0.5f, 3.2f, 0.9f, seed + 15);
+                        s.Rect(s.Gravel, x, z, hx, hz, p.Yaw, 1f, 5f, 0.5f, seed + 12);
+                        break;
+                    case "apartment":
+                    case "platform":
+                        // Enterable city buildings and station platforms: paved under and round them (no grass through the floor).
+                        s.Paved(s.Asphalt, x, z, hx, hz, p.Yaw, 0.5f, 3.2f, 1f, seed + 15);
                         s.Rect(s.Gravel, x, z, hx, hz, p.Yaw, 1f, 5f, 0.5f, seed + 12);
                         break;
                     case "city_semi":
@@ -672,6 +678,14 @@ namespace Afterfall.Presentation
             return tex;
         }
 
+        /// <summary>Re-aims the ground tint (sampled at Unity positions) after the floating origin moved.</summary>
+        public static void ShiftGroundTint(WorldLayout layout, Vector3 origin)
+        {
+            int res = Mathf.Clamp(Mathf.CeilToInt(layout.Size / 2f), 64, 4096);
+            float k = (res - 1f) / res / layout.Size;
+            Shader.SetGlobalVector(GroundTintRectId, new Vector4(k, k, 0.5f / res + origin.x * k, 0.5f / res + origin.z * k));
+        }
+
         /// <summary>Writes one painted tile's average ground colour into the map-wide tint texture.</summary>
         public static void PublishGroundTint(GroundWeights splat, Texture2D tint, float worldSize)
         {
@@ -804,7 +818,7 @@ namespace Afterfall.Presentation
             {
                 var go = new GameObject("Edge");
                 go.transform.SetParent(root, false);
-                go.transform.position = c;
+                go.transform.localPosition = c;
                 go.AddComponent<BoxCollider>().size = size;
                 go.layer = Layers.Prop;
             }
@@ -822,7 +836,7 @@ namespace Afterfall.Presentation
             {
                 GameObject go = PropBuilder.Build(p);
                 if (go == null) continue;
-                go.transform.SetParent(root, true);
+                go.transform.SetParent(root, false); // built in world coordinates: they become local ones under the anchor
                 Shapes.SetLayerRecursive(go, Layers.Prop);
             }
             return root;

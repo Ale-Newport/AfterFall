@@ -155,7 +155,7 @@ namespace Afterfall.Presentation
             p.x = Mathf.Clamp(p.x, edge, layout.Size - edge);
             p.z = Mathf.Clamp(p.z, edge, layout.Size - edge);
             // No-clip through buildings and trees, but never below the ground or into the sky's far plane.
-            p.y = Mathf.Clamp(p.y, layout.HeightAt(p.x, p.z) + 0.6f, layout.MaxHeight + 600f);
+            p.y = Mathf.Clamp(p.y, layout.HeightAt(p.x + Conversions.Origin.x, p.z + Conversions.Origin.z) + 0.6f, layout.MaxHeight + 600f);
             transform.position = p;
 
             _gc.Session.ReportPlayerTransform(p.ToSim(), cam.eulerAngles.y, new PlayerActivity { Flying = true });

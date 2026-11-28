@@ -144,7 +144,7 @@ namespace Afterfall.Domain.World
     }
 
     /// <summary>The hand-designed building plans the generator can place.</summary>
-    public static class BuildingPlans
+    public static partial class BuildingPlans
     {
         public const string MillbrookApartmentsId = "millbrook_apartments";
 
@@ -161,7 +161,7 @@ namespace Afterfall.Domain.World
                 case MillbrookApartmentsId: return MillbrookApartments();
                 case AshfordApartmentsId: return Apartments(AshfordApartmentsId, "Ashford Apartments", "");
                 case EastgateApartmentsId: return Apartments(EastgateApartmentsId, "Eastgate Apartments", EastgateCarLock);
-                default: return null;
+                default: return CityPlan(id);
             }
         }
 

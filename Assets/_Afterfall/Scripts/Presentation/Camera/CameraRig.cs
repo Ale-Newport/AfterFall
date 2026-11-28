@@ -175,6 +175,14 @@ namespace Afterfall.Presentation
         /// <summary>How far the shoulder camera sees: 650 m in the valley and the region, further in the basin (its skyline).</summary>
         public float ViewDistance { get; private set; } = 650f;
 
+        /// <summary>The world (and the followed survivor) jumped by <paramref name="delta"/>: keep the camera where it was relative to them, without damping.</summary>
+        public void OnWorldShifted(Transform target, Vector3 delta)
+        {
+            transform.position += delta;
+            if (_camera != null && _camera.transform.parent != transform) _camera.transform.position += delta;
+            Unity.Cinemachine.CinemachineCore.OnTargetObjectWarped(target, delta);
+        }
+
         public void SetViewDistance(float metres)
         {
             ViewDistance = metres;

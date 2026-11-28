@@ -10,52 +10,140 @@
       "kind": "lashes",
       "albedo": "Textures/eyebrow002",
       "normal": "",
-      "triangles": 192
+      "triangles": 192,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "pain",
+        "snarl"
+      ]
     },
     {
       "mesh": "infected_m1_eyelashes01",
       "kind": "lashes",
       "albedo": "Textures/eyelashes01",
       "normal": "",
-      "triangles": 368
+      "triangles": 368,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl"
+      ]
     },
     {
       "mesh": "infected_m1_skin",
       "kind": "skin",
       "albedo": "Textures/old_lightskinned_male_diffuse",
       "normal": "",
-      "triangles": 2092
+      "triangles": 2092,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl",
+        "mouth_open"
+      ]
+    },
+    {
+      "mesh": "infected_m1_skin_lod1",
+      "kind": "skin",
+      "albedo": "Textures/old_lightskinned_male_diffuse",
+      "normal": "",
+      "triangles": 418,
+      "lod": 1,
+      "expressions": []
     },
     {
       "mesh": "infected_m1_eyes",
       "kind": "eyes",
       "albedo": "Textures/brown_eye",
       "normal": "",
-      "triangles": 172
+      "triangles": 172,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m1_eyes_lod1",
+      "kind": "eyes",
+      "albedo": "Textures/brown_eye",
+      "normal": "",
+      "triangles": 86,
+      "lod": 1,
+      "expressions": []
     },
     {
       "mesh": "infected_m1_male_elegantsuit01",
       "kind": "cloth",
       "albedo": "Textures/male_elegantsuit01_diffuse",
       "normal": "",
-      "triangles": 14956
+      "triangles": 14956,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m1_male_elegantsuit01_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/male_elegantsuit01_diffuse",
+      "normal": "",
+      "triangles": 3290,
+      "lod": 1,
+      "expressions": []
     },
     {
       "mesh": "infected_m1_shoes01",
       "kind": "cloth",
       "albedo": "Textures/shoes01_diffuse",
       "normal": "Textures/shoes01_normal",
-      "triangles": 3320
+      "triangles": 3320,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m1_shoes01_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/shoes01_diffuse",
+      "normal": "Textures/shoes01_normal",
+      "triangles": 730,
+      "lod": 1,
+      "expressions": []
     },
     {
       "mesh": "infected_m1_hair",
       "kind": "hair",
       "albedo": "Textures/short03_diffuse",
       "normal": "",
-      "triangles": 1922
+      "triangles": 1922,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl",
+        "mouth_open"
+      ]
+    },
+    {
+      "mesh": "infected_m1_hair_lod1",
+      "kind": "hair",
+      "albedo": "Textures/short03_diffuse",
+      "normal": "",
+      "triangles": 671,
+      "lod": 1,
+      "expressions": []
     }
   ],
   "triangles": 23022,
+  "lod1_triangles": 5195,
+  "expressions": [
+    "blink",
+    "smile",
+    "pain",
+    "snarl",
+    "mouth_open"
+  ],
   "assets": {
     "proxy": "male1591",
     "skin": "old_caucasian_male",

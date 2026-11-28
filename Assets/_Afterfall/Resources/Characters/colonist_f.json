@@ -10,52 +10,140 @@
       "kind": "hair",
       "albedo": "Textures/bob02_diffuse",
       "normal": "",
-      "triangles": 2248
+      "triangles": 2248,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl",
+        "mouth_open"
+      ]
+    },
+    {
+      "mesh": "colonist_f_hair_lod1",
+      "kind": "hair",
+      "albedo": "Textures/bob02_diffuse",
+      "normal": "",
+      "triangles": 786,
+      "lod": 1,
+      "expressions": []
     },
     {
       "mesh": "colonist_f_skin",
       "kind": "skin",
       "albedo": "Textures/young_lightskinned_female_diffuse3",
       "normal": "",
-      "triangles": 17546
+      "triangles": 17546,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl",
+        "mouth_open"
+      ]
+    },
+    {
+      "mesh": "colonist_f_skin_lod1",
+      "kind": "skin",
+      "albedo": "Textures/young_lightskinned_female_diffuse3",
+      "normal": "",
+      "triangles": 3509,
+      "lod": 1,
+      "expressions": []
     },
     {
       "mesh": "colonist_f_eyebrow010",
       "kind": "lashes",
       "albedo": "Textures/eyebrow010",
       "normal": "",
-      "triangles": 192
+      "triangles": 192,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "pain",
+        "snarl"
+      ]
     },
     {
       "mesh": "colonist_f_eyelashes03",
       "kind": "lashes",
       "albedo": "Textures/eyelashes03",
       "normal": "",
-      "triangles": 368
+      "triangles": 368,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl"
+      ]
     },
     {
       "mesh": "colonist_f_female_elegantsuit01",
       "kind": "cloth",
       "albedo": "Textures/female_elegantsuit01_diffuse",
       "normal": "Textures/female_elegantsuit01_normal",
-      "triangles": 4192
+      "triangles": 4192,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "colonist_f_female_elegantsuit01_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/female_elegantsuit01_diffuse",
+      "normal": "Textures/female_elegantsuit01_normal",
+      "triangles": 921,
+      "lod": 1,
+      "expressions": []
     },
     {
       "mesh": "colonist_f_eyes",
       "kind": "eyes",
       "albedo": "Textures/brown_eye",
       "normal": "",
-      "triangles": 172
+      "triangles": 172,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "colonist_f_eyes_lod1",
+      "kind": "eyes",
+      "albedo": "Textures/brown_eye",
+      "normal": "",
+      "triangles": 86,
+      "lod": 1,
+      "expressions": []
     },
     {
       "mesh": "colonist_f_shoes03",
       "kind": "cloth",
       "albedo": "Textures/shoes03_diffuse",
       "normal": "",
-      "triangles": 4128
+      "triangles": 4128,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "colonist_f_shoes03_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/shoes03_diffuse",
+      "normal": "",
+      "triangles": 907,
+      "lod": 1,
+      "expressions": []
     }
   ],
   "triangles": 28846,
+  "lod1_triangles": 6209,
+  "expressions": [
+    "blink",
+    "smile",
+    "pain",
+    "snarl",
+    "mouth_open"
+  ],
   "assets": {
     "proxy": "female_generic",
     "skin": "young_asian_female",

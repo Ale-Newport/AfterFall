@@ -1,0 +1,153 @@
+{
+  "name": "colonist_f3",
+  "role": "colonist",
+  "female": true,
+  "rig": "game_engine",
+  "bones": 53,
+  "parts": [
+    {
+      "mesh": "colonist_f3_skin",
+      "kind": "skin",
+      "albedo": "Textures/young_lightskinned_female_diffuse2",
+      "normal": "",
+      "triangles": 16940,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl",
+        "mouth_open"
+      ]
+    },
+    {
+      "mesh": "colonist_f3_skin_lod1",
+      "kind": "skin",
+      "albedo": "Textures/young_lightskinned_female_diffuse2",
+      "normal": "",
+      "triangles": 3388,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "colonist_f3_eyebrow010",
+      "kind": "lashes",
+      "albedo": "Textures/eyebrow010",
+      "normal": "",
+      "triangles": 192,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "pain",
+        "snarl"
+      ]
+    },
+    {
+      "mesh": "colonist_f3_eyelashes02",
+      "kind": "lashes",
+      "albedo": "Textures/eyelashes02",
+      "normal": "",
+      "triangles": 368,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl"
+      ]
+    },
+    {
+      "mesh": "colonist_f3_hair",
+      "kind": "hair",
+      "albedo": "Textures/long01_diffuse",
+      "normal": "",
+      "triangles": 4108,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "colonist_f3_hair_lod1",
+      "kind": "hair",
+      "albedo": "Textures/long01_diffuse",
+      "normal": "",
+      "triangles": 1437,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "colonist_f3_eyes",
+      "kind": "eyes",
+      "albedo": "Textures/brown_eye",
+      "normal": "",
+      "triangles": 172,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "colonist_f3_eyes_lod1",
+      "kind": "eyes",
+      "albedo": "Textures/brown_eye",
+      "normal": "",
+      "triangles": 86,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "colonist_f3_male_worksuit01",
+      "kind": "cloth",
+      "albedo": "Textures/male_worksuit01_diffuse",
+      "normal": "Textures/male_worksuit01_normal",
+      "triangles": 6986,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "colonist_f3_male_worksuit01_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/male_worksuit01_diffuse",
+      "normal": "Textures/male_worksuit01_normal",
+      "triangles": 1536,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "colonist_f3_shoes06",
+      "kind": "cloth",
+      "albedo": "Textures/shoes06_diffuse",
+      "normal": "",
+      "triangles": 3064,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "colonist_f3_shoes06_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/shoes06_diffuse",
+      "normal": "",
+      "triangles": 674,
+      "lod": 1,
+      "expressions": []
+    }
+  ],
+  "triangles": 31830,
+  "lod1_triangles": 7121,
+  "expressions": [
+    "blink",
+    "smile",
+    "pain",
+    "snarl",
+    "mouth_open"
+  ],
+  "assets": {
+    "proxy": "female_generic",
+    "skin": "young_caucasian_female2",
+    "hair": "long01",
+    "eyebrows": "eyebrow010",
+    "eyelashes": "eyelashes02",
+    "clothes": [
+      "male_worksuit01",
+      "shoes06"
+    ]
+  },
+  "source": "MakeHuman system assets (CC0) via MPFB 2.0.17"
+}

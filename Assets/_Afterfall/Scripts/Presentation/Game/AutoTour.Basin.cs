@@ -55,7 +55,7 @@ namespace Afterfall.Presentation
             int shot = 0;
             foreach ((string name, float x, float z, float yaw, float pitch) in stops)
             {
-                gc.TeleportTo(new Vector3(x, l.HeightAt(x, z), z), name, false);
+                gc.TeleportTo(new Vec3(x, l.HeightAt(x, z), z).ToUnity(), name, false);
                 yield return null;
                 float tp = Time.realtimeSinceStartup + P(60f);
                 while (gc.Teleporting && Time.realtimeSinceStartup < tp) yield return null;
@@ -64,12 +64,18 @@ namespace Afterfall.Presentation
                 yield return Seconds(2f);
                 while ((gc.TerrainTiles.PaintingTiles > 0 || l.PendingChunks > 0 || gc.NavBaking) && Time.realtimeSinceStartup < settle) yield return null;
                 yield return Seconds(2.5f);
-                Vector3 here = gc.Player.transform.position;
+                Vector3 here = gc.Player.transform.position.ToWorld();
                 gc.CameraRig.Look(yaw, pitch);
                 yield return Seconds(1f);
                 ChunkViews v = gc.Chunks;
-                Check(Vector3.Distance(Flat(here), new Vector3(x, 0, z)) < 60f && gc.IsWorldReadyAt(here),
-                    $"At {name} {Fmt(here)}, {here.y:0} m: {l.GeneratedChunkCount} chunks made, city {v.DetailedChunks} detailed + {v.SkylineChunks} skyline, {gc.Sync.NodeViewCount} node views, {gc.TerrainTiles.LoadedTiles} tiles");
+                Vector3 local = gc.Player.transform.position;
+                bool onMesh = UnityEngine.AI.NavMesh.SamplePosition(local, out UnityEngine.AI.NavMeshHit nh, 3f, UnityEngine.AI.NavMesh.AllAreas);
+                Check(Mathf.Abs(local.x) < 2600f && Mathf.Abs(local.z) < 2600f && onMesh,
+                    $"Floating origin at {Fmt(Conversions.Origin)} after {gc.OriginShifts} shifts: the survivor is at Unity {Fmt(local)} (world {Fmt(here)}), on the NavMesh {onMesh} (window at {Fmt(gc.NavWindowCentre)}, {UnityEngine.AI.NavMesh.CalculateTriangulation().indices.Length / 3} triangles)");
+                Check(Vector3.Distance(Flat(here), new Vector3(x, 0, z)) < 60f && gc.IsWorldReadyAt(here.FromWorld()),
+                    $"At {name} {Fmt(here)}, {here.y:0} m: {l.GeneratedChunkCount} chunks made, city {v.DetailedChunks} detailed + {v.SkylineChunks} skyline, {gc.Sync.NodeViewCount} node views, {gc.TerrainTiles.LoadedTiles} tiles ({gc.TerrainTiles.PaintingTiles} painting, camera at {Fmt(gc.CameraRig.Camera.transform.position.ToWorld())}, ground {l.HeightAt(here.x, here.z):0} m)");
+                if (name == "the Lake District")
+                    Check(gc.FarTrees != null && gc.FarTrees.VisibleCells > 20, $"Distant trees stand in for the real ones beyond {WorldSync.NodeViewRadius:0} m: {gc.FarTrees?.VisibleCells} cells in {gc.FarTrees?.ChunkCount} chunks");
                 if (shot == 0)
                 {
                     float mw = Time.realtimeSinceStartup + P(20f);
@@ -81,6 +87,7 @@ namespace Afterfall.Presentation
                 yield return MeasureFrames(name, 3f);
                 shot++;
             }
+            yield return BasinInteriors(gc, l);
             float wait = Time.realtimeSinceStartup + P(30f);
             while (!gc.Maps.Ready && Time.realtimeSinceStartup < wait) yield return null;
             Check(gc.Maps.Ready, $"The basin's world map was drawn ({gc.Maps.OverviewSize}×{gc.Maps.OverviewSize} px for {l.Size / 1000f:0} km)");
@@ -94,6 +101,48 @@ namespace Afterfall.Presentation
             Line($"Basin streaming: {t.TilesBuilt} height tiles made ({t.CachedTiles} cached), {l.GeneratedChunkCount} chunks generated, {s.World.SeededChunks.Count} seeded, {s.World.ResourceNodes.Count} nodes and {s.World.Structures.Count} structures in the world, {s.World.Zombies.Count} infected");
             string save = Afterfall.Persistence.SaveSerializer.Serialize(s.World, "tour", 1);
             Check(save.Length < 20_000_000, $"A save after crossing the basin is {save.Length / 1024} KB");
+        }
+
+        /// <summary>Inside the city's buildings: the central station, a block of flats and a supermarket.</summary>
+        private IEnumerator BasinInteriors(GameController gc, WorldLayout l)
+        {
+            var basin = (BasinWorld)l.Chunks;
+            (Vec3 Centre, string Name) central = basin.Stations.FirstOrDefault(st => st.Name == "Kesselmouth Central");
+            Check(central.Name != null, $"{basin.Stations.Count()} railway stations along the lines: {string.Join(", ", basin.Stations.Take(6).Select(st => st.Name))}…");
+            if (central.Name == null) yield break;
+            l.EnsureChunk(WorldLayout.ChunkOf(central.Centre.X), WorldLayout.ChunkOf(central.Centre.Z));
+            var visits = new System.Collections.Generic.List<(string Label, PlacedPlan Plan, float X, float Z, int Floor, float Yaw)>();
+            PlacedPlan station = l.Plans.FirstOrDefault(pp => pp.Plan.Name == central.Name);
+            if (station != null) visits.Add(("the station's ticket hall", station, 0f, 2.5f, 0, 180f));
+            // The nearest block of flats and supermarket among the chunks made so far.
+            PlacedPlan Nearest(string kind) => l.Plans.Where(pp => pp.Plan.Id.StartsWith(kind + "|", System.StringComparison.Ordinal))
+                .OrderBy(pp => Vec3.DistanceXZ(pp.Origin, central.Centre)).FirstOrDefault();
+            PlacedPlan flats = Nearest(BuildingPlans.FlatsKind), market = Nearest(BuildingPlans.SupermarketKind);
+            if (flats != null) visits.Add(($"the stair hall of {flats.Plan.Name} ({flats.Plan.Floors} storeys)", flats, -3f, 2.5f, 0, 180f));
+            if (market != null) visits.Add(($"the sales floor of {market.Plan.Name}", market, 0f, 9f, 0, 180f));
+            Check(flats != null && market != null, $"The city's chunks hold blocks of flats ({l.Plans.Count(pp => pp.Plan.Id.StartsWith("flats|", System.StringComparison.Ordinal))}) and supermarkets ({l.Plans.Count(pp => pp.Plan.Id.StartsWith("supermarket|", System.StringComparison.Ordinal))})");
+            int n = 0;
+            foreach ((string label, PlacedPlan plan, float px, float pz, int floor, float yaw) in visits)
+            {
+                Vec3 target = plan.ToWorld(px, pz, floor);
+                gc.TeleportTo(target.ToUnity(), label, false);
+                yield return null;
+                float tp = Time.realtimeSinceStartup + P(60f);
+                while (gc.Teleporting && Time.realtimeSinceStartup < tp) yield return null;
+                float settle = Time.realtimeSinceStartup + P(20f);
+                yield return Seconds(2f);
+                while ((gc.TerrainTiles.PaintingTiles > 0 || l.PendingChunks > 0 || gc.NavBaking) && Time.realtimeSinceStartup < settle) yield return null;
+                yield return Seconds(2f);
+                gc.CameraRig.Look(plan.Yaw + yaw, 8f);
+                yield return Seconds(1f);
+                Vec3 at = gc.Player.transform.position.ToSim();
+                PlanRoom room = l.RoomAt(at, out PlacedPlan inside);
+                bool onMesh = UnityEngine.AI.NavMesh.SamplePosition(gc.Player.transform.position, out UnityEngine.AI.NavMeshHit hit, 1.5f, UnityEngine.AI.NavMesh.AllAreas);
+                int fixtures = gc.Session.World.Structures.Values.Count(st => Vec3.DistanceXZ(st.Position, plan.Origin) < Mathf.Max(plan.Plan.Width, plan.Plan.Depth) * 0.6f);
+                Check(inside == plan && room != null && onMesh && fixtures >= 8,
+                    $"Inside {label}: room {(room != null ? room.Name : "none")}, {fixtures} doors and fittings, on the NavMesh {onMesh}");
+                yield return Capture($"99i{n++}_basin_{plan.Plan.Id.Substring(0, plan.Plan.Id.IndexOf('|'))}");
+            }
         }
     }
 }

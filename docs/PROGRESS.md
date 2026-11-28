@@ -1,18 +1,18 @@
 # Progress log
 
-_Last updated: 2026-11-27 (session 7: world expansion — creative and developer tools, map and minimap, doors and apartment blocks, vehicles, the 2 km Greater Millbrook world; character pipeline planned)._
+_Last updated: 2026-11-28 (session 8: the 64 km Kessel Basin and its follow-ups — floating origin, city interiors, street furniture, distant trees; character variety, LODs, faces and motion-captured gait)._
 
 ## Snapshot
 | | |
 |---|---|
 | Branch | `main` (every commit pushed to `origin`). Latest release: `v0.1.1` |
 | Unity version | 6000.3.28f1 (arm64), installed through Unity Hub 3.22.6 with a Personal license |
-| Last headless tests | 2026-11-27: **211/211 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on Linux, Windows and macOS on each push. |
-| Last Unity EditMode run | 2026-11-27: **211/211 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
-| Last Unity PlayMode run | 2026-11-27: **7/7 passed** (5 smoke tests plus 2 Input System integration tests; the Input System package's 2 Windows mouse tests skip themselves on macOS). |
+| Last headless tests | 2026-11-28: **216/216 passed** (`dotnet test`, .NET 10.0.403, macOS 27, Apple M2 Max). GitHub Actions runs the same suite on Linux, Windows and macOS on each push. |
+| Last Unity EditMode run | 2026-11-28: **216/216 passed** in 6000.3.28f1 (`tools/run-unity-checks.sh editmode`) |
+| Last Unity PlayMode run | 2026-11-28: **7/7 passed** (5 smoke tests plus 2 Input System integration tests; the Input System package's 2 Windows mouse tests skip themselves on macOS). |
 | Last player builds | 2026-11-27: macOS (universal), no errors. 2026-11-20: Windows x64 (Mono), attached to the v0.1.1 release with the macOS build |
 | Last scripted tour of the build | 2026-11-27 (macOS, with every world-expansion scene and a new game in the 2 km region): **0 failed checks, 0 errors logged**, valley new game in 2.5 s, region in 7.6 s; region frames 8.3–8.4 ms average in every town. 2026-11-24: new game in 2.4 s, frames 8.3–8.6 ms average at the start camp, in the strategic view, in the rain and at night (vsync-capped, Apple M2 Max, 1600×900). 2026-11-20 (v0.1.1): Windows (GitHub-hosted `windows-latest`, WARP software rendering, 800×450, patience 25): **0 failed checks, 0 errors logged**, 46 minutes. |
-| Last model gallery | 2026-11-09: **151 screenshots, 0 errors logged** (`tools/gallery.sh`, all sections), reviewed by eye. |
+| Last model gallery | 2026-11-28: characters section (14 models, faces, walk and run strips), 0 errors logged, reviewed by eye. 2026-11-09: **151 screenshots, 0 errors logged** (all sections). |
 | Human playtest of the acceptance loop | **not yet** |
 | Windows build | built (v0.1.1); the full scripted tour passes on a GitHub-hosted runner; **never run on a real Windows PC with a GPU** |
 
@@ -118,6 +118,11 @@ Conveyors and pipes, disasters other than storms and cold snaps (fires, floods, 
 ## The Kessel Basin (session 8, 2026-11-28)
 - World version 3: 64 × 64 km generated in chunks on demand (`BasinWorld`, `TiledHeightField`, `ChunkStreaming`), Greater Millbrook in its corner, biomes (mountains with snow, moor, lakes, badlands, farmland, marsh, coast), twelve villages and towns, rivers, roads and rail with bridges, and Kesselmouth, a London-sized city of towers, mansion blocks, terraces, semis, docks and parks. Spatial indexes, compact saves (untouched nodes are not saved), streamed views, merged city meshes, a skyline, far terrain, snow and sand layers, a local detail map. See WORLD_GENERATION.md.
 - Tests: 215 headless (4 new `BasinTests`); the basin tour in the macOS build: 0 failures, 0 errors, 8.3–8.4 ms average at every stop.
+
+## Basin follow-ups and characters (session 8, 2026-11-28)
+- Floating origin for the 64 km world; NavMesh window rebaked only for new ground inside it; railway stations, blocks of flats and supermarkets that can be entered; street furniture; distant trees (WORLD_EXPANSION_PROGRESS.md, phase 8).
+- Characters: seven more models (14), clothes tinted per instance, decimated LOD1 parts with a `LODGroup`, blinking and five expressions from MakeHuman's CC0 expression units, and a motion-captured walk and run from the CMU database (CHARACTER_PIPELINE.md).
+- Verified: 216 headless tests; Unity EditMode 216/216 and PlayMode 7/7; macOS build; the basin tour with 0 failures and 0 errors (inside a station, a block of flats and a supermarket; distant trees; a save after crossing the basin 5.2 MB); the model gallery's characters (line-up, faces, walk and run strips).
 
 ## World expansion (session 7, 2026-11-27)
 Details, phases and limitations: WORLD_EXPANSION_PROGRESS.md.
@@ -272,7 +277,7 @@ Bugs that only showed up in the engine, all fixed:
 - Not yet measured (needs playtests): time to first construction, time to first machine output, playtime without critical bugs.
 
 ## Next development tasks
-0. **World expansion follow-ups**: motion capture and facial expressions for the characters (CHARACTER_PIPELINE.md); sector streaming of props and structure views for worlds beyond 2 km; far-distance tree impostors; map detail tiles; road-aware vehicle routing; vehicle sounds and headlights.
+0. **World expansion follow-ups**: a hand playtest of the 64 km basin (the tour drives commands, not mouse and keyboard); pruning untouched building fittings from saves (a crossing of the city seeds thousands of doors and containers); road-aware vehicle routing; vehicle sounds and headlights; more motion capture (idles, turns, crouch-walk).
 1. **Playtest the acceptance scenario** ([#1](https://github.com/Ale-Newport/AfterFall/issues/1), docs/TESTING.md) by hand in the editor or the macOS build, including a session into days 2–3 for storms and a cold snap. Tune movement, camera, harvest and colonist pacing, day length, and weather balance. Record time to first construction and to first machine output.
 2. Storage designation in the strategic view (which crates take what); the Guard profession.
 3. Conveyors (automation level 3) between storage and machines.

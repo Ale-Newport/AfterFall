@@ -136,6 +136,7 @@ namespace Afterfall.Domain.World
             {
                 PopulateCity(layout, c, rng, ref nodeIndex, ref containerIndex);
                 PopulateNature(layout, c, rng, Node);
+                PopulateInteriors(layout, c);
             }
         }
 

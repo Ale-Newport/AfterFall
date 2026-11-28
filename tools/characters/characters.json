@@ -189,6 +189,197 @@
         "male_casualsuit05",
         "shoes05"
       ]
+    },
+    {
+      "name": "colonist_m2",
+      "role": "colonist",
+      "female": false,
+      "phenotype": {
+        "gender": 1.0,
+        "age": 0.35,
+        "muscle": 0.55,
+        "weight": 0.45,
+        "proportions": 0.55,
+        "height": 0.6,
+        "race": {
+          "asian": 0.05,
+          "caucasian": 0.15,
+          "african": 0.8
+        }
+      },
+      "proxy": "male_generic",
+      "skin": "young_african_male",
+      "hair": "afro01",
+      "eyebrows": "eyebrow002",
+      "eyelashes": "eyelashes03",
+      "clothes": [
+        "male_casualsuit01",
+        "shoes03"
+      ]
+    },
+    {
+      "name": "colonist_m3",
+      "role": "colonist",
+      "female": false,
+      "phenotype": {
+        "gender": 1.0,
+        "age": 0.8,
+        "muscle": 0.4,
+        "weight": 0.62,
+        "proportions": 0.5,
+        "height": 0.45,
+        "race": {
+          "asian": 0.8,
+          "caucasian": 0.15,
+          "african": 0.05
+        }
+      },
+      "proxy": "male_generic",
+      "skin": "old_asian_male",
+      "hair": "short01",
+      "eyebrows": "eyebrow009",
+      "eyelashes": "eyelashes01",
+      "clothes": [
+        "male_casualsuit03",
+        "fedora01",
+        "shoes05"
+      ]
+    },
+    {
+      "name": "colonist_f2",
+      "role": "colonist",
+      "female": true,
+      "phenotype": {
+        "gender": 0.0,
+        "age": 0.6,
+        "muscle": 0.45,
+        "weight": 0.55,
+        "proportions": 0.5,
+        "height": 0.45,
+        "race": {
+          "asian": 0.05,
+          "caucasian": 0.1,
+          "african": 0.85
+        }
+      },
+      "proxy": "female_generic",
+      "skin": "middleage_african_female",
+      "hair": "braid01",
+      "eyebrows": "eyebrow006",
+      "eyelashes": "eyelashes04",
+      "clothes": [
+        "female_elegantsuit01",
+        "shoes04"
+      ]
+    },
+    {
+      "name": "colonist_f3",
+      "role": "colonist",
+      "female": true,
+      "phenotype": {
+        "gender": 0.0,
+        "age": 0.3,
+        "muscle": 0.6,
+        "weight": 0.4,
+        "proportions": 0.55,
+        "height": 0.55,
+        "race": {
+          "asian": 0.05,
+          "caucasian": 0.9,
+          "african": 0.05
+        }
+      },
+      "proxy": "female_generic",
+      "skin": "young_caucasian_female2",
+      "hair": "long01",
+      "eyebrows": "eyebrow010",
+      "eyelashes": "eyelashes02",
+      "clothes": [
+        "male_worksuit01",
+        "shoes06"
+      ]
+    },
+    {
+      "name": "infected_m3",
+      "role": "infected",
+      "female": false,
+      "phenotype": {
+        "gender": 1.0,
+        "age": 0.3,
+        "muscle": 0.5,
+        "weight": 0.4,
+        "proportions": 0.5,
+        "height": 0.6,
+        "race": {
+          "asian": 0.1,
+          "caucasian": 0.85,
+          "african": 0.05
+        }
+      },
+      "proxy": "male1591",
+      "skin": "young_caucasian_male2",
+      "hair": "short04",
+      "eyebrows": "eyebrow003",
+      "eyelashes": "eyelashes01",
+      "clothes": [
+        "male_worksuit01",
+        "shoes06"
+      ]
+    },
+    {
+      "name": "infected_m4",
+      "role": "infected",
+      "female": false,
+      "phenotype": {
+        "gender": 1.0,
+        "age": 0.6,
+        "muscle": 0.45,
+        "weight": 0.7,
+        "proportions": 0.5,
+        "height": 0.5,
+        "race": {
+          "asian": 0.85,
+          "caucasian": 0.1,
+          "african": 0.05
+        }
+      },
+      "proxy": "male1591",
+      "skin": "middleage_asian_male",
+      "hair": "short02",
+      "eyebrows": "eyebrow005",
+      "eyelashes": "eyelashes01",
+      "clothes": [
+        "male_casualsuit03",
+        "fedora_cocked",
+        "shoes01"
+      ]
+    },
+    {
+      "name": "infected_f2",
+      "role": "infected",
+      "female": true,
+      "phenotype": {
+        "gender": 0.0,
+        "age": 0.85,
+        "muscle": 0.35,
+        "weight": 0.55,
+        "proportions": 0.5,
+        "height": 0.45,
+        "race": {
+          "asian": 0.05,
+          "caucasian": 0.9,
+          "african": 0.05
+        }
+      },
+      "proxy": "female1605",
+      "skin": "old_caucasian_female",
+      "hair": "bob01",
+      "eyebrows": "eyebrow011",
+      "eyelashes": "eyelashes02",
+      "clothes": [
+        "female_elegantsuit01",
+        "shoes02"
+      ]
     }
   ]
 }

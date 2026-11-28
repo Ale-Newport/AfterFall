@@ -107,7 +107,21 @@ namespace Afterfall.Presentation
 
         public int NodeViewCount => _nodes.Count;
 
-        private Vector3 NodeFocus() => _gc.Session.World.Player.Position.ToUnity();
+        /// <summary>The floating origin moved (the views moved with the world anchor): re-place NavMesh agents on the moved NavMesh.</summary>
+        public void OnWorldShifted()
+        {
+            foreach (ZombieView z in _zombies.Values)
+                if (z != null && z.Agent != null && z.Agent.enabled) z.Agent.enabled = false; // re-placed by the view next frame
+            foreach (ColonistView c in _colonists.Values)
+                if (c != null && c.Agent != null && c.Agent.enabled) c.Agent.enabled = false;
+        }
+
+        /// <summary>The survivor in world coordinates (node positions are world positions).</summary>
+        private Vector3 NodeFocus()
+        {
+            Vec3 p = _gc.Session.World.Player.Position;
+            return new Vector3(p.X, p.Y, p.Z);
+        }
 
         /// <summary>In a large world, views of the world's structures and parked vehicles exist only this near the survivor.</summary>
         public const float StructureViewRadius = 350f, VehicleViewRadius = 700f;

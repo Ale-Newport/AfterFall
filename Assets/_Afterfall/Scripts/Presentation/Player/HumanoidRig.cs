@@ -93,6 +93,7 @@ namespace Afterfall.Presentation
         private bool _seated;
         private float _seatFootDrop, _seatFootForward;
         private float _phase;
+        private float _gait;
         private float _time;
         private float _swing = -1f;
         private float _deathT;
@@ -108,6 +109,7 @@ namespace Afterfall.Presentation
         private readonly List<Renderer> _heldRenderers = new List<Renderer>();
 
         private SkinnedBody _skin;
+        private CharacterFace _face;
 
         /// <summary>Where held items go: the skinned model's right palm, or the procedural fist.</summary>
         public Transform Hand => _skin != null ? _skin.Grip : _hand;
@@ -187,7 +189,7 @@ namespace Afterfall.Presentation
         {
             string name = CharacterModels.Pick(p, shambling);
             var skinRenderers = new List<Renderer>();
-            GameObject go = CharacterModels.Instantiate(name, transform, shambling, skinRenderers);
+            GameObject go = CharacterModels.Instantiate(name, transform, shambling, skinRenderers, p.Variant);
             if (go == null) return false;
             var joints = new SkinnedBody.Joints
             {
@@ -201,6 +203,7 @@ namespace Afterfall.Presentation
                 return false;
             }
             _skin = body;
+            _face = CharacterFace.Bind(go, shambling, p.Variant * 7919 + name.Length);
             ModelName = name;
             _renderers.AddRange(skinRenderers);
             if (!shambling && (p.Backpack || p.Satchel))
@@ -267,7 +270,11 @@ namespace Afterfall.Presentation
             if (_swing < 0f) _swing = 0f;
         }
 
-        public void Flash() => _hitFlash = 0.18f;
+        public void Flash()
+        {
+            _hitFlash = 0.18f;
+            _face?.Hurt();
+        }
 
         public void SetDead(bool dead)
         {
@@ -359,6 +366,7 @@ namespace Afterfall.Presentation
             transform.localPosition = root;
             Apply(pose);
             _skin?.Sync();
+            _face?.Update(dt, false, _swing >= 0f);
         }
 
         private Pose Locomotion(float speed, float dt)
@@ -404,6 +412,15 @@ namespace Afterfall.Presentation
             pose.ArmR = new Vector3(-armAmp * s - 3f * idle - _crouch * 18f - _air * 25f, 0f, out_);
             pose.ForeL = -(elbow + 14f * Mathf.Max(0f, -s) * stride + _crouch * 25f);
             pose.ForeR = -(elbow + 14f * Mathf.Max(0f, s) * stride + _crouch * 25f);
+
+            // Motion capture: the walk and run cycles, played by distance so a planted foot stays put.
+            // Standing, crouching and jumping stay procedural; the mocap fades in with speed.
+            if (GaitClips.Available && !_shambling)
+            {
+                if (speed > 0.05f) _gait = Mathf.Repeat(_gait + speed * dt / GaitClips.Stride(speed), 1f);
+                float k = Mathf.Clamp01((speed - 0.2f) / 0.6f) * (1f - _crouch) * (1f - _air);
+                if (k > 0f) pose = Blend(pose, MocapPose(GaitClips.At(_gait, GaitClips.RunWeight(speed)), run, spread, breath), k);
+            }
             if (holding)
             {
                 // Carry the tool ready at the hip.
@@ -510,6 +527,27 @@ namespace Afterfall.Presentation
             return Blend(hit, b, Ease((t - 0.5f) / 0.5f));
         }
 
+        /// <summary>A captured gait sample on the rig's posture: its lean when running, its hips' spread, a head that keeps looking ahead.</summary>
+        private static Pose MocapPose(GaitClips.Sample g, float run, float spread, float breath)
+        {
+            var p = new Pose
+            {
+                Pelvis = new Vector3(g.Pelvis.x, CharacterLayout.PelvisY - 0.004f - run * 0.035f + g.Pelvis.y, g.Pelvis.z),
+                PelvisRot = new Vector3(run * 6f + g.PelvisRot.x, g.PelvisRot.y, g.PelvisRot.z),
+                ChestRot = new Vector3(run * 7f + breath * 0.9f + g.ChestRot.x, g.ChestRot.y, g.ChestRot.z),
+                FootL = new Vector3(-spread + g.FootL.x, g.FootL.y, g.FootL.z),
+                FootR = new Vector3(spread + g.FootR.x, g.FootR.y, g.FootR.z),
+                FootPitchL = g.PitchL,
+                FootPitchR = g.PitchR,
+                ArmL = g.ArmL,
+                ArmR = g.ArmR,
+                ForeL = g.ForeL,
+                ForeR = g.ForeR
+            };
+            p.HeadRot = new Vector3(-(p.PelvisRot.x + p.ChestRot.x) * 0.75f + g.HeadRot.x, -(p.PelvisRot.y + p.ChestRot.y) * 0.8f, 0f);
+            return p;
+        }
+
         private static Pose Blend(Pose a, Pose b, float t) => new Pose
         {
             Pelvis = Vector3.Lerp(a.Pelvis, b.Pelvis, t),
@@ -586,6 +624,7 @@ namespace Afterfall.Presentation
             _footL.localRotation = Quaternion.Euler(-thigh - knee + 30f * fall, 0f, 0f);
             _footR.localRotation = Quaternion.Euler(-thigh - knee + 40f * fall, 0f, 0f);
             _skin?.Sync();
+            _face?.Update(Time.deltaTime, true, false);
         }
     }
 }

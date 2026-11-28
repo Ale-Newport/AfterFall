@@ -48,6 +48,7 @@ namespace Afterfall.Presentation
                 case "power_pole_old": OldPole(t, s, place % 4); break;
                 case "bridge": Bridge(t, s); break;
                 case "rail": Rail(t, s, p.Variant); break;
+                case "platform": Platform(t, s, p.Variant); break;
                 default:
                     Shapes.BevelBox(t, "Block", Mat(Surface.Concrete, new Color(0.55f, 0.54f, 0.52f)), new Vector3(0, s.y * 0.5f, 0), s, 0.04f);
                     break;

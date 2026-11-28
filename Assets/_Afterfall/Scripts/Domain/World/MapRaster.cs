@@ -87,7 +87,7 @@ namespace Afterfall.Domain.World
         public static readonly HashSet<string> BuildingKinds = new HashSet<string>(StringComparer.Ordinal)
         {
             "house", "clinic", "shop", "garage", "warehouse", "barn", "shack", "silo", "canopy", "transformer", "tent", "apartment", "townhouse", "store", "office", "church", "school", "hall",
-            "city_terrace", "city_midrise", "city_tower", "city_semi", "city_shed", "city_church"
+            "city_terrace", "city_midrise", "city_tower", "city_semi", "city_shed", "city_church", "platform"
         };
 
         public int RoadSegmentCount => Roads.Count;

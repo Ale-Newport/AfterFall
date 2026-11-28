@@ -186,6 +186,13 @@ namespace Afterfall.Domain.World
 
         public bool HasNodeKey(string key) => _nodeKeys.ContainsKey(key);
 
+        /// <summary>The live node generated from a seed key, if it is in the world.</summary>
+        public bool TryGetNodeByKey(string key, out ResourceNodeState node)
+        {
+            node = null;
+            return _nodeKeys.TryGetValue(key, out EntityId id) && ResourceNodes.TryGetValue(id, out node);
+        }
+
         private readonly List<EntityId> _near = new List<EntityId>();
         private readonly List<Structure> _nearStructures = new List<Structure>();
 

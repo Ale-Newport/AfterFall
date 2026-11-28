@@ -249,7 +249,7 @@ namespace Afterfall.Presentation
                 Shader.SetGlobalVector(PusherId, new Vector4(p.x, p.y, p.z, 0.85f));
             }
             // The strategic camera is far above everything this draws.
-            if (cam.y - _layout.HeightAt(cam.x, cam.z) <= MaxCameraHeight)
+            if (cam.y - _layout.HeightAt(WX(cam.x), WZ(cam.z)) <= MaxCameraHeight)
             {
                 UpdateCells(cam, BuildBudgetMs);
                 Draw();
@@ -258,6 +258,25 @@ namespace Afterfall.Presentation
         }
 
         private static long Key(int x, int z) => ((long)x << 32) ^ (uint)z;
+
+        // Cells, culling and blockers live in Unity space; heights, splat weights and the random scatter
+        // use world positions, so a floating-origin shift neither moves nor re-scatters anything.
+        private static float WX(float x) => x + Conversions.Origin.x;
+        private static float WZ(float z) => z + Conversions.Origin.z;
+        private int OX => Mathf.RoundToInt(Conversions.Origin.x / CellSize);
+        private int OZ => Mathf.RoundToInt(Conversions.Origin.z / CellSize);
+
+        /// <summary>The floating origin moved: every cell's instances are rebuilt where they are now.</summary>
+        public void OnWorldShifted()
+        {
+            foreach (Cell c in _cells.Values)
+            {
+                foreach (Bucket b in c.Buckets) b.Count = 0;
+                c.Built = false;
+                _pool.Push(c);
+            }
+            _cells.Clear();
+        }
 
         /// <summary>Keeps the cells within reach of <paramref name="center"/>, generating missing ones nearest first.</summary>
         private void UpdateCells(Vector3 center, float budgetMs)
@@ -282,9 +301,10 @@ namespace Afterfall.Presentation
             bool rebuild = _rebuildAt >= 0f && Time.time >= _rebuildAt;
             if (rebuild) _rebuildAt = -1f;
             _queue.Clear();
-            for (int z = Mathf.Max(0, cz0); z <= Mathf.Min(maxCell, cz1); z++)
+            // The map's edges, in Unity cells (shifted by the floating origin).
+            for (int z = Mathf.Max(-OZ, cz0); z <= Mathf.Min(maxCell - OZ, cz1); z++)
             {
-                for (int x = Mathf.Max(0, cx0); x <= Mathf.Min(maxCell, cx1); x++)
+                for (int x = Mathf.Max(-OX, cx0); x <= Mathf.Min(maxCell - OX, cx1); x++)
                 {
                     long k = Key(x, z);
                     if (!_cells.TryGetValue(k, out Cell c))
@@ -328,7 +348,7 @@ namespace Afterfall.Presentation
             {
                 for (int j = 0; j <= 2; j++)
                 {
-                    float h = _layout.HeightAt(x0 + i * CellSize * 0.5f, z0 + j * CellSize * 0.5f);
+                    float h = _layout.HeightAt(WX(x0 + i * CellSize * 0.5f), WZ(z0 + j * CellSize * 0.5f));
                     lo = Mathf.Min(lo, h);
                     hi = Mathf.Max(hi, h);
                 }
@@ -463,11 +483,11 @@ namespace Afterfall.Presentation
             {
                 for (int i = 0; i < perSide; i++)
                 {
-                    int gx = c.X * perSide + i, gz = c.Z * perSide + j;
+                    int gx = (c.X + OX) * perSide + i, gz = (c.Z + OZ) * perSide + j;
                     float h0 = TextureSynth.Hash01(gx, gz, _seed + seed);
                     float x = c.X * CellSize + (i + TextureSynth.Hash01(gx, gz, _seed + seed + 1)) * step;
                     float z = c.Z * CellSize + (j + TextureSynth.Hash01(gx, gz, _seed + seed + 2)) * step;
-                    _weights.Sample(x, z, _w);
+                    _weights.Sample(WX(x), WZ(z), _w);
                     if (_w[TerrainSurfaces.Snow] > 0.35f) continue; // nothing grows or lies loose on the snowfields
                     place(c, x, z, _w, h0, TextureSynth.Hash01(gx, gz, _seed + seed + 3), TextureSynth.Hash01(gx, gz, _seed + seed + 4));
                 }
@@ -482,11 +502,11 @@ namespace Afterfall.Presentation
             {
                 for (int i = 0; i < perSide; i++)
                 {
-                    int gx = c.X * perSide + i, gz = c.Z * perSide + j;
+                    int gx = (c.X + OX) * perSide + i, gz = (c.Z + OZ) * perSide + j;
                     float h0 = TextureSynth.Hash01(gx, gz, _seed + 31);
                     float x = c.X * CellSize + (i + TextureSynth.Hash01(gx, gz, _seed + 32)) * step;
                     float z = c.Z * CellSize + (j + TextureSynth.Hash01(gx, gz, _seed + 33)) * step;
-                    _weights.Sample(x, z, _w);
+                    _weights.Sample(WX(x), WZ(z), _w);
                     float meadow = _w[TerrainSurfaces.Meadow], dry = _w[TerrainSurfaces.DryGrass];
                     float score = meadow + dry * 0.9f + _w[TerrainSurfaces.ForestFloor] * 0.12f + _w[TerrainSurfaces.Dirt] * 0.07f
                         + _w[TerrainSurfaces.Gravel] * 0.05f + _w[TerrainSurfaces.Shore] * 0.1f;
@@ -550,8 +570,8 @@ namespace Afterfall.Presentation
 
         private void PlaceReeds(Cell c, float x, float z, float[] w, float h0, float h1, float h2)
         {
-            _layout.WaterNear(x, z, 4f, out float water);
-            float h = _layout.HeightAt(x, z);
+            _layout.WaterNear(WX(x), WZ(z), 4f, out float water);
+            float h = _layout.HeightAt(WX(x), WZ(z));
             if (h < water - 0.35f || h > water + 0.5f) return;
             float patch = Smooth(-0.3f, 0.3f, Noise.Value(_seed + 71, x * 0.08f, z * 0.08f));
             if (h0 > (0.2f + w[TerrainSurfaces.Shore] * 0.6f) * patch) return;
@@ -572,14 +592,14 @@ namespace Afterfall.Presentation
         /// </summary>
         private bool Ground(float x, float z, float minAboveWater, out Vector3 pos, out Vector3 normal)
         {
-            float h = _layout.HeightAt(x, z);
+            float h = _layout.HeightAt(WX(x), WZ(z));
             pos = new Vector3(x, h, z);
             normal = Vector3.up;
             if (minAboveWater >= 0f && h < _layout.WaterLevel + minAboveWater) return false;
-            if (minAboveWater >= 0f && _layout.WaterNear(x, z, 0.5f, out float level) && h < level + minAboveWater) return false;
+            if (minAboveWater >= 0f && _layout.WaterNear(WX(x), WZ(z), 0.5f, out float level) && h < level + minAboveWater) return false;
             const float d = 0.5f;
-            float hx = _layout.HeightAt(x + d, z) - _layout.HeightAt(x - d, z);
-            float hz = _layout.HeightAt(x, z + d) - _layout.HeightAt(x, z - d);
+            float hx = _layout.HeightAt(WX(x + d), WZ(z)) - _layout.HeightAt(WX(x - d), WZ(z));
+            float hz = _layout.HeightAt(WX(x), WZ(z + d)) - _layout.HeightAt(WX(x), WZ(z - d));
             normal = new Vector3(-hx, 2f * d, -hz).normalized;
             return normal.y > 0.74f;
         }
@@ -587,7 +607,7 @@ namespace Afterfall.Presentation
         private void Add(Cell c, Kind kind, Vector3 pos, Vector3 normal, float yaw, float scale, float follow)
         {
             Quaternion tilt = Quaternion.FromToRotation(Vector3.up, Vector3.Slerp(Vector3.up, normal, follow));
-            c.Buckets[(int)kind].Add(Matrix4x4.TRS(pos, tilt * Quaternion.Euler(0f, yaw, 0f), Vector3.one * scale), Rank(pos.x, pos.z));
+            c.Buckets[(int)kind].Add(Matrix4x4.TRS(pos, tilt * Quaternion.Euler(0f, yaw, 0f), Vector3.one * scale), Rank(WX(pos.x), WZ(pos.z)));
         }
 
         /// <summary>The shader's per-instance rank (AfterfallHash12 of the pivot), which sets how far away it is still drawn.</summary>

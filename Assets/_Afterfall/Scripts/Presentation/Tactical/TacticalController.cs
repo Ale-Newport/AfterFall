@@ -24,6 +24,9 @@ namespace Afterfall.Presentation
         private Transform _cableRoot;
         private GameObject _selectionRing;
         private GameObject _fog;
+
+        /// <summary>The fog-of-war overlay (under the world anchor), once built.</summary>
+        public GameObject Fog => _fog;
         private Texture2D _fogTex;
         private int _fogVersion = -1;
         private int _cableVersion = -1;
@@ -132,7 +135,8 @@ namespace Afterfall.Presentation
                 Selected = EntityId.None;
                 return;
             }
-            if (!_gc.Session.World.Exploration.IsRevealed(view.transform.position.x, view.transform.position.z)) return;
+            Vector3 vw = view.transform.position.ToWorld();
+            if (!_gc.Session.World.Exploration.IsRevealed(vw.x, vw.z)) return;
             if (LinkSource.IsValid && view.Id != LinkSource)
             {
                 OpResult r = _gc.Session.ConnectPower(LinkSource, view.Id);
@@ -294,7 +298,8 @@ namespace Afterfall.Presentation
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
             _fog = new GameObject("FogOfWar");
-            _fog.transform.SetParent(transform, false);
+            // Built in world coordinates under the world anchor (the floating origin moves it).
+            _fog.transform.SetParent(_gc.WorldRoot, false);
             _fog.AddComponent<MeshFilter>().sharedMesh = mesh;
             var r = _fog.AddComponent<MeshRenderer>();
             r.sharedMaterial = MaterialLibrary.UnlitTransparentTextured(_fogTex);

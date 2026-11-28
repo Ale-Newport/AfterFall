@@ -55,8 +55,8 @@ namespace Afterfall.Presentation
 
         private Vector3 Focus()
         {
-            if (_gc.CameraRig != null && _gc.CameraRig.Camera != null) return _gc.CameraRig.Camera.transform.position;
-            return _gc.Player != null ? _gc.Player.transform.position : Vector3.zero;
+            if (_gc.CameraRig != null && _gc.CameraRig.Camera != null) return _gc.CameraRig.Camera.transform.position.ToWorld();
+            return _gc.Player != null ? _gc.Player.transform.position.ToWorld() : Vector3.zero;
         }
 
         private View Get(long key)
@@ -80,12 +80,22 @@ namespace Afterfall.Presentation
                 v.Pending = null;
                 if (v.PendingDetail)
                 {
-                    if (v.Detail == null) v.Detail = CityMesher.Finish(prep, _root);
+                    if (v.Detail == null)
+                    {
+                        v.Detail = CityMesher.Finish(prep, _root);
+                        MarkNavDirty(kv.Key);
+                    }
                     if (v.Skyline != null) Destroy(v.Skyline);
                     v.Skyline = null;
                 }
                 else if (v.Detail == null && v.Skyline == null) v.Skyline = CityMesher.Finish(prep, _root);
                 break;
+            }
+            // A chunk's buildings are obstacles (and floors) for the NavMesh once they all stand.
+            if (_propQueue.Count == 0 && _navProps.Count > 0)
+            {
+                foreach (long k in _navProps) MarkNavDirty(k);
+                _navProps.Clear();
             }
             for (int i = 0; i < 6 && _propQueue.Count > 0; i++)
             {
@@ -93,7 +103,7 @@ namespace Afterfall.Presentation
                 if (!_views.TryGetValue(key, out View v) || v.Props == null) continue;
                 GameObject go = PropBuilder.Build(p);
                 if (go == null) continue;
-                go.transform.SetParent(v.Props.transform, true);
+                go.transform.SetParent(v.Props.transform, false); // world coordinates as local ones under the anchor
                 Shapes.SetLayerRecursive(go, Layers.Prop);
             }
 
@@ -126,6 +136,7 @@ namespace Afterfall.Presentation
                     v.Props = new GameObject($"Props {x},{z}");
                     v.Props.transform.SetParent(_root, false);
                     foreach (PropPlacement p in c.Props) _propQueue.Enqueue((c.Key, p));
+                    _navProps.Add(c.Key);
                 }
                 if (c.Blocks.Count > 0 && v.Pending == null)
                 {
@@ -173,6 +184,15 @@ namespace Afterfall.Presentation
             DetailedChunks = detailed;
             SkylineChunks = sky;
             PropChunks = props;
+        }
+
+        private readonly HashSet<long> _navProps = new HashSet<long>();
+
+        private void MarkNavDirty(long key)
+        {
+            ChunkContent.FromKey(key, out int x, out int z);
+            float size = WorldLayout.ChunkSize;
+            _gc.MarkNavDirty(new Rect(x * size, z * size, size, size));
         }
 
         private static float Distance(Vector3 p, int x, int z)

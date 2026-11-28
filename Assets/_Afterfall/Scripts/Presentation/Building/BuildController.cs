@@ -193,11 +193,11 @@ namespace Afterfall.Presentation
             WorldLayout layout = _gc.Session.World.Layout;
             _probe = new PlacementProbe
             {
-                InsideMap = layout.IsInsideMap(pos.x, pos.z, 3f),
+                InsideMap = layout.IsInsideMap(pos.x + Conversions.Origin.x, pos.z + Conversions.Origin.z, 3f),
                 OnSupport = onSupport,
                 HasGround = true,
                 SlopeDegrees = onSupport ? 0f : FootprintSlope(pos, yaw),
-                InWater = !onSupport && layout.WaterAt(pos.x, pos.z, out float waterLevel) && layout.HeightAt(pos.x, pos.z) < waterLevel + 0.1f,
+                InWater = !onSupport && layout.WaterAt(pos.x + Conversions.Origin.x, pos.z + Conversions.Origin.z, out float waterLevel) && _gc.GroundHeight(pos) < waterLevel + 0.1f,
                 WaterNearby = WaterNear(layout, pos, 6f),
                 Distance = tactical ? 0f : Vector3.Distance(_gc.Player.transform.position, pos),
                 MaxDistance = 12f
@@ -239,7 +239,7 @@ namespace Afterfall.Presentation
             foreach (Vector3 c in new[] { new Vector3(-hx, 0, -hz), new Vector3(hx, 0, -hz), new Vector3(-hx, 0, hz), new Vector3(hx, 0, hz), Vector3.zero })
             {
                 Vector3 p = pos + r * c;
-                float h = l.HeightAt(p.x, p.z);
+                float h = l.HeightAt(p.x + Conversions.Origin.x, p.z + Conversions.Origin.z);
                 min = Mathf.Min(min, h);
                 max = Mathf.Max(max, h);
             }
@@ -252,8 +252,9 @@ namespace Afterfall.Presentation
             for (int i = 0; i < 12; i++)
             {
                 float a = i * Mathf.PI / 6f;
-                if (l.IsWater(p.x + Mathf.Cos(a) * radius, p.z + Mathf.Sin(a) * radius)) return true;
-                if (l.IsWater(p.x + Mathf.Cos(a) * radius * 0.5f, p.z + Mathf.Sin(a) * radius * 0.5f)) return true;
+                Vector3 w = p.ToWorld();
+                if (l.IsWater(w.x + Mathf.Cos(a) * radius, w.z + Mathf.Sin(a) * radius)) return true;
+                if (l.IsWater(w.x + Mathf.Cos(a) * radius * 0.5f, w.z + Mathf.Sin(a) * radius * 0.5f)) return true;
             }
             return false;
         }
@@ -318,7 +319,7 @@ namespace Afterfall.Presentation
             foreach (Vector3 o in new[] { new Vector3(-hx, 0, -hz), new Vector3(hx, 0, -hz), new Vector3(-hx, 0, hz), new Vector3(hx, 0, hz), Vector3.zero })
             {
                 Vector3 p = c + r * o;
-                max = Mathf.Max(max, l.HeightAt(p.x, p.z));
+                max = Mathf.Max(max, l.HeightAt(p.x + Conversions.Origin.x, p.z + Conversions.Origin.z));
             }
             return max;
         }

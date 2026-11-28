@@ -1,0 +1,153 @@
+{
+  "name": "infected_f2",
+  "role": "infected",
+  "female": true,
+  "rig": "game_engine",
+  "bones": 53,
+  "parts": [
+    {
+      "mesh": "infected_f2_hair",
+      "kind": "hair",
+      "albedo": "Textures/bob01_diffuse",
+      "normal": "",
+      "triangles": 8474,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_f2_hair_lod1",
+      "kind": "hair",
+      "albedo": "Textures/bob01_diffuse",
+      "normal": "",
+      "triangles": 2964,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_f2_eyebrow011",
+      "kind": "lashes",
+      "albedo": "Textures/eyebrow011",
+      "normal": "",
+      "triangles": 192,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "pain",
+        "snarl"
+      ]
+    },
+    {
+      "mesh": "infected_f2_eyelashes02",
+      "kind": "lashes",
+      "albedo": "Textures/eyelashes02",
+      "normal": "",
+      "triangles": 368,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl"
+      ]
+    },
+    {
+      "mesh": "infected_f2_female_elegantsuit01",
+      "kind": "cloth",
+      "albedo": "Textures/female_elegantsuit01_diffuse",
+      "normal": "Textures/female_elegantsuit01_normal",
+      "triangles": 4192,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_f2_female_elegantsuit01_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/female_elegantsuit01_diffuse",
+      "normal": "Textures/female_elegantsuit01_normal",
+      "triangles": 922,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_f2_skin",
+      "kind": "skin",
+      "albedo": "Textures/old_lightskinned_female_diffuse",
+      "normal": "",
+      "triangles": 2304,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl",
+        "mouth_open"
+      ]
+    },
+    {
+      "mesh": "infected_f2_skin_lod1",
+      "kind": "skin",
+      "albedo": "Textures/old_lightskinned_female_diffuse",
+      "normal": "",
+      "triangles": 459,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_f2_eyes",
+      "kind": "eyes",
+      "albedo": "Textures/brown_eye",
+      "normal": "",
+      "triangles": 172,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_f2_eyes_lod1",
+      "kind": "eyes",
+      "albedo": "Textures/brown_eye",
+      "normal": "",
+      "triangles": 86,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_f2_shoes02",
+      "kind": "cloth",
+      "albedo": "Textures/shoes02_diffuse",
+      "normal": "",
+      "triangles": 3064,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_f2_shoes02_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/shoes02_diffuse",
+      "normal": "",
+      "triangles": 674,
+      "lod": 1,
+      "expressions": []
+    }
+  ],
+  "triangles": 18766,
+  "lod1_triangles": 5105,
+  "expressions": [
+    "blink",
+    "smile",
+    "pain",
+    "snarl",
+    "mouth_open"
+  ],
+  "assets": {
+    "proxy": "female1605",
+    "skin": "old_caucasian_female",
+    "hair": "bob01",
+    "eyebrows": "eyebrow011",
+    "eyelashes": "eyelashes02",
+    "clothes": [
+      "female_elegantsuit01",
+      "shoes02"
+    ]
+  },
+  "source": "MakeHuman system assets (CC0) via MPFB 2.0.17"
+}

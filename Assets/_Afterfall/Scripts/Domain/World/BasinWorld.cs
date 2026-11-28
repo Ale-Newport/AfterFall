@@ -81,6 +81,7 @@ namespace Afterfall.Domain.World
             IndexRiversForValleys();
             DefineRoads();
             _layout.IndexWater();
+            DefineStations();
             CopyRegion(new ChunkContent(0, 0)); // builds the per-chunk buckets now, so worker threads only read them
         }
 

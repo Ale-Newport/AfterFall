@@ -21,6 +21,8 @@ namespace Afterfall.Presentation
             public string albedo = "";
             public string normal = "";
             public int triangles;
+            public int lod;
+            public string[] expressions = Array.Empty<string>();
         }
 
         [Serializable]
@@ -34,10 +36,22 @@ namespace Afterfall.Presentation
         }
 
         private const string Folder = "Characters/";
-        private static readonly string[] SurvivorsMale = { "survivor_m", "colonist_m" };
-        private static readonly string[] SurvivorsFemale = { "survivor_f", "colonist_f" };
-        private static readonly string[] InfectedMale = { "infected_m1", "infected_m2" };
-        private static readonly string[] InfectedFemale = { "infected_f1" };
+        private static readonly string[] SurvivorsMale = { "survivor_m", "colonist_m", "colonist_m2", "colonist_m3" };
+        private static readonly string[] SurvivorsFemale = { "survivor_f", "colonist_f", "colonist_f2", "colonist_f3" };
+        private static readonly string[] InfectedMale = { "infected_m1", "infected_m2", "infected_m3", "infected_m4" };
+        private static readonly string[] InfectedFemale = { "infected_f1", "infected_f2" };
+
+        /// <summary>Clothes are tinted by the instance's variant (shared materials, one per tint).</summary>
+        private static readonly Color[] ClothTints =
+        {
+            Color.white, new Color(0.8f, 0.85f, 0.95f), new Color(0.95f, 0.88f, 0.72f), new Color(0.8f, 0.9f, 0.76f), new Color(0.9f, 0.78f, 0.74f)
+        };
+
+        /// <summary>Screen heights where a model drops to its decimated parts, and where it is no longer drawn.</summary>
+        public const float Lod1Height = 0.11f, CullHeight = 0.006f;
+
+        /// <summary>False (or <c>-afterfall-no-character-lod</c>) draws the full parts at every distance and hides the decimated ones.</summary>
+        public static bool Lods = Array.IndexOf(Environment.GetCommandLineArgs(), "-afterfall-no-character-lod") < 0;
 
         private static readonly Dictionary<string, Manifest> Manifests = new Dictionary<string, Manifest>();
         private static readonly Dictionary<string, GameObject> Models = new Dictionary<string, GameObject>();
@@ -75,7 +89,7 @@ namespace Afterfall.Presentation
                     if (m == null) continue;
                     if (!Models.ContainsKey(name)) Models[name] = Resources.Load<GameObject>(Folder + name);
                     bool infected = m.role == "infected";
-                    foreach (Part p in m.parts) MaterialFor(p, infected);
+                    foreach (Part p in m.parts) MaterialFor(p, infected, 0);
                 }
         }
 
@@ -100,7 +114,7 @@ namespace Afterfall.Presentation
         /// A new instance of the model with its materials, or null when the model is missing.
         /// Renderers are returned so the rig can hide them (first person, vehicles).
         /// </summary>
-        public static GameObject Instantiate(string name, Transform parent, bool infected, List<Renderer> renderers)
+        public static GameObject Instantiate(string name, Transform parent, bool infected, List<Renderer> renderers, int variant = 0)
         {
             Manifest manifest = Load(name);
             if (manifest == null) return null;
@@ -114,6 +128,9 @@ namespace Afterfall.Presentation
             go.name = "Model_" + name;
             var parts = new Dictionary<string, Part>(StringComparer.Ordinal);
             foreach (Part p in manifest.parts) parts[p.mesh] = p;
+            var near = new List<Renderer>();
+            var far = new List<Renderer>();
+            int tint = ((variant % ClothTints.Length) + ClothTints.Length) % ClothTints.Length;
             foreach (SkinnedMeshRenderer r in go.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
                 if (!parts.TryGetValue(r.gameObject.name, out Part part) && !parts.TryGetValue(r.sharedMesh != null ? r.sharedMesh.name : "", out part))
@@ -121,20 +138,42 @@ namespace Afterfall.Presentation
                     r.enabled = false;
                     continue;
                 }
-                r.sharedMaterial = MaterialFor(part, infected);
+                r.sharedMaterial = MaterialFor(part, infected, tint);
                 r.updateWhenOffscreen = false;
                 r.skinnedMotionVectors = false;
-                r.shadowCastingMode = part.kind == "lashes" || part.kind == "eyes" ? UnityEngine.Rendering.ShadowCastingMode.Off : UnityEngine.Rendering.ShadowCastingMode.On;
+                bool small = part.kind == "lashes" || part.kind == "eyes";
+                r.shadowCastingMode = small ? UnityEngine.Rendering.ShadowCastingMode.Off : UnityEngine.Rendering.ShadowCastingMode.On;
+                if (part.lod == 1)
+                {
+                    // The decimated copy casts no shadow and has no face to animate.
+                    r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    far.Add(r);
+                }
+                else near.Add(r);
                 renderers?.Add(r);
+            }
+            // Distant characters draw their decimated parts (models built before LODs have none).
+            if (far.Count > 0 && !Lods)
+                foreach (Renderer r in far)
+                {
+                    r.enabled = false;
+                    renderers?.Remove(r);
+                }
+            else if (far.Count > 0)
+            {
+                LODGroup group = go.AddComponent<LODGroup>();
+                group.SetLODs(new[] { new LOD(Lod1Height, near.ToArray()), new LOD(CullHeight, far.ToArray()) });
+                group.RecalculateBounds();
             }
             return go;
         }
 
-        private static Material MaterialFor(Part part, bool infected)
+        private static Material MaterialFor(Part part, bool infected, int tintIndex)
         {
             // The infected's eyes glow like the procedural ones (the shared emissive material).
             if (infected && part.kind == "eyes") return MaterialLibrary.Emissive(new Color(1f, 0.86f, 0.42f), new Color(1f, 0.74f, 0.2f) * 3.2f);
-            string key = $"{part.kind}:{part.albedo}:{part.normal}:{(infected ? 1 : 0)}";
+            if (part.kind != "cloth") tintIndex = 0;
+            string key = $"{part.kind}:{part.albedo}:{part.normal}:{(infected ? 1 : 0)}:{tintIndex}";
             if (Materials.TryGetValue(key, out Material m) && m != null) return m;
             bool cutout = part.kind == "hair" || part.kind == "lashes";
             bool normal = !cutout && !string.IsNullOrEmpty(part.normal);
@@ -158,7 +197,7 @@ namespace Afterfall.Presentation
                     case "hair": tint = new Color(0.7f, 0.68f, 0.64f); break;
                 }
             }
-            m.SetColor("_BaseColor", tint);
+            m.SetColor("_BaseColor", tint * ClothTints[tintIndex]);
             m.SetFloat("_Smoothness", smooth);
             Materials[key] = m;
             return m;

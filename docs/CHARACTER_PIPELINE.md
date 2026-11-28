@@ -21,6 +21,11 @@ The repository is public on GitHub under the MIT license, so every committed ass
 | `colonist_m` | Survivors you can recruit | male_generic proxy, older | Striped shirt and jeans | 26 k |
 | `colonist_f` | Survivors you can recruit | female_generic proxy | Striped dress | 29 k |
 | `infected_m1`, `infected_m2`, `infected_f1` | The infected | low-poly proxies (male1591, female1605) | A suit; jeans and a shirt; a vest and jeans | 16–26 k |
+| `colonist_m2`, `colonist_m3` | Recruitable survivors | male_generic, young; older with a fedora | Shirt and jeans; striped shirt and jeans | 29–39 k |
+| `colonist_f2`, `colonist_f3` | Recruitable survivors | female_generic | Dress; work overalls | 31–32 k |
+| `infected_m3`, `infected_m4`, `infected_f2` | The infected | low-poly proxies | Work overalls; jeans and a fedora; a dress | 14–19 k |
+
+Clothes are tinted per instance by the palette's variant (five shared tints), so the same outfit appears in several colours.
 
 Each has the 53-bone MPFB **game-engine** rig (pelvis, spine_01–03, neck, head, clavicles, arms, hands with fingers, thighs, calves, feet, toes), eyes, eyebrows, eyelashes, hair and shoes. Skin under the clothes is deleted. Textures are shared between models and capped at 1024 px (52 MB in all, in Git LFS).
 
@@ -37,7 +42,10 @@ For each character it:
 - refuses any asset that is not in MPFB's CC0 system asset index, and the six outfits that print the MakeHuman logo (male_casualsuit02/04/06, female_casualsuit01/02, female_sportsuit01);
 - builds the human with MPFB (game-engine rig, no subdivision), deletes the hidden skin and removes the base mesh (the proxy is the body);
 - writes `<name>.fbx` (armature and meshes, no animation) and `<name>.json`: each mesh part with its kind (skin, cloth, hair, lashes, eyes), albedo and normal map, and triangle count;
-- writes each texture once to `Textures/`, downscaled with macOS's `sips`.
+- writes each texture once to `Textures/`, downscaled with macOS's `sips`;
+- **faces**: before the hidden skin is cut, mixes MakeHuman's expression-unit targets (for the character's dominant ethnic mix) into five expressions — `blink`, `smile`, `pain`, `snarl`, `mouth_open` — and carries them from the base mesh onto every fitted mesh (body, eyes, brows, lashes, clothes) through its MHCLO/proxy vertex matches, as MPFB does for visemes. The masks are then applied with bmesh, which keeps the shape keys. They export as FBX blend shapes;
+- **LOD**: every body, clothes, hair and eye part gets a decimated copy `<part>_lod1` (about a fifth of the triangles, no blend shapes); brows and lashes have none. The manifest marks each part's `lod` and its `expressions`;
+- with `AFTERFALL_FACE_PREVIEW=<dir>` it renders each character's face neutral and with each expression (Workbench) to check the shape keys.
 
 Unity imports them with `Editor/CharacterImport.cs`: generic rig, no animation, no materials, normal maps flagged, 1024 px maximum.
 
@@ -51,10 +59,12 @@ Unity imports them with `Editor/CharacterImport.cs`: generic rig, no animation, 
 - Held tools hang from a grip in the model's right palm. The survivor's backpack and satchel (sculpted, as before) hang on the model's chest.
 - `CharacterModels.Enabled = false` (or missing assets) falls back to the procedural bodies everywhere.
 
+- `CharacterModels.Instantiate` adds a `LODGroup`: full parts until the model is 11 % of the screen high, the `_lod1` parts (no shadows) down to 0.6 %, then nothing.
+- `CharacterFace` blinks every 2–6 s and mixes the expressions: survivors smile now and then and wince when hit, the infected snarl, groan and gape when they lunge, the dead close their eyes. Only faces on screen are updated.
+- **Motion capture**: `GaitClips` holds a walk and a run from the CMU database (subject 35), converted by `tools/mocap/convert_cmu.py` into the procedural rig's own pose parameters (pelvis bob, sway and swing, chest and head swing, upper arms and elbows, ankle targets for the leg IK, foot pitch), one full cycle each, scaled to the rig's legs and in a frame moving with the body. `HumanoidRig.Locomotion` plays them by distance travelled (one cycle per stride, 1.37 m walking and 2.22 m running), mixes walk and run between 2 and 3.6 m/s, and fades them in above 0.2 m/s; standing, crouching, jumping, the infected's shamble and every other pose stay procedural. `-afterfall-procedural-gait` turns them off.
+
 Checked in the model gallery (`tools/gallery.sh characters`): the line-up, every character front and back, walking, action poses (death, crouch, jump, claw, tool swing) and held items.
 
 ## Not done yet
-- **Motion capture.** Animation is still procedural. CMU motion capture would need its own download approval, retargeting to the game-engine rig (it maps to a Unity Humanoid avatar) and an Animator; the procedural rig would remain for vehicles and deaths.
-- **Faces**: no expressions or eye blinks (MPFB has expression targets).
-- **More variety**: a few more bodies and outfits per role; per-character colour variation of clothes; torn clothing and wounds for the infected.
-- **LODs**: one level today; the infected could use the proxy741 body far away.
+- Motion capture covers walking and running only (one cycle each); idles, turns, crouch-walks and the infected's shamble are procedural.
+- Torn clothing and wounds for the infected; more bodies per role.

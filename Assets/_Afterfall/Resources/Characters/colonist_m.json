@@ -10,52 +10,138 @@
       "kind": "skin",
       "albedo": "Textures/middleage_darkskinned_male_diffuse",
       "normal": "",
-      "triangles": 15956
+      "triangles": 15956,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl",
+        "mouth_open"
+      ]
+    },
+    {
+      "mesh": "colonist_m_skin_lod1",
+      "kind": "skin",
+      "albedo": "Textures/middleage_darkskinned_male_diffuse",
+      "normal": "",
+      "triangles": 3190,
+      "lod": 1,
+      "expressions": []
     },
     {
       "mesh": "colonist_m_eyebrow004",
       "kind": "lashes",
       "albedo": "Textures/eyebrow004",
       "normal": "",
-      "triangles": 192
+      "triangles": 192,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "pain",
+        "snarl"
+      ]
     },
     {
       "mesh": "colonist_m_eyelashes01",
       "kind": "lashes",
       "albedo": "Textures/eyelashes01",
       "normal": "",
-      "triangles": 368
+      "triangles": 368,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl"
+      ]
     },
     {
       "mesh": "colonist_m_eyes",
       "kind": "eyes",
       "albedo": "Textures/brown_eye",
       "normal": "",
-      "triangles": 172
+      "triangles": 172,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "colonist_m_eyes_lod1",
+      "kind": "eyes",
+      "albedo": "Textures/brown_eye",
+      "normal": "",
+      "triangles": 86,
+      "lod": 1,
+      "expressions": []
     },
     {
       "mesh": "colonist_m_male_casualsuit03",
       "kind": "cloth",
       "albedo": "Textures/male_casualsuit03_diffuse",
       "normal": "Textures/male_casualsuit03_normal",
-      "triangles": 4800
+      "triangles": 4800,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "colonist_m_male_casualsuit03_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/male_casualsuit03_diffuse",
+      "normal": "Textures/male_casualsuit03_normal",
+      "triangles": 1056,
+      "lod": 1,
+      "expressions": []
     },
     {
       "mesh": "colonist_m_shoes01",
       "kind": "cloth",
       "albedo": "Textures/shoes01_diffuse",
       "normal": "Textures/shoes01_normal",
-      "triangles": 3320
+      "triangles": 3320,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "colonist_m_shoes01_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/shoes01_diffuse",
+      "normal": "Textures/shoes01_normal",
+      "triangles": 729,
+      "lod": 1,
+      "expressions": []
     },
     {
       "mesh": "colonist_m_hair",
       "kind": "hair",
       "albedo": "Textures/short04_diffuse",
       "normal": "",
-      "triangles": 1050
+      "triangles": 1050,
+      "lod": 0,
+      "expressions": [
+        "smile",
+        "snarl",
+        "mouth_open"
+      ]
+    },
+    {
+      "mesh": "colonist_m_hair_lod1",
+      "kind": "hair",
+      "albedo": "Textures/short04_diffuse",
+      "normal": "",
+      "triangles": 367,
+      "lod": 1,
+      "expressions": []
     }
   ],
   "triangles": 25858,
+  "lod1_triangles": 5428,
+  "expressions": [
+    "blink",
+    "smile",
+    "pain",
+    "snarl",
+    "mouth_open"
+  ],
   "assets": {
     "proxy": "male_generic",
     "skin": "middleage_african_male",

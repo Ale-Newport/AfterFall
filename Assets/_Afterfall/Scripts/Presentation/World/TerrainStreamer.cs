@@ -74,6 +74,7 @@ namespace Afterfall.Presentation
         /// <summary>Builds every tile within <paramref name="radius"/> of a point now (load screens, teleports).</summary>
         public void BuildAround(Vector3 p, float radius)
         {
+            p = p.ToWorld();
             var pending = new List<Tile>();
             ForTilesNear(p, radius, (x, z) =>
             {
@@ -88,6 +89,7 @@ namespace Afterfall.Presentation
         /// <summary>True once the tile under a point is built (a teleport waits for this).</summary>
         public bool IsReadyAt(Vector3 p)
         {
+            p = p.ToWorld();
             int x = Mathf.Clamp(Mathf.FloorToInt(p.x / WorldBuilder.TileSize), 0, _across - 1), z = Mathf.Clamp(Mathf.FloorToInt(p.z / WorldBuilder.TileSize), 0, _across - 1);
             return _tiles.TryGetValue(Key(x, z), out Tile t) && t.Terrain != null;
         }
@@ -95,6 +97,7 @@ namespace Afterfall.Presentation
         /// <summary>Starts painting the tiles around a point now (a teleport is about to go there).</summary>
         public void Prefetch(Vector3 p)
         {
+            p = p.ToWorld();
             // Keep the destination's tiles while the camera is still far away (a teleport is waiting for them).
             _hold = p;
             _holdUntil = Time.unscaledTime + 6f;
@@ -142,25 +145,27 @@ namespace Afterfall.Presentation
             t.Weights = w;
             t.Terrain = WorldBuilder.BuildTile(_layout, t.X, t.Z, w, _root);
             Version++;
+            _gc.MarkNavDirty(new Rect(t.X * WorldBuilder.TileSize, t.Z * WorldBuilder.TileSize, WorldBuilder.TileSize, WorldBuilder.TileSize));
             WorldBuilder.PublishGroundTint(w, _tint, _layout.Size);
         }
 
         private void ForTilesNear(Vector3 p, float radius, System.Action<int, int> each)
         {
-            for (int z = 0; z < _across; z++)
-                for (int x = 0; x < _across; x++)
-                {
-                    float x0 = x * WorldBuilder.TileSize, z0 = z * WorldBuilder.TileSize;
-                    float dx = Mathf.Max(0f, Mathf.Max(x0 - p.x, p.x - (x0 + WorldBuilder.TileSize)));
-                    float dz = Mathf.Max(0f, Mathf.Max(z0 - p.z, p.z - (z0 + WorldBuilder.TileSize)));
-                    if (dx * dx + dz * dz <= radius * radius) each(x, z);
-                }
+            float ts = WorldBuilder.TileSize;
+            int xa = Mathf.Max(0, Mathf.FloorToInt((p.x - radius) / ts)), xb = Mathf.Min(_across - 1, Mathf.FloorToInt((p.x + radius) / ts));
+            int za = Mathf.Max(0, Mathf.FloorToInt((p.z - radius) / ts)), zb = Mathf.Min(_across - 1, Mathf.FloorToInt((p.z + radius) / ts));
+            for (int z = za; z <= zb; z++)
+                for (int x = xa; x <= xb; x++)
+                    if (Near(p, x * ts, z * ts, radius)) each(x, z);
         }
 
         private void Update()
         {
             if (_gc == null || _gc.Player == null) return;
-            Vector3 p = _gc.CameraRig != null && _gc.CameraRig.Camera != null ? _gc.CameraRig.Camera.transform.position : _gc.Player.transform.position;
+            // Tiles stream around the camera and the survivor: they part in flight and strategic view,
+            // and for a frame or two after a teleport, and the ground under the survivor must stay.
+            Vector3 survivor = _gc.Player.transform.position.ToWorld();
+            Vector3 p = _gc.CameraRig != null && _gc.CameraRig.Camera != null ? _gc.CameraRig.Camera.transform.position.ToWorld() : survivor;
             // Upload at most one finished tile per frame; uploading is the costly main-thread part.
             Tile ready = null;
             int painting = 0;
@@ -179,20 +184,20 @@ namespace Afterfall.Presentation
             _scan -= Time.unscaledDeltaTime;
             if (_scan > 0f) return;
             _scan = 0.5f;
-            ForTilesNear(p, LoadRadius, (x, z) =>
+            System.Action<int, int> load = (x, z) =>
             {
                 Tile t = Get(x, z);
                 if (t.Terrain == null && t.Painting == null) t.Painting = Paint(x, z);
-            });
+            };
+            ForTilesNear(survivor, LoadRadius, load);
+            if (Flat(p - survivor) > 50f) ForTilesNear(p, LoadRadius, load);
             _drop.Clear();
             foreach (KeyValuePair<int, Tile> kv in _tiles)
             {
                 Tile t = kv.Value;
                 if (t.Terrain == null) continue;
                 float x0 = t.X * WorldBuilder.TileSize, z0 = t.Z * WorldBuilder.TileSize;
-                float dx = Mathf.Max(0f, Mathf.Max(x0 - p.x, p.x - (x0 + WorldBuilder.TileSize)));
-                float dz = Mathf.Max(0f, Mathf.Max(z0 - p.z, p.z - (z0 + WorldBuilder.TileSize)));
-                if (dx * dx + dz * dz <= UnloadRadius * UnloadRadius) continue;
+                if (Near(p, x0, z0, UnloadRadius) || Near(survivor, x0, z0, UnloadRadius)) continue;
                 if (Time.unscaledTime < _holdUntil)
                 {
                     float hx = Mathf.Max(0f, Mathf.Max(x0 - _hold.x, _hold.x - (x0 + WorldBuilder.TileSize)));
@@ -210,6 +215,15 @@ namespace Afterfall.Presentation
                 _tiles.Remove(k);
             }
             if (_drop.Count > 0) Stitch();
+        }
+
+        private static float Flat(Vector3 d) => Mathf.Sqrt(d.x * d.x + d.z * d.z);
+
+        private static bool Near(Vector3 p, float x0, float z0, float radius)
+        {
+            float dx = Mathf.Max(0f, Mathf.Max(x0 - p.x, p.x - (x0 + WorldBuilder.TileSize)));
+            float dz = Mathf.Max(0f, Mathf.Max(z0 - p.z, p.z - (z0 + WorldBuilder.TileSize)));
+            return dx * dx + dz * dz <= radius * radius;
         }
 
         private void Stitch()

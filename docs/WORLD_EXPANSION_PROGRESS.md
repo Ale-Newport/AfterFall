@@ -12,7 +12,15 @@ Phases and acceptance criteria are in WORLD_EXPANSION_ROADMAP.md; the starting p
 | 5a Terrain tiles and the water model | Done | `a50bb29` | Valley unchanged in the tour; tiles stream |
 | 5b Greater Millbrook (world version 2, 2 km) | Done (see below) | this change | `RegionTests` (7); tour `RegionScene` |
 | 6 Realistic characters | Done: seven skinned MakeHuman (CC0) models driven by the procedural rig; motion capture not yet | this change | Model gallery (`tools/gallery.sh characters`); full tour with skinned survivor, colonists and infected |
-| 7 The 64 km Kessel Basin with Kesselmouth (London-sized city), biomes and chunk streaming | Done (first version) | this change | `BasinTests` (4); tour `BasinScene` (`-afterfall-tour-basin`): 10 stops, 0 failures, 8.3–8.4 ms average at each |
+| 7 The 64 km Kessel Basin with Kesselmouth (London-sized city), biomes and chunk streaming | Done (first version) | `4ea2937` | `BasinTests` (4); tour `BasinScene` (`-afterfall-tour-basin`): 10 stops, 0 failures, 8.3–8.4 ms average at each |
+| 8 Basin follow-ups: floating origin, city interiors (flats, supermarkets, stations), street furniture, distant trees; character variety, LODs, faces, motion capture | Done | this change | `BasinTests` (5); tour `BasinScene`: the origin shifts with the survivor and the NavMesh, terrain and node views follow; inside a station, a block of flats and a supermarket; distant trees; model gallery (faces, gait strips) |
+
+## Phase 8 details
+- **Floating origin**: see ARCHITECTURE.md. Across the basin tour (ten teleports up to 50 km) the survivor stays within 260 m of Unity's origin after 10 shifts, on the NavMesh at every stop.
+- **Interiors**: `BasinWorld.Interiors.cs` lays them after a chunk's other content, from its own random stream. 23 railway stations along the three lines (a ticket hall, kiosk and locked ticket office, a 72 m platform with a canopy); blocks of flats three to six storeys high in place of some mansion-block facades (at most one per chunk); supermarkets in place of some dock sheds and tower blocks (aisles, tills, fridges, a storeroom and a locked office). Plans are rebuilt from their ids (`BuildingPlans.CityPlanId`); every locked door's key is somewhere reachable in the same building.
+- **Street furniture**: lamp posts along both pavements of every street, bins and benches, bus shelters and telephone boxes on the main roads, merged into each detailed city chunk (render-only).
+- **Distant trees**: `FarTrees` draws each generated chunk's trees as low-poly stand-ins (merged per 128 m cell) from 230 m to 1.25 km, where real tree views stop; felled trees are left out when a chunk is rebuilt.
+- **Performance**: the NavMesh window used to rebake on every new terrain tile anywhere; it now rebakes only for new ground inside it, at most every 1.5 s (the city stops went from 12.8–13.4 ms average with 133–183 ms spikes to 8.5 ms).
 
 ## Phase 5b details
 - Generation: 2 × 2 km, deterministic, about 0.7–0.9 s in a release build (debug test builds are slower).
@@ -23,7 +31,7 @@ Phases and acceptance criteria are in WORLD_EXPANSION_ROADMAP.md; the starting p
 ## Known limitations
 - Loading the region takes about 7.6 s (the valley about 2.4 s), mostly building every prop and container view at once.
 - Props and buildings are all built at load (about 240 buildings in the region); only terrain, resource nodes and the NavMesh stream. A world much larger than 2 km needs sector streaming of props and structure views.
-- Beyond 260 m trees are not drawn (as in the valley), so from the air distant forests show only as the ground's forest floor.
+- Beyond 260 m trees are not drawn in the valley and the 2 km region (the basin has distant stand-ins out to 1.25 km).
 - The map overview is 1 m per pixel in the region; detail tiles are still to do.
 - Colonists far from the survivor (outside the NavMesh window) move in straight lines until the survivor comes back.
-- Characters move with the procedural animation (no motion capture yet) and have no facial expressions.
+- Motion capture covers walking and running; other movements are procedural.

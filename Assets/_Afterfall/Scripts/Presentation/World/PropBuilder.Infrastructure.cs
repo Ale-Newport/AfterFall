@@ -113,5 +113,65 @@ namespace Afterfall.Presentation
                 rail.Box(new Vector3(x, 0.44f, 0f), new Vector3(0.07f, 0.04f, len));  // head
             }
         }
+
+        /// <summary>
+        /// A station platform along +Z, its top at the local origin (level with the station's floor):
+        /// a solid concrete slab reaching into the ground, a yellow safety line on the track's side
+        /// (-X for variant 1, +X otherwise), and a canopy on posts over its middle (render-only).
+        /// </summary>
+        private static void Platform(Transform t, Vector3 s, int variant)
+        {
+            float w = s.x, len = s.z;
+            PropKit.Spawn(t, PropKit.Cached($"prop:platform:{w:0.##}x{len:0.##}:{variant}", kit => PlatformKit(kit, w, len, variant == 1 ? -1f : 1f)));
+            ColliderBox(t, "Platform", new Vector3(0f, -1.5f, 0f), new Vector3(w, 3f, len));
+        }
+
+        private static void PlatformKit(PropKit kit, float w, float len, float trackSide)
+        {
+            MeshBuilder concrete = kit[Mat(Surface.Concrete, new Color(0.6f, 0.59f, 0.56f))];
+            MeshBuilder paving = kit[Mat(PropSurfaces.FloorTiles, new Color(0.52f, 0.5f, 0.47f))];
+            MeshBuilder paint = kit[YellowPaint];
+            MeshBuilder steel = kit[Mat(Surface.PaintedMetal, new Color(0.22f, 0.3f, 0.27f), 0.3f, 0.4f)];
+            MeshBuilder roof = kit[Mat(Surface.Metal, new Color(0.5f, 0.52f, 0.52f), 0.3f, 0.6f)];
+            concrete.Color = Tone(0.9f);
+            concrete.Box(new Vector3(0f, -1.5f, 0f), new Vector3(w, 3f, len), null, 0.03f);
+            paving.Color = Tone(1f);
+            paving.Box(new Vector3(0f, 0.005f, 0f), new Vector3(w - 0.1f, 0.02f, len - 0.1f));
+            // Edge coping and the safety line on the track side.
+            concrete.Color = Tone(1.05f);
+            concrete.Box(new Vector3(trackSide * (w * 0.5f - 0.25f), 0.01f, 0f), new Vector3(0.5f, 0.04f, len), null, 0.01f);
+            paint.Color = Tone(0.95f);
+            paint.Box(new Vector3(trackSide * (w * 0.5f - 0.75f), 0.022f, 0f), new Vector3(0.12f, 0.01f, len - 0.4f));
+
+            // The canopy over the middle half, its posts along the far side.
+            float cl = len * 0.5f, back = -trackSide * (w * 0.5f - 0.6f);
+            int posts = Mathf.Max(2, Mathf.RoundToInt(cl / 6f) + 1);
+            for (int i = 0; i < posts; i++)
+            {
+                float z = -cl * 0.5f + i * cl / (posts - 1);
+                steel.Color = Vary(1701, i, 0.1f);
+                steel.Box(new Vector3(back, 1.65f, z), new Vector3(0.16f, 3.3f, 0.16f));
+                steel.Box(new Vector3(back * 0.35f, 3.25f, z), new Vector3(w * 0.68f, 0.14f, 0.12f), Quaternion.Euler(0f, 0f, trackSide * -4f));
+            }
+            roof.Color = Tone(0.95f);
+            roof.Box(new Vector3(back * 0.3f, 3.42f, 0f), new Vector3(w * 0.85f, 0.08f, cl + 0.6f), Quaternion.Euler(0f, 0f, trackSide * -4f), 0.01f);
+            // Benches between the posts and a sign board at each end of the canopy.
+            for (int i = 0; i + 1 < posts; i += 2)
+            {
+                float z = -cl * 0.5f + (i + 0.5f) * cl / (posts - 1);
+                steel.Color = Tone(0.8f);
+                steel.Box(new Vector3(back + trackSide * 0.55f, 0.45f, z), new Vector3(0.45f, 0.06f, 1.6f));
+                steel.Box(new Vector3(back + trackSide * 0.35f, 0.75f, z), new Vector3(0.05f, 0.5f, 1.6f));
+                steel.Box(new Vector3(back + trackSide * 0.55f, 0.22f, z - 0.7f), new Vector3(0.4f, 0.44f, 0.06f));
+                steel.Box(new Vector3(back + trackSide * 0.55f, 0.22f, z + 0.7f), new Vector3(0.4f, 0.44f, 0.06f));
+            }
+            for (int end = -1; end <= 1; end += 2)
+            {
+                steel.Color = Tone(0.7f);
+                steel.Box(new Vector3(back * 0.2f, 2.7f, end * (cl * 0.5f - 0.3f)), new Vector3(1.8f, 0.45f, 0.06f));
+                paint.Color = Tone(0.9f);
+                paint.Box(new Vector3(back * 0.2f, 2.7f, end * (cl * 0.5f - 0.27f)), new Vector3(1.6f, 0.3f, 0.02f));
+            }
+        }
     }
 }

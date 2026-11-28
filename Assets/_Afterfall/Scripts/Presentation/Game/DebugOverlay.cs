@@ -100,9 +100,9 @@ namespace Afterfall.Presentation
             }
             if (On(DiagnosticSection.Position))
             {
-                Vector3 p = _gc.Player.transform.position;
+                Vector3 p = _gc.Player.transform.position.ToWorld();
                 _sb.AppendLine(string.Format(ci, "Position X {0:0.0} Y {1:0.0} Z {2:0.0} · heading {3:0}° · ground {4:0.0} · map {5:0} m · explored {6:0}%{7}",
-                    p.x, p.y, p.z, _gc.CameraRig.ViewTransform.eulerAngles.y, _gc.GroundHeight(p), w.Layout.Size, w.Exploration.RevealedFraction * 100f,
+                    p.x, p.y, p.z, _gc.CameraRig.ViewTransform.eulerAngles.y, _gc.GroundHeight(p.FromWorld()), w.Layout.Size, w.Exploration.RevealedFraction * 100f,
                     _gc.Player.Flight.Active ? string.Format(ci, " · FLYING {0:0} m/s", _gc.Player.Flight.CurrentSpeed) : ""));
                 var poi = w.Layout.PoiAt(p.x, p.z);
                 _sb.AppendLine($"Mode {w.Settings.ModeLabel()} · area {(poi != null ? poi.Name : "wilderness")}");

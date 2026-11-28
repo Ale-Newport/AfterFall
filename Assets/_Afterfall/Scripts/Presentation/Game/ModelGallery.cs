@@ -310,8 +310,8 @@ namespace Afterfall.Presentation
                 rigs.Add((name, HumanoidRig.Create(holder, palette, infected)));
             }
             Add("survivor", PlayerCharacter.SurvivorPalette, false, 0f);
-            for (int v = 0; v < 3; v++) Add("colonist_" + v, ColonistView.PaletteFor(v), false, 1.2f + v * 1.2f);
-            for (int v = 0; v < 3; v++) Add("infected_" + v, ZombieView.PaletteFor(v), true, 4.8f + v * 1.2f);
+            for (int v = 0; v < 6; v++) Add("colonist_" + v, ColonistView.PaletteFor(v), false, 1.2f + v * 1.2f);
+            for (int v = 0; v < 6; v++) Add("infected_" + v, ZombieView.PaletteFor(v), true, 8.4f + v * 1.2f);
             foreach (var (_, rig) in rigs) rig.Animate(0f, false, true, 0.02f);
             yield return Shoot("characters/_lineup", lineup, 20f, 8f);
             foreach ((string name, HumanoidRig rig) in rigs)
@@ -320,7 +320,7 @@ namespace Afterfall.Presentation
                 yield return Shoot("characters/" + name + "_back", rig.gameObject, 205f, 10f, 0.8f);
             }
             // Walking and running poses.
-            HumanoidRig survivor = rigs[0].rig, infected = rigs[4].rig;
+            HumanoidRig survivor = rigs[0].rig, infected = rigs[7].rig;
             for (int f = 0; f < 6; f++)
             {
                 survivor.Animate(3.5f, false, true, 0.05f);
@@ -328,6 +328,25 @@ namespace Afterfall.Presentation
             }
             yield return Shoot("characters/_walking", lineup, 70f, 8f);
             Destroy(lineup);
+
+            // The motion-captured gait: a walk (1.3 m/s) and a run (3.6 m/s), six moments of one cycle each, from the side.
+            foreach ((string label, float speed) in new[] { ("walk", 1.3f), ("run", 3.6f) })
+            {
+                GameObject strip = Subject("gait_" + label);
+                for (int i = 0; i < 6; i++)
+                {
+                    var holder = new GameObject(label + i).transform;
+                    holder.SetParent(strip.transform, false);
+                    holder.localPosition = new Vector3(0f, 0f, i * 1.1f);
+                    HumanoidRig rig = HumanoidRig.Create(holder, PlayerCharacter.SurvivorPalette, false);
+                    float stride = GaitClips.Available ? GaitClips.Stride(speed) : 1.2f;
+                    int steps = Mathf.RoundToInt(stride * (i / 6f + 1f) / (speed * 0.02f)); // a full cycle to settle, then i sixths
+                    for (int k = 0; k < steps; k++) rig.Animate(speed, false, true, 0.02f);
+                }
+                yield return Shoot("characters/_gait_" + label, strip, 90f, 4f);
+                Destroy(strip);
+            }
+            Line($"Gait: {(GaitClips.Available ? $"motion capture (walk {GaitClips.Walk.stride:0.00} m, run {GaitClips.Run.stride:0.00} m per cycle)" : "procedural")}");
 
             // Action poses: mid swing, infected claw, crouch, airborne, dead.
             GameObject poses = Subject("poses");

@@ -10,52 +10,138 @@
       "kind": "lashes",
       "albedo": "Textures/eyebrow001",
       "normal": "",
-      "triangles": 192
+      "triangles": 192,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "pain",
+        "snarl"
+      ]
     },
     {
       "mesh": "survivor_m_eyelashes01",
       "kind": "lashes",
       "albedo": "Textures/eyelashes01",
       "normal": "",
-      "triangles": 368
+      "triangles": 368,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl"
+      ]
     },
     {
       "mesh": "survivor_m_eyes",
       "kind": "eyes",
       "albedo": "Textures/brown_eye",
       "normal": "",
-      "triangles": 172
+      "triangles": 172,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "survivor_m_eyes_lod1",
+      "kind": "eyes",
+      "albedo": "Textures/brown_eye",
+      "normal": "",
+      "triangles": 86,
+      "lod": 1,
+      "expressions": []
     },
     {
       "mesh": "survivor_m_male_worksuit01",
       "kind": "cloth",
       "albedo": "Textures/male_worksuit01_diffuse",
       "normal": "Textures/male_worksuit01_normal",
-      "triangles": 6986
+      "triangles": 6986,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "survivor_m_male_worksuit01_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/male_worksuit01_diffuse",
+      "normal": "Textures/male_worksuit01_normal",
+      "triangles": 1535,
+      "lod": 1,
+      "expressions": []
     },
     {
       "mesh": "survivor_m_shoes06",
       "kind": "cloth",
       "albedo": "Textures/shoes06_diffuse",
       "normal": "",
-      "triangles": 3064
+      "triangles": 3064,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "survivor_m_shoes06_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/shoes06_diffuse",
+      "normal": "",
+      "triangles": 674,
+      "lod": 1,
+      "expressions": []
     },
     {
       "mesh": "survivor_m_hair",
       "kind": "hair",
       "albedo": "Textures/short02_diffuse",
       "normal": "",
-      "triangles": 3344
+      "triangles": 3344,
+      "lod": 0,
+      "expressions": [
+        "pain",
+        "snarl",
+        "mouth_open"
+      ]
+    },
+    {
+      "mesh": "survivor_m_hair_lod1",
+      "kind": "hair",
+      "albedo": "Textures/short02_diffuse",
+      "normal": "",
+      "triangles": 1170,
+      "lod": 1,
+      "expressions": []
     },
     {
       "mesh": "survivor_m_skin",
       "kind": "skin",
       "albedo": "Textures/middleage_lightskinned_male_diffuse",
       "normal": "",
-      "triangles": 16932
+      "triangles": 16932,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl",
+        "mouth_open"
+      ]
+    },
+    {
+      "mesh": "survivor_m_skin_lod1",
+      "kind": "skin",
+      "albedo": "Textures/middleage_lightskinned_male_diffuse",
+      "normal": "",
+      "triangles": 3386,
+      "lod": 1,
+      "expressions": []
     }
   ],
   "triangles": 31058,
+  "lod1_triangles": 6851,
+  "expressions": [
+    "blink",
+    "smile",
+    "pain",
+    "snarl",
+    "mouth_open"
+  ],
   "assets": {
     "proxy": "male_generic",
     "skin": "middleage_caucasian_male",

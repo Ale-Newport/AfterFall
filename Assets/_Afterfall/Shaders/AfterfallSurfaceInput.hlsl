@@ -32,6 +32,9 @@ float3 AfterfallObjectPivotWS()
 }
 
 // Gentle sway that grows with height above the pivot. Strength 0 leaves the vertex untouched.
+// The world point at Unity's origin (the basin's floating origin; zero elsewhere).
+float4 _AfterfallOrigin;
+
 float3 AfterfallApplyWind(float3 positionWS)
 {
     float3 result = positionWS;
@@ -62,7 +65,7 @@ void AfterfallMappingSpace(float3 positionOS, float3 normalOS, float3 positionWS
     }
     else
     {
-        mapPos = positionWS;
+        mapPos = positionWS + _AfterfallOrigin.xyz; // world-space mapping survives a floating-origin shift
         mapNormal = normalWS;
     }
 }

@@ -219,7 +219,7 @@ namespace Afterfall.Presentation
             gc.CameraRig.Tactical.Focus(far, 0f);
             yield return Seconds(1f);
             yield return Capture("07b_strategic_unexplored");
-            Transform fog = gc.Tactical.transform.Find("FogOfWar");
+            Transform fog = gc.Tactical.Fog != null ? gc.Tactical.Fog.transform : null;
             Renderer fogRenderer = fog != null ? fog.GetComponent<Renderer>() : null;
             Line(fogRenderer == null ? "FAIL: no fog-of-war renderer" :
                 $"Fog of war: active {fog.gameObject.activeInHierarchy}, visible {fogRenderer.isVisible}, shader {fogRenderer.sharedMaterial.shader.name}, queue {fogRenderer.sharedMaterial.renderQueue}, layer {LayerMask.LayerToName(fog.gameObject.layer)}");
@@ -1259,7 +1259,7 @@ namespace Afterfall.Presentation
         private IEnumerator MeasureFrames(string label, float seconds)
         {
             var ms = new List<float>();
-            float end = Time.realtimeSinceStartup + seconds;
+            float start = Time.realtimeSinceStartup, end = start + seconds;
             while (Time.realtimeSinceStartup < end)
             {
                 yield return null;
@@ -1267,7 +1267,9 @@ namespace Afterfall.Presentation
             }
             ms.Sort();
             if (ms.Count == 0) yield break;
-            Line($"Frame time at {label}: avg {ms.Average():0.0} ms, p95 {ms[(int)(ms.Count * 0.95f)]:0.0} ms, worst {ms[ms.Count - 1]:0.0} ms over {ms.Count} frames");
+            // The frame rate by the wall clock too: on Metal the delta can report the display's interval while frames run slower.
+            float fps = ms.Count / Mathf.Max(0.001f, Time.realtimeSinceStartup - start);
+            Line($"Frame time at {label}: avg {ms.Average():0.0} ms, p95 {ms[(int)(ms.Count * 0.95f)]:0.0} ms, worst {ms[ms.Count - 1]:0.0} ms over {ms.Count} frames ({fps:0} fps by the clock)");
         }
 
         private static IEnumerator Seconds(float s)

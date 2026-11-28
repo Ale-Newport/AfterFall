@@ -1,0 +1,157 @@
+{
+  "name": "infected_m3",
+  "role": "infected",
+  "female": false,
+  "rig": "game_engine",
+  "bones": 53,
+  "parts": [
+    {
+      "mesh": "infected_m3_eyebrow003",
+      "kind": "lashes",
+      "albedo": "Textures/eyebrow003",
+      "normal": "",
+      "triangles": 192,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "pain",
+        "snarl"
+      ]
+    },
+    {
+      "mesh": "infected_m3_eyelashes01",
+      "kind": "lashes",
+      "albedo": "Textures/eyelashes01",
+      "normal": "",
+      "triangles": 368,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl"
+      ]
+    },
+    {
+      "mesh": "infected_m3_skin",
+      "kind": "skin",
+      "albedo": "Textures/young_lightskinned_male_diffuse2",
+      "normal": "",
+      "triangles": 2220,
+      "lod": 0,
+      "expressions": [
+        "blink",
+        "smile",
+        "pain",
+        "snarl",
+        "mouth_open"
+      ]
+    },
+    {
+      "mesh": "infected_m3_skin_lod1",
+      "kind": "skin",
+      "albedo": "Textures/young_lightskinned_male_diffuse2",
+      "normal": "",
+      "triangles": 443,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m3_eyes",
+      "kind": "eyes",
+      "albedo": "Textures/brown_eye",
+      "normal": "",
+      "triangles": 172,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m3_eyes_lod1",
+      "kind": "eyes",
+      "albedo": "Textures/brown_eye",
+      "normal": "",
+      "triangles": 86,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m3_male_worksuit01",
+      "kind": "cloth",
+      "albedo": "Textures/male_worksuit01_diffuse",
+      "normal": "Textures/male_worksuit01_normal",
+      "triangles": 6986,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m3_male_worksuit01_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/male_worksuit01_diffuse",
+      "normal": "Textures/male_worksuit01_normal",
+      "triangles": 1536,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m3_shoes06",
+      "kind": "cloth",
+      "albedo": "Textures/shoes06_diffuse",
+      "normal": "",
+      "triangles": 3064,
+      "lod": 0,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m3_shoes06_lod1",
+      "kind": "cloth",
+      "albedo": "Textures/shoes06_diffuse",
+      "normal": "",
+      "triangles": 673,
+      "lod": 1,
+      "expressions": []
+    },
+    {
+      "mesh": "infected_m3_hair",
+      "kind": "hair",
+      "albedo": "Textures/short04_diffuse",
+      "normal": "",
+      "triangles": 1050,
+      "lod": 0,
+      "expressions": [
+        "smile",
+        "snarl",
+        "mouth_open"
+      ]
+    },
+    {
+      "mesh": "infected_m3_hair_lod1",
+      "kind": "hair",
+      "albedo": "Textures/short04_diffuse",
+      "normal": "",
+      "triangles": 367,
+      "lod": 1,
+      "expressions": []
+    }
+  ],
+  "triangles": 14052,
+  "lod1_triangles": 3105,
+  "expressions": [
+    "blink",
+    "smile",
+    "pain",
+    "snarl",
+    "mouth_open"
+  ],
+  "assets": {
+    "proxy": "male1591",
+    "skin": "young_caucasian_male2",
+    "hair": "short04",
+    "eyebrows": "eyebrow003",
+    "eyelashes": "eyelashes01",
+    "clothes": [
+      "male_worksuit01",
+      "shoes06"
+    ]
+  },
+  "source": "MakeHuman system assets (CC0) via MPFB 2.0.17"
+}
