@@ -11,6 +11,9 @@ namespace Afterfall.Presentation
     /// </summary>
     public sealed class DayNightCycle : MonoBehaviour
     {
+        /// <summary>Scales the fog (the basin thins it so the city's skyline shows across the river).</summary>
+        public static float FogScale = 1f;
+
         private GameController _gc;
         private Light _sun, _moon;
 
@@ -94,7 +97,7 @@ namespace Afterfall.Presentation
             RenderSettings.ambientGroundColor = look.AmbientGround;
             Color fog = SkyRig.FogColor(look);
             RenderSettings.fogColor = fog;
-            RenderSettings.fogDensity = look.FogDensity;
+            RenderSettings.fogDensity = look.FogDensity * FogScale;
 
             SkyRig rig = sun.GetComponent<SkyRig>();
             if (rig != null) rig.Apply(look, toSun, toMoon, elevation);

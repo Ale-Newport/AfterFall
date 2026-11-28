@@ -468,6 +468,7 @@ namespace Afterfall.Presentation
                     float x = c.X * CellSize + (i + TextureSynth.Hash01(gx, gz, _seed + seed + 1)) * step;
                     float z = c.Z * CellSize + (j + TextureSynth.Hash01(gx, gz, _seed + seed + 2)) * step;
                     _weights.Sample(x, z, _w);
+                    if (_w[TerrainSurfaces.Snow] > 0.35f) continue; // nothing grows or lies loose on the snowfields
                     place(c, x, z, _w, h0, TextureSynth.Hash01(gx, gz, _seed + seed + 3), TextureSynth.Hash01(gx, gz, _seed + seed + 4));
                 }
             }
@@ -489,7 +490,7 @@ namespace Afterfall.Presentation
                     float meadow = _w[TerrainSurfaces.Meadow], dry = _w[TerrainSurfaces.DryGrass];
                     float score = meadow + dry * 0.9f + _w[TerrainSurfaces.ForestFloor] * 0.12f + _w[TerrainSurfaces.Dirt] * 0.07f
                         + _w[TerrainSurfaces.Gravel] * 0.05f + _w[TerrainSurfaces.Shore] * 0.1f;
-                    score *= 1f - Mathf.Clamp01(_w[TerrainSurfaces.Asphalt] * 3f) - Mathf.Clamp01(_w[TerrainSurfaces.Rock] * 1.5f);
+                    score *= 1f - Mathf.Clamp01(_w[TerrainSurfaces.Asphalt] * 3f) - Mathf.Clamp01(_w[TerrainSurfaces.Rock] * 1.5f) - Mathf.Clamp01(_w[TerrainSurfaces.Snow] * 2.5f);
                     if (score <= 0.02f) continue;
                     // Clumps and thin spots rather than an even lawn.
                     float clump = 0.68f + 0.5f * Noise.Value(_seed + 41, x * 0.32f, z * 0.32f);

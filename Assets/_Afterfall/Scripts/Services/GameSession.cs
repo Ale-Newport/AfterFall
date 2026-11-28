@@ -89,7 +89,14 @@ namespace Afterfall.Services
             Scheduler.Register(new VehicleSystem(this), 1);
             Scheduler.Register(new ResourceRespawnSystem(World, Content), 0.2);
             Scheduler.RestorePhases(World.TickPhases);
+
+            // A chunked world makes its surroundings now, so the first frame has ground, loot and trees.
+            Streaming = new ChunkStreaming(this);
+            if (World.Layout.IsChunked) Streaming.Warm(World.Player != null ? World.Player.Position : World.Layout.PlayerSpawn);
         }
+
+        /// <summary>Generation and seeding of a chunked world around the survivor (does nothing in prebuilt worlds).</summary>
+        public ChunkStreaming Streaming { get; }
 
         public ContentDatabase Content { get; }
         public WorldState World { get; }
@@ -134,6 +141,7 @@ namespace Afterfall.Services
         {
             if (Paused || dt <= 0) return;
             dt = Math.Min(dt, 0.25); // a long frame hitch must not fast-forward the world
+            Streaming.Update(dt);
             World.Clock.Advance(dt);
             Scheduler.Advance(dt);
             Scheduler.StorePhases(World.TickPhases);

@@ -17,13 +17,17 @@ namespace Afterfall.Services
     public static class WorldSeeding
     {
         /// <summary>Returns how many fixtures were created.</summary>
-        public static int EnsureFixtures(WorldState world, ContentDatabase content)
+        public static int EnsureFixtures(WorldState world, ContentDatabase content) =>
+            SeedFixtures(world, content, world.Layout.Fixtures, world.Layout.Vehicles);
+
+        /// <summary>Creates the given keyed fixtures and vehicles that the world does not have yet; returns how many.</summary>
+        public static int SeedFixtures(WorldState world, ContentDatabase content, List<FixtureSeed> fixtures, List<VehicleSeed> vehicleSeeds)
         {
             var present = new HashSet<string>(StringComparer.Ordinal);
             foreach (Structure s in world.Structures.Values)
                 if (!string.IsNullOrEmpty(s.SeedKey)) present.Add(s.SeedKey);
             int created = 0;
-            foreach (FixtureSeed f in world.Layout.Fixtures)
+            foreach (FixtureSeed f in fixtures)
             {
                 if (present.Contains(f.Key)) continue;
                 BuildingDefinition def = content.Building(f.DefId);
@@ -55,7 +59,7 @@ namespace Afterfall.Services
             var vehicles = new HashSet<string>(StringComparer.Ordinal);
             foreach (Afterfall.Domain.Vehicles.VehicleState v in world.Vehicles.Values)
                 if (!string.IsNullOrEmpty(v.SeedKey)) vehicles.Add(v.SeedKey);
-            foreach (VehicleSeed seed in world.Layout.Vehicles)
+            foreach (VehicleSeed seed in vehicleSeeds)
             {
                 if (vehicles.Contains(seed.Key)) continue;
                 Afterfall.Domain.Vehicles.VehicleDefinition def = content.Vehicle(seed.DefId);

@@ -44,6 +44,7 @@ namespace Afterfall.Domain.World
                 return OpResult.Fail("inventory_full", "Inventory full — drop or store something first.");
 
             node.RemainingHarvests--;
+            node.Touched = true;
             if (node.RemainingHarvests <= 0)
             {
                 node.Depleted = true;

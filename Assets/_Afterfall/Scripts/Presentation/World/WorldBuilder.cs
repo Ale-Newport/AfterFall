@@ -54,7 +54,7 @@ namespace Afterfall.Presentation
         /// </summary>
         public static Terrain BuildTile(WorldLayout layout, int tx, int tz, GroundWeights weights, Transform parent)
         {
-            HeightField hf = layout.Height;
+            HeightSource hf = layout.Height;
             int res = Mathf.RoundToInt(TileSize / hf.CellSize) + 1;
             int gx0 = Mathf.RoundToInt(tx * TileSize / hf.CellSize), gz0 = Mathf.RoundToInt(tz * TileSize / hf.CellSize);
             var data = new TerrainData
@@ -197,10 +197,10 @@ namespace Afterfall.Presentation
 
         // ------------------------------------------------------------------ splat painting
 
-        private struct Segment
+        public struct Segment
         {
             public float Ax, Az, Bx, Bz, HalfWidth;
-            public bool Paved;
+            public bool Paved, Rail;
         }
 
         /// <summary>Soft masks stamped around objects on the ground, at splat resolution.</summary>
@@ -208,7 +208,7 @@ namespace Afterfall.Presentation
         {
             public readonly int Res;
             public readonly float Cell, X0, Z0;
-            public readonly float[] Forest, Dirt, Gravel, Rock, Asphalt;
+            public readonly float[] Forest, Dirt, Gravel, Rock, Asphalt, Grass;
 
             public Stamps(int res, float x0, float z0, float size)
             {
@@ -221,6 +221,7 @@ namespace Afterfall.Presentation
                 Gravel = new float[res * res];
                 Rock = new float[res * res];
                 Asphalt = new float[res * res];
+                Grass = new float[res * res];
             }
 
             /// <summary>Max-blends a soft disc: full inside <paramref name="inner"/>, fading out to <paramref name="outer"/>.</summary>
@@ -262,12 +263,11 @@ namespace Afterfall.Presentation
         private static bool Near(float x, float z, float x0, float z0, float size, float margin) =>
             x >= x0 - margin && z >= z0 - margin && x <= x0 + size + margin && z <= z0 + size + margin;
 
-        private static Stamps BuildStamps(WorldLayout layout, int seed, float ox, float oz, float size)
+        private static Stamps BuildStamps(TileFeatures f, int seed, float ox, float oz, float size)
         {
             var s = new Stamps(SplatResolution, ox, oz, size);
-            foreach (NodeSeed n in layout.Nodes)
+            foreach (NodeSeed n in f.Nodes)
             {
-                if (!Near(n.Position.X, n.Position.Z, ox, oz, size, 8f)) continue;
                 float x = n.Position.X, z = n.Position.Z, k = n.Scale;
                 switch (n.DefId)
                 {
@@ -285,9 +285,8 @@ namespace Afterfall.Presentation
                     case "transformer_wreck": s.Disc(s.Gravel, x, z, 1f, 2.6f, 0.8f, seed + 12); break;
                 }
             }
-            foreach (PropPlacement p in layout.Props)
+            foreach (PropPlacement p in f.Props)
             {
-                if (!Near(p.Position.X, p.Position.Z, ox, oz, size, 40f)) continue;
                 float x = p.Position.X, z = p.Position.Z, hx = p.Size.X * 0.5f, hz = p.Size.Z * 0.5f;
                 switch (p.Kind)
                 {
@@ -331,6 +330,26 @@ namespace Afterfall.Presentation
                     case "sign":
                         s.Disc(s.Dirt, x, z, 0.3f, 1f, 0.6f, seed + 13);
                         break;
+                    // Kesselmouth: pavements in front of terraces, mansion blocks and towers, gardens round
+                    // the semis, yards round the docks' sheds, lawns and paths in the parks.
+                    case "city_terrace":
+                    case "city_midrise":
+                    case "city_tower":
+                    case "city_church":
+                        s.Paved(s.Asphalt, x, z, hx, hz, p.Yaw, 0.5f, 3.2f, 0.9f, seed + 15);
+                        s.Rect(s.Gravel, x, z, hx, hz, p.Yaw, 1f, 5f, 0.5f, seed + 12);
+                        break;
+                    case "city_semi":
+                        s.Rect(s.Grass, x, z, hx, hz, p.Yaw, 1f, 7f, 0.9f, seed + 16);
+                        s.Paved(s.Gravel, x, z, hx, hz, p.Yaw, 0.2f, 1.2f, 0.7f, seed + 12);
+                        break;
+                    case "city_shed":
+                        s.Paved(s.Asphalt, x, z, hx, hz, p.Yaw, 2f, 6f, 0.85f, seed + 15);
+                        s.Rect(s.Gravel, x, z, hx, hz, p.Yaw, 4f, 12f, 0.8f, seed + 12);
+                        break;
+                    case "city_park":
+                        s.Rect(s.Grass, x, z, hx, hz, p.Yaw, -6f, 0f, 1f, seed + 16);
+                        break;
                 }
             }
             return s;
@@ -351,14 +370,18 @@ namespace Afterfall.Presentation
             return t * t * (3f - 2f * t);
         }
 
-        /// <summary>Paints the splat of one terrain tile (pure C#, safe on a worker thread).</summary>
-        public static GroundWeights PaintSplat(WorldLayout layout, int seed, float ox, float oz, float size)
+        /// <summary>What lies on and near one terrain tile, gathered on the main thread so painting can run on a worker.</summary>
+        public sealed class TileFeatures
         {
-            int res = SplatResolution;
-            int layers = TerrainSurfaces.Count;
-            var map = new GroundWeights(res, layers, ox, oz, size);
-            float cell = size / (res - 1);
-            Stamps stamps = BuildStamps(layout, seed, ox, oz, size);
+            public Segment[] Segments;
+            public readonly List<NodeSeed> Nodes = new List<NodeSeed>();
+            public readonly List<PropPlacement> Props = new List<PropPlacement>();
+        }
+
+        /// <summary>Collects the roads, nodes and props reaching a tile (main thread: chunked layouts grow while playing).</summary>
+        public static TileFeatures CollectFeatures(WorldLayout layout, float ox, float oz, float size)
+        {
+            var f = new TileFeatures();
             var segments = new List<Segment>();
             foreach (RoadPath r in layout.Roads)
                 for (int i = 0; i + 1 < r.Points.Count; i++)
@@ -367,9 +390,45 @@ namespace Afterfall.Presentation
                     // Only segments that reach this tile matter.
                     float m = r.Width * 0.5f + 12f;
                     if (Mathf.Max(a.X, b.X) < ox - m || Mathf.Min(a.X, b.X) > ox + size + m || Mathf.Max(a.Z, b.Z) < oz - m || Mathf.Min(a.Z, b.Z) > oz + size + m) continue;
-                    segments.Add(new Segment { Ax = a.X, Az = a.Z, Bx = b.X, Bz = b.Z, HalfWidth = r.Width * 0.5f, Paved = r.Paved });
+                    segments.Add(new Segment { Ax = a.X, Az = a.Z, Bx = b.X, Bz = b.Z, HalfWidth = r.Width * 0.5f, Paved = r.Paved && !r.Rail, Rail = r.Rail });
                 }
-            Segment[] segs = segments.ToArray();
+            f.Segments = segments.ToArray();
+            if (layout.IsChunked)
+            {
+                // The tile is a chunk: its own content and its neighbours' near the edges.
+                int cx = WorldLayout.ChunkOf(ox + 1f), cz = WorldLayout.ChunkOf(oz + 1f);
+                for (int z = cz - 1; z <= cz + 1; z++)
+                    for (int x = cx - 1; x <= cx + 1; x++)
+                    {
+                        ChunkContent c = layout.GetChunk(x, z);
+                        if (c == null) continue;
+                        foreach (NodeSeed n in c.Nodes)
+                            if (Near(n.Position.X, n.Position.Z, ox, oz, size, 8f)) f.Nodes.Add(n);
+                        foreach (PropPlacement p in c.Props)
+                            if (Near(p.Position.X, p.Position.Z, ox, oz, size, 40f)) f.Props.Add(p);
+                        foreach (PropPlacement p in c.Blocks)
+                            if (Near(p.Position.X, p.Position.Z, ox, oz, size, 40f)) f.Props.Add(p);
+                    }
+            }
+            else
+            {
+                foreach (NodeSeed n in layout.Nodes)
+                    if (Near(n.Position.X, n.Position.Z, ox, oz, size, 8f)) f.Nodes.Add(n);
+                foreach (PropPlacement p in layout.Props)
+                    if (Near(p.Position.X, p.Position.Z, ox, oz, size, 40f)) f.Props.Add(p);
+            }
+            return f;
+        }
+
+        /// <summary>Paints the splat of one terrain tile from gathered features (pure C#, safe on a worker thread).</summary>
+        public static GroundWeights PaintSplat(WorldLayout layout, int seed, float ox, float oz, float size, TileFeatures features)
+        {
+            int res = SplatResolution;
+            int layers = TerrainSurfaces.Count;
+            var map = new GroundWeights(res, layers, ox, oz, size);
+            float cell = size / (res - 1);
+            Stamps stamps = BuildStamps(features, seed, ox, oz, size);
+            Segment[] segs = features.Segments;
 
             Parallel.For(0, res, z =>
             {
@@ -405,7 +464,8 @@ namespace Afterfall.Presentation
             Over(w, TerrainSurfaces.DryGrass, dry * 0.8f);
 
             // Forest floor where the generator plants the forest, and needle skirts under every tree.
-            float forestNoise = region ? WorldGenerator.RegionForest(seed, x, z) : Noise.Fbm(seed + 77, x * 0.011f, z * 0.011f, 3) + (256f - x) / 256f * 0.25f;
+            // The basin paints its woodland by biome (PaintBiome); the region and the valley by their own formulas.
+            float forestNoise = layout.IsChunked ? -1f : region ? WorldGenerator.RegionForest(seed, x, z) : Noise.Fbm(seed + 77, x * 0.011f, z * 0.011f, 3) + (256f - x) / 256f * 0.25f;
             float forest = Smooth(-0.1f, 0.18f, forestNoise + n3 * 0.08f) * 0.6f;
             forest = Mathf.Max(forest, stamps.Forest[si]);
             Over(w, TerrainSurfaces.ForestFloor, forest);
@@ -430,11 +490,14 @@ namespace Afterfall.Presentation
             Over(w, TerrainSurfaces.Gravel, band * 0.55f);
 
             PaintPoi(layout, x, z, n2, n3, n4, w);
+            float snow = layout.Chunks is BasinWorld basin ? PaintBiome(basin, layout, x, z, h, slope, water, n1, n2, n3, n4, w) : 0f;
 
             // Objects standing on the ground.
+            Over(w, TerrainSurfaces.Meadow, stamps.Grass[si]);
             Over(w, TerrainSurfaces.Gravel, stamps.Gravel[si]);
             Over(w, TerrainSurfaces.Dirt, stamps.Dirt[si] * (0.75f + n4 * 0.25f));
             Over(w, TerrainSurfaces.Asphalt, stamps.Asphalt[si] * (0.9f + n4 * 0.1f));
+            if (snow > 0.01f) Over(w, TerrainSurfaces.Snow, snow);
 
             PaintRoad(segs, x, z, n3, n4, w);
         }
@@ -481,6 +544,59 @@ namespace Afterfall.Presentation
                 Over(w, TerrainSurfaces.Dirt, track * (0.6f + rut * 0.4f) * (1f - centre * 0.7f));
                 Over(w, TerrainSurfaces.Gravel, track * rut * Smooth(0f, 0.5f, n4) * 0.35f);
             }
+        }
+
+        /// <summary>
+        /// The Kessel Basin's ground by biome: snow on the high Greyspine, sand on beaches and red sand
+        /// and bare rock in the Scar, heather and peat on the moor, mud and reeds in the marsh, a patchwork
+        /// of ploughed, ripe and grazed fields on the farmland, and worn urban ground in Kesselmouth.
+        /// </summary>
+        private static float PaintBiome(BasinWorld basin, WorldLayout layout, float x, float z, float h, float slope, float water, float n1, float n2, float n3, float n4, float[] w)
+        {
+            BiomeSample b = basin.Biome(x, z);
+            if (b.Forest > 0.05f) Over(w, TerrainSurfaces.ForestFloor, Smooth(0.05f, 0.5f, b.Forest) * 0.6f);
+            if (b.Farm > 0.05f)
+            {
+                float wx = x + Noise.Fbm(401, x * 0.004f, z * 0.004f, 2) * 40f, wz = z + Noise.Fbm(402, x * 0.004f, z * 0.004f, 2) * 40f;
+                int fx = Mathf.FloorToInt(wx / 260f), fz = Mathf.FloorToInt(wz / 210f);
+                float kind = Noise.Hash01(403, fx, fz);
+                float edge = Mathf.Min(Mathf.Min(Mathf.Repeat(wx, 260f), 260f - Mathf.Repeat(wx, 260f)), Mathf.Min(Mathf.Repeat(wz, 210f), 210f - Mathf.Repeat(wz, 210f)));
+                float inField = Smooth(3f, 7f, edge) * b.Farm;
+                if (kind < 0.35f)
+                {
+                    float furrow = 0.5f + 0.5f * Mathf.Sin(((kind < 0.17f ? wx : wz) * Mathf.PI * 2f / 1.6f) + n4 * 0.5f);
+                    Over(w, TerrainSurfaces.Dirt, inField * (0.7f + furrow * 0.3f));
+                }
+                else if (kind < 0.7f) Over(w, TerrainSurfaces.DryGrass, inField * 0.9f);
+                else Over(w, TerrainSurfaces.Meadow, inField * 0.8f);
+            }
+            if (b.Moor > 0.05f)
+            {
+                Over(w, TerrainSurfaces.DryGrass, b.Moor * 0.65f);
+                Over(w, TerrainSurfaces.ForestFloor, b.Moor * Smooth(0.1f, 0.4f, n2 + n3 * 0.4f) * 0.5f); // heather
+                Over(w, TerrainSurfaces.Dirt, b.Moor * Smooth(0.35f, 0.6f, n1 + n4 * 0.2f) * 0.5f); // peat
+            }
+            if (b.Marsh > 0.05f)
+            {
+                Over(w, TerrainSurfaces.Shore, b.Marsh * Smooth(water + 2.2f, water + 0.6f, h));
+                Over(w, TerrainSurfaces.Meadow, b.Marsh * Smooth(water + 1f, water + 2.5f, h) * 0.5f);
+            }
+            if (b.Badlands > 0.05f)
+            {
+                Over(w, TerrainSurfaces.Sand, b.Badlands * 0.8f);
+                Over(w, TerrainSurfaces.Rock, b.Badlands * Smooth(14f, 26f, slope + n3 * 6f));
+                Over(w, TerrainSurfaces.Gravel, b.Badlands * Smooth(0.25f, 0.55f, n2) * 0.4f);
+            }
+            if (b.Beach > 0.05f) Over(w, TerrainSurfaces.Sand, b.Beach * Smooth(water + 6f, water + 2f, h));
+            if (b.City > 0.05f)
+            {
+                // Vacant lots and verges between the stamped pavements.
+                Over(w, TerrainSurfaces.DryGrass, b.City * 0.45f);
+                Over(w, TerrainSurfaces.Gravel, b.City * Smooth(0.2f, 0.45f, n2 + n4 * 0.2f) * 0.5f);
+            }
+            if (b.Mountain > 0.05f) Over(w, TerrainSurfaces.Rock, b.Mountain * Smooth(380f, 460f, h + n2 * 30f) * Smooth(0.2f, 0.4f, n3 + 0.3f));
+            // Snow is laid last (after the rings stamped round rocks), except on cliffs.
+            return b.Snow * (1f - Smooth(38f, 52f, slope) * 0.7f);
         }
 
         private static void PaintPoi(WorldLayout layout, float x, float z, float n2, float n3, float n4, float[] w)
@@ -538,7 +654,8 @@ namespace Afterfall.Presentation
         /// </summary>
         public static Texture2D CreateGroundTint(WorldLayout layout)
         {
-            int res = Mathf.Max(64, Mathf.CeilToInt(layout.Size / 2f));
+            // Half a texel per metre, but at most 4096² (16 m per texel across the 64 km basin).
+            int res = Mathf.Clamp(Mathf.CeilToInt(layout.Size / 2f), 64, 4096);
             var tex = new Texture2D(res, res, TextureFormat.RGBA32, false, false)
             {
                 name = "Ground tint",
@@ -593,8 +710,21 @@ namespace Afterfall.Presentation
             root.transform.SetParent(parent, false);
             root.layer = 4; // built-in Water layer
             float size = layout.LakeRadius * 3f;
-            Shapes.Part(root.transform, "Lake", MeshFactory.Quad, WaterMaterial(),
-                new Vector3(layout.LakeCenter.X, layout.WaterLevel, layout.LakeCenter.Z), new Vector3(size, size, 1f), Quaternion.Euler(90f, 0f, 0f), false).layer = 4;
+            if (size > 0f)
+                Shapes.Part(root.transform, "Lake", MeshFactory.Quad, WaterMaterial(),
+                    new Vector3(layout.LakeCenter.X, layout.WaterLevel, layout.LakeCenter.Z), new Vector3(size, size, 1f), Quaternion.Euler(90f, 0f, 0f), false).layer = 4;
+            if (layout.Chunks is BasinWorld basin)
+            {
+                // The sea: strips along the coast from just inland of the shore to the map's edge, at sea level.
+                const float strip = 2048f;
+                for (float z = 0f; z < layout.Size; z += strip)
+                {
+                    float coast = Mathf.Min(basin.CoastX(z), basin.CoastX(z + strip)) - 3000f;
+                    float w = layout.Size + 4000f - coast;
+                    Shapes.Part(root.transform, "Sea", MeshFactory.Quad, WaterMaterial(),
+                        new Vector3(coast + w * 0.5f, layout.SeaLevel, z + strip * 0.5f), new Vector3(w, strip, 1f), Quaternion.Euler(90f, 0f, 0f), false).layer = 4;
+                }
+            }
             foreach (RiverPath river in layout.Rivers)
             {
                 const int chunk = 16;

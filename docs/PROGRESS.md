@@ -115,6 +115,10 @@ All twelve are fixed (commit `fix(game): runtime issues found in presentation re
 ## Not started
 Conveyors and pipes, disasters other than storms and cold snaps (fires, floods, disease), factions, wildlife, the armoured infected, firearms, vehicles, multiple regions and streaming, skinned character animation, recorded audio, localisation.
 
+## The Kessel Basin (session 8, 2026-11-28)
+- World version 3: 64 × 64 km generated in chunks on demand (`BasinWorld`, `TiledHeightField`, `ChunkStreaming`), Greater Millbrook in its corner, biomes (mountains with snow, moor, lakes, badlands, farmland, marsh, coast), twelve villages and towns, rivers, roads and rail with bridges, and Kesselmouth, a London-sized city of towers, mansion blocks, terraces, semis, docks and parks. Spatial indexes, compact saves (untouched nodes are not saved), streamed views, merged city meshes, a skyline, far terrain, snow and sand layers, a local detail map. See WORLD_GENERATION.md.
+- Tests: 215 headless (4 new `BasinTests`); the basin tour in the macOS build: 0 failures, 0 errors, 8.3–8.4 ms average at every stop.
+
 ## World expansion (session 7, 2026-11-27)
 Details, phases and limitations: WORLD_EXPANSION_PROGRESS.md.
 - **Creative mode and developer tools** (F6 panel: item browser and spawner, vehicles, teleports, time, weather, infected, diagnostics; F7 free flight). `CreativeTests`.

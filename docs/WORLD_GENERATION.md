@@ -12,7 +12,8 @@ Because the layout is regenerated, changing the generator changes the ground und
 | Version | Name | Size | Choose it |
 |---|---|---|---|
 | 1 | Millbrook Valley | 512 × 512 m, one terrain tile | New Game → World → "Millbrook Valley (512 m)"; every save made before world version 2 |
-| 2 | Greater Millbrook | 2048 × 2048 m, 4 × 4 terrain tiles of 512 m | New Game → World → "Greater Millbrook (2 km)" (the default for new games) |
+| 2 | Greater Millbrook | 2048 × 2048 m, 4 × 4 terrain tiles of 512 m | New Game → World → "Greater Millbrook (2 km)" |
+| 3 | The Kessel Basin | 65 536 × 65 536 m, 128 × 128 chunks of 512 m, generated as the survivor travels | New Game → World → "Kessel Basin (64 km)" (the default for new games) |
 
 `WorldGenerator.Generate(seed, version)` dispatches; `NewGameFactory` and `WorldStateMapper.FromDto` both pass `GameSettings.WorldVersion`, and `WorldState` takes the layout's size (the fog-of-war grid is 128 × 128 cells of 16 m in version 2).
 
@@ -54,6 +55,61 @@ The valley sits in the south-west corner with every landmark, building, containe
 - **Water**: a ribbon mesh along each river at its level (in chunks, so it culls) and a disc for each lake, all with the lake shader.
 - **Ground painting** uses the region's own forest density, raises the rock line to the mountains (125 m) and dusts the peaks with scree; shores and reeds follow the nearest river or lake.
 - **The map** draws rivers and lakes at their own levels, the railway as a thin dark line, and the whole 2 km region at 2048 × 2048 px.
+
+## The Kessel Basin (version 3: `BasinWorld*.cs`, `TiledHeightField.cs`, `Services/ChunkStreaming.cs`)
+A 64 km world can't be built up front (4 billion height samples, millions of buildings). Only the **plan** is made at load (about 1–2 s, with Greater Millbrook): places, rivers, lakes, the road and rail network with its grades and bridges, and the city's rules. Everything else is made **per 512 m chunk, on demand, from the seed and the position alone**, so the same seed is the same world whatever order chunks are made in (tested).
+
+### What is where
+| Area | Where (km) | Character |
+|---|---|---|
+| Greater Millbrook | 0–2, 0–2 (south-west corner) | Version 2 exactly (its heights, content and keys), blended into the basin over 1.2 km, with highlands rising north of it |
+| The Greyspine | west, x < ~16, z > ~8 | Ridged mountains to ~800 m, rock above ~400 m, snow above ~550 m, pine forest to the tree line (~500 m); the Aldwater's source; Cragholm village |
+| The Thornwood | around (19, 44) | Dense old forest between the mountains and the moor |
+| The High Moor | north, z > ~47 | Rolling heather and peat at 120–250 m, rocks, tarns; High Tor hamlet; Kingsmoor town |
+| The Lake District | north-east, around (51, 55) | Wooded hills and five lakes; Dunmere village |
+| The Scar | south-west, around (11, 6.5) | Red-sand badlands of terraced mesas; Redrock outpost |
+| Farmland | south and west-centre | A patchwork of ploughed, ripe and grazed fields (260 × 210 m) with hedgerows; Harrowgate, Oxley, Ashby Cross, Stonebridge |
+| Estuary marshes | around (53.5, 20) | Mud and reeds barely above the sea; Fenwick hamlet |
+| The coast | east, x ≈ 58.5 ± 2.6 km | Beaches and dunes in the south (Saltcombe), cliffs in the north (Gullhaven); the sea beyond (level 12 m) |
+| **Kesselmouth** | centred (40, 30), radius 21 km | The metropolis: ~1 400 km² of city mask, about the area of Greater London (~1 570 km²) |
+
+Rivers: the **Aldwater** (Greyspine → Kesselmouth → the sea, 28 m wide upstream, 90 m in the city, 160 m in the docks, a 300 m estuary), the **Brack** (moor → the Aldwater in the city) and the **Fennel** (lake district → the sea), meandering, with levels that only fall and never drop below the sea. Twelve towns and villages, ring roads and radial avenues in the city, a motorway from Millbrook to the docks, A-roads to every village, a mountain road, and three railway lines out of the city centre. Every road and rail line is graded (pinned at crossings and on village pads, at most 9 %, rail 4 %) and gets a bridge wherever it crosses water.
+
+### Kesselmouth
+The street plan is the contour lines of two smoothly **warped fields** U and V on a constant 104 m grid (a varying grid spacing would be multiplied by the distance from the origin and squeeze the blocks): streets bend like an old city's, and every chunk can build the blocks whose centres it holds while matching its neighbours exactly. Dense blocks (density > 0.6) are halved by a lane. Each block, by density and district:
+- **Towers** in the Old Quarter (40–220 m, glass curtain walls, banding or fins, crowns) with plazas;
+- **Mansion blocks** (4–8 storeys, brick or stone, shops on the high streets);
+- **Terraces** of brick or rendered houses (2–4 storeys, sash windows, front doors, slate roofs, chimneys, shopfronts on arterials);
+- **Semi-detached houses** with hipped tile roofs and front gardens in the suburbs;
+- **Docks**: corrugated sheds with roller doors along the estuary;
+- **Parks** (about one block in seven, and the great Hollin Heath) with trees that can be felled;
+- churches with spires; avenues every sixth street; abandoned cars; parked vehicles to find; infected.
+
+A few buildings per block can be **entered and searched** (houses, shops, clinics, warehouses, garages with their containers); the rest are solid façades. A city chunk holds 200–360 buildings, 30–80 containers and 50–90 street segments, generated in 80–250 ms on a worker.
+
+### Generation on demand
+- **Heights** (`TiledHeightField`): 513² tiles at 1 m, made on demand (10–50 ms) and kept in a 160-tile cache: the coarse ground on a 4 m grid, fine detail by biome (rough in the mountains and badlands, none in the city), then village pads, roads, river channels and lake bowls pressed in. Coarse heights (`CoarseHeight`, `MapHeight` on a cached 64 m grid) serve maps and distant things without making tiles. City chunks use the coarse ground directly (city ground has no fine detail), so the distant skyline never makes height tiles.
+- **Chunks** (`WorldLayout.RequestChunk`/`EnsureChunk`): generated on worker threads (at most 6 at once, nearest first) and merged on the main thread; their content is appended to the layout's lists, so the rest of the game sees one layout.
+- **Seeding** (`ChunkStreaming`, twice a second): chunks within 1.15 km are requested; within 640 m they are **seeded once** (containers with loot, fixtures, vehicles, campfires, infected; remembered in `WorldState.SeededChunks`, saved) and their trees, rocks and plants become resource nodes. Nodes nobody has touched are dropped again beyond 1 km of the survivor and every recruited colonist and are **not saved**: they are remade from the layout when someone returns (a felled tree is kept and saved with its key). Crossing the whole basin leaves a ~2.6 MB save.
+- **Indexes**: structures and nodes are kept in 32 m spatial grids, so the infected's checks for doors and walls look only nearby.
+
+### How the game draws it (`ChunkViews`, `CityMesher`)
+- Terrain tiles stream as before (within 700 m), painted with **ten layers** (snow and sand added) by biome: snow above the snow line, sand on beaches and in the Scar, heather and peat on the moor, mud in the marsh, field patterns on farmland, worn urban ground and pavements in the city.
+- Props (bridges, rail, enterable buildings, village houses) within 900 m.
+- The city: **merged meshes per chunk** (one per material, prepared on a worker, one chunk finished per frame) with a box collider per building under a Not Walkable modifier, within ~760 m; a **skyline** of boxes out to 2.6 km.
+- A **far-terrain** mesh (12 km, 96 m grid, coloured by biome) under the detailed tiles so the land reaches the horizon; the sea in strips along the coast.
+- In the basin the camera sees 3.2 km and the fog is thinner.
+- Structures and parked vehicles have views only within 350 m / 700 m (player-built structures and the driven vehicle always).
+- The map: the overview from cached grids (biome colours, the city's grey), and a **1 km local map** at 1 m per pixel around the survivor (streets and buildings) on the minimap and, zoomed in, on the world map.
+
+### Measured (macOS build, Apple M2 Max, 1600×900)
+New game playable after ~9 s. In the basin tour (teleports to the city centre, terraced streets, docklands, the river, the snow, the moor, the lakes, the Scar, the coast and Harrowgate): frame time 8.3–8.4 ms average (the vsync cap) at every stop, worst single frame ≤ 17 ms; 15 city chunks detailed and ~37 in the skyline at the centre.
+
+### Known limits
+- Positions are plain floats: 64 km from the origin they are good to ~4 mm. No jitter was seen in stills; motion at the far corners has not been checked. A floating origin would remove the risk.
+- Only a few city buildings can be entered; towers have no interiors; streets have no pavement kerbs or street furniture yet.
+- Distant forests beyond 300 m show only as the far terrain's colour.
+- The world map's detail covers 1 km around the survivor; elsewhere it shows the overview.
 
 ## Planned buildings
 A `BuildingPlan` (Domain/World/BuildingPlan.cs) describes a multi-storey building in its own frame (X right, Z toward the front, metres):

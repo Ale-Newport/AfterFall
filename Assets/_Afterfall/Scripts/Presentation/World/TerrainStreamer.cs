@@ -34,6 +34,8 @@ namespace Afterfall.Presentation
         private readonly List<int> _drop = new List<int>();
         private Texture2D _tint;
         private float _scan;
+        private Vector3 _hold;
+        private float _holdUntil = -1f;
 
         /// <summary>Splat weights for ground cover across every loaded tile.</summary>
         public WorldWeights Weights { get; private set; }
@@ -76,7 +78,7 @@ namespace Afterfall.Presentation
             ForTilesNear(p, radius, (x, z) =>
             {
                 Tile t = Get(x, z);
-                if (t.Terrain == null && t.Painting == null) t.Painting = Paint(x, z);
+                if (t.Terrain == null && t.Painting == null) t.Painting = Paint(x, z, true);
                 if (t.Terrain == null) pending.Add(t);
             });
             foreach (Tile t in pending) Finish(t);
@@ -93,6 +95,9 @@ namespace Afterfall.Presentation
         /// <summary>Starts painting the tiles around a point now (a teleport is about to go there).</summary>
         public void Prefetch(Vector3 p)
         {
+            // Keep the destination's tiles while the camera is still far away (a teleport is waiting for them).
+            _hold = p;
+            _holdUntil = Time.unscaledTime + 6f;
             ForTilesNear(p, WorldBuilder.TileSize * 0.6f, (x, z) =>
             {
                 Tile t = Get(x, z);
@@ -107,12 +112,27 @@ namespace Afterfall.Presentation
             return t;
         }
 
-        private Task<GroundWeights> Paint(int x, int z)
+        /// <summary>
+        /// Starts painting a tile on a worker. In a chunked world the tile's chunk must exist first (its
+        /// streets and buildings are painted): returns null and asks for it unless <paramref name="now"/>.
+        /// </summary>
+        private Task<GroundWeights> Paint(int x, int z, bool now = false)
         {
             WorldLayout layout = _layout;
+            if (layout.IsChunked && !layout.HasChunk(x, z))
+            {
+                if (now) layout.EnsureChunk(x, z);
+                else
+                {
+                    layout.RequestChunk(x, z);
+                    layout.IntegrateReady(4);
+                    if (!layout.HasChunk(x, z)) return null;
+                }
+            }
             int seed = _seed;
             float ox = x * WorldBuilder.TileSize, oz = z * WorldBuilder.TileSize;
-            return Task.Run(() => WorldBuilder.PaintSplat(layout, seed, ox, oz, WorldBuilder.TileSize));
+            WorldBuilder.TileFeatures features = WorldBuilder.CollectFeatures(layout, ox, oz, WorldBuilder.TileSize);
+            return Task.Run(() => WorldBuilder.PaintSplat(layout, seed, ox, oz, WorldBuilder.TileSize, features));
         }
 
         private void Finish(Tile t)
@@ -172,7 +192,14 @@ namespace Afterfall.Presentation
                 float x0 = t.X * WorldBuilder.TileSize, z0 = t.Z * WorldBuilder.TileSize;
                 float dx = Mathf.Max(0f, Mathf.Max(x0 - p.x, p.x - (x0 + WorldBuilder.TileSize)));
                 float dz = Mathf.Max(0f, Mathf.Max(z0 - p.z, p.z - (z0 + WorldBuilder.TileSize)));
-                if (dx * dx + dz * dz > UnloadRadius * UnloadRadius) _drop.Add(kv.Key);
+                if (dx * dx + dz * dz <= UnloadRadius * UnloadRadius) continue;
+                if (Time.unscaledTime < _holdUntil)
+                {
+                    float hx = Mathf.Max(0f, Mathf.Max(x0 - _hold.x, _hold.x - (x0 + WorldBuilder.TileSize)));
+                    float hz = Mathf.Max(0f, Mathf.Max(z0 - _hold.z, _hold.z - (z0 + WorldBuilder.TileSize)));
+                    if (hx * hx + hz * hz <= LoadRadius * LoadRadius) continue;
+                }
+                _drop.Add(kv.Key);
             }
             foreach (int k in _drop)
             {

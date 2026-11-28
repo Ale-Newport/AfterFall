@@ -17,7 +17,7 @@ namespace Afterfall.Tests
             WorldLayout a = WorldGenerator.Generate(77);
             WorldLayout b = WorldGenerator.Generate(77);
             Assert.AreEqual(a.Nodes.Count, b.Nodes.Count);
-            CollectionAssert.AreEqual(a.Height.Heights, b.Height.Heights);
+            CollectionAssert.AreEqual(((HeightField)a.Height).Heights, ((HeightField)b.Height).Heights);
             for (int i = 0; i < a.Nodes.Count; i++)
             {
                 Assert.AreEqual(a.Nodes[i].DefId, b.Nodes[i].DefId);

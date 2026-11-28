@@ -18,8 +18,37 @@ namespace Afterfall.Domain.World
         public const float RegionSize = 2048f;
         public const float RegionMaxHeight = 220f;
 
-        /// <summary>The layout for a world version (1 = valley, 2 = region).</summary>
-        public static WorldLayout Generate(int seed, int version) => version >= 2 ? GenerateRegion(seed) : Generate(seed);
+        /// <summary>The layout for a world version (1 = valley, 2 = region, 3 = the 64 km basin).</summary>
+        public static WorldLayout Generate(int seed, int version) => version >= 3 ? GenerateBasin(seed) : version == 2 ? GenerateRegion(seed) : Generate(seed);
+
+        /// <summary>
+        /// World version 3: the 64 km Kessel Basin around Greater Millbrook. Only the plan is made here
+        /// (places, rivers, lakes, the road network); terrain and content come per chunk on demand.
+        /// </summary>
+        public static WorldLayout GenerateBasin(int seed)
+        {
+            WorldLayout region = GenerateRegion(seed);
+            var l = new WorldLayout
+            {
+                Version = 3,
+                RegionName = "The Kessel Basin",
+                SeaLevel = BasinWorld.Sea,
+                WaterLevel = BasinWorld.Sea,
+                LakeCenter = region.LakeCenter,
+                LakeRadius = 0f,
+                PlayerSpawn = region.PlayerSpawn
+            };
+            l.Pois.AddRange(region.Pois);
+            l.Roads.AddRange(region.Roads);
+            l.Rivers.AddRange(region.Rivers);
+            l.Lakes.AddRange(region.Lakes);
+            l.Survivors.AddRange(region.Survivors);
+            var basin = new BasinWorld(seed, l, region);
+            basin.Plan();
+            l.Chunks = basin;
+            l.Height = new TiledHeightField(basin, (int)(BasinWorld.WorldSize / WorldLayout.ChunkSize), BasinWorld.MaxHeight, 160);
+            return l;
+        }
 
         /// <summary>Where the region's apartment blocks stand (Y holds the yaw), each inside a town block.</summary>
         private static readonly Vec3 AshfordApartments = new Vec3(935f, 0f, 540f);
@@ -394,7 +423,7 @@ namespace Afterfall.Domain.World
         /// </summary>
         private const float MaxRoadGrade = 0.16f;
 
-        private static void LimitGrade(RoadPath r, float[] h, bool[] pinned, float maxGrade)
+        internal static void LimitGrade(RoadPath r, float[] h, bool[] pinned, float maxGrade)
         {
             int n = h.Length;
             var at = new float[n];
@@ -482,7 +511,7 @@ namespace Afterfall.Domain.World
             return heights;
         }
 
-        private static bool IntersectTU(Vec3 a, Vec3 b, Vec3 c, Vec3 d, out float t, out float u)
+        internal static bool IntersectTU(Vec3 a, Vec3 b, Vec3 c, Vec3 d, out float t, out float u)
         {
             t = u = 0f;
             float r1x = b.X - a.X, r1z = b.Z - a.Z, r2x = d.X - c.X, r2z = d.Z - c.Z;
@@ -495,7 +524,7 @@ namespace Afterfall.Domain.World
         }
 
         /// <summary>Splits a path's segments into lengths of at most <paramref name="step"/> metres.</summary>
-        private static void Subdivide(RoadPath r, float step)
+        internal static void Subdivide(RoadPath r, float step)
         {
             var pts = new List<Vec3>(r.Points);
             r.Points.Clear();
@@ -648,7 +677,7 @@ namespace Afterfall.Domain.World
             }
         }
 
-        private static ContainerSpec[] ContainersFor(string kind, DeterministicRandom rng)
+        internal static ContainerSpec[] ContainersFor(string kind, DeterministicRandom rng)
         {
             switch (kind)
             {

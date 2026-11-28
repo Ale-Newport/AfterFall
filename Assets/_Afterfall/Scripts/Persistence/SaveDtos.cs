@@ -187,6 +187,7 @@ namespace Afterfall.Persistence
         public int Remaining { get; set; }
         public bool Depleted { get; set; }
         public double RespawnAt { get; set; }
+        public string SeedKey { get; set; } = "";
     }
 
     public sealed class DropDto
@@ -302,6 +303,9 @@ namespace Afterfall.Persistence
 
         /// <summary>Explored cells as a base64 bitset.</summary>
         public string ExploredCells { get; set; } = "";
+
+        /// <summary>Chunks of a chunked world that have been seeded (see WorldState.SeededChunks).</summary>
+        public List<long> SeededChunks { get; set; } = new List<long>();
 
         public List<string> DiscoveredPois { get; set; } = new List<string>();
         public ThreatState Threat { get; set; }

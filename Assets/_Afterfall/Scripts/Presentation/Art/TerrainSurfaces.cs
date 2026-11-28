@@ -71,7 +71,9 @@ namespace Afterfall.Presentation.Art
         public const int Asphalt = 5;
         public const int Gravel = 6;
         public const int Shore = 7;
-        public const int Count = 8;
+        public const int Snow = 8;
+        public const int Sand = 9;
+        public const int Count = 10;
 
         /// <summary>Texture resolution of every layer.</summary>
         public const int Resolution = 512;
@@ -85,7 +87,9 @@ namespace Afterfall.Presentation.Art
             new TerrainLayerArt("DryGrass", 7.3f, 0.75f, TextureSynth.TerrainDryGrass),
             new TerrainLayerArt("Asphalt", 6f, 0.9f, TextureSynth.TerrainAsphalt),
             new TerrainLayerArt("Gravel", 3f, 1.1f, TextureSynth.TerrainGravel),
-            new TerrainLayerArt("Shore", 5f, 1f, TextureSynth.TerrainShore)
+            new TerrainLayerArt("Shore", 5f, 1f, TextureSynth.TerrainShore),
+            new TerrainLayerArt("Snow", 8f, 0.6f, TextureSynth.TerrainSnow),
+            new TerrainLayerArt("Sand", 6f, 0.7f, TextureSynth.TerrainSand)
         };
 
         /// <summary>World size of one repeat of the lake ripple normal map.</summary>

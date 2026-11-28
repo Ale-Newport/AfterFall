@@ -55,6 +55,9 @@ The strategic camera keeps its own fog plane over the 3D world (from the same `E
 ## Saves
 `WorldDto.Navigation` holds the markers (id, name, position, kind) and the waypoint. Older saves have none and load with an empty list. Marker ids come from the world's id allocator and are never reused.
 
+## The 64 km basin
+The overview (2048², 32 m per pixel) is drawn from cached coarse grids (heights every 64 m, biomes every 256 m): the city in grey, snow, sand, heath, marsh, the rivers, lakes and sea, and the road and rail network; no terrain tiles are made for it. Around the survivor a **local map** (1024 m at 1 m per pixel, streets and building footprints of the generated chunks) is redrawn on a worker when they have moved 300 m or new chunks appear; the minimap shows it over the overview, and so does the world map when zoomed in.
+
 ## Not done yet
 - Detail tiles: one overview covers the 2 km region; at close zoom it is coarser than in the valley. Worlds beyond 2 km need the same rasterizer per tile, cached and loaded by zoom level.
 - Road-aware route planning for vehicles.

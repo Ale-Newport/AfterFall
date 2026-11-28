@@ -12,7 +12,7 @@ Phases and acceptance criteria are in WORLD_EXPANSION_ROADMAP.md; the starting p
 | 5a Terrain tiles and the water model | Done | `a50bb29` | Valley unchanged in the tour; tiles stream |
 | 5b Greater Millbrook (world version 2, 2 km) | Done (see below) | this change | `RegionTests` (7); tour `RegionScene` |
 | 6 Realistic characters | Done: seven skinned MakeHuman (CC0) models driven by the procedural rig; motion capture not yet | this change | Model gallery (`tools/gallery.sh characters`); full tour with skinned survivor, colonists and infected |
-| 7+ Larger regions (toward 30–60 km), more archetypes | Not started | — | — |
+| 7 The 64 km Kessel Basin with Kesselmouth (London-sized city), biomes and chunk streaming | Done (first version) | this change | `BasinTests` (4); tour `BasinScene` (`-afterfall-tour-basin`): 10 stops, 0 failures, 8.3–8.4 ms average at each |
 
 ## Phase 5b details
 - Generation: 2 × 2 km, deterministic, about 0.7–0.9 s in a release build (debug test builds are slower).

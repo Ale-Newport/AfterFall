@@ -175,9 +175,35 @@ namespace Afterfall.Domain.World
 
         // ------------------------------------------------------------------ entity management
 
+        /// <summary>Structures and resource nodes by position (see <see cref="StructuresNear"/>).</summary>
+        public SpatialGrid StructureGrid { get; } = new SpatialGrid();
+        public SpatialGrid NodeGrid { get; } = new SpatialGrid();
+
+        /// <summary>Chunks of a chunked world whose containers, fixtures, vehicles and infected have been created (saved).</summary>
+        public HashSet<long> SeededChunks { get; } = new HashSet<long>();
+
+        private readonly Dictionary<string, EntityId> _nodeKeys = new Dictionary<string, EntityId>(StringComparer.Ordinal);
+
+        public bool HasNodeKey(string key) => _nodeKeys.ContainsKey(key);
+
+        private readonly List<EntityId> _near = new List<EntityId>();
+        private readonly List<Structure> _nearStructures = new List<Structure>();
+
+        /// <summary>Structures whose position is within <paramref name="radius"/> (plus a cell) of a point. The list is reused.</summary>
+        public List<Structure> StructuresNear(Vec3 p, float radius)
+        {
+            StructureGrid.Query(p, radius, _near);
+            _nearStructures.Clear();
+            foreach (EntityId id in _near)
+                if (Structures.TryGetValue(id, out Structure s)) _nearStructures.Add(s);
+            return _nearStructures;
+        }
+
         public void AddStructure(Structure s)
         {
+            if (Structures.TryGetValue(s.Id, out Structure old)) StructureGrid.Remove(old.Id, old.Position);
             Structures[s.Id] = s;
+            StructureGrid.Add(s.Id, s.Position);
             _sortedStructureIds = null;
             Ids.EnsureAbove(s.Id);
             RegisterStructureInventories(s);
@@ -211,6 +237,7 @@ namespace Afterfall.Domain.World
             if (s.Generator != null) UnregisterInventory(s.Generator.Fuel);
             if (s.Heater != null) UnregisterInventory(s.Heater.Fuel);
             Structures.Remove(id);
+            StructureGrid.Remove(id, s.Position);
             _sortedStructureIds = null;
             int removed = PowerLinks.RemoveAll(l => l.Involves(id));
             if (s.Power != null || removed > 0) MarkPowerTopologyChanged();
@@ -261,8 +288,21 @@ namespace Afterfall.Domain.World
 
         public void AddNode(ResourceNodeState node)
         {
+            if (ResourceNodes.TryGetValue(node.Id, out ResourceNodeState old)) NodeGrid.Remove(old.Id, old.Position);
             ResourceNodes[node.Id] = node;
+            NodeGrid.Add(node.Id, node.Position);
+            if (!string.IsNullOrEmpty(node.SeedKey)) _nodeKeys[node.SeedKey] = node.Id;
             Ids.EnsureAbove(node.Id);
+            MarkChanged();
+        }
+
+        /// <summary>Removes a node (chunked worlds drop untouched nodes far from the survivor).</summary>
+        public void RemoveNode(EntityId id)
+        {
+            if (!ResourceNodes.TryGetValue(id, out ResourceNodeState n)) return;
+            ResourceNodes.Remove(id);
+            NodeGrid.Remove(id, n.Position);
+            if (!string.IsNullOrEmpty(n.SeedKey)) _nodeKeys.Remove(n.SeedKey);
             MarkChanged();
         }
 

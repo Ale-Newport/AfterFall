@@ -21,7 +21,7 @@ namespace Afterfall.Presentation.UI
 
         private readonly UiManager _ui;
         private readonly GameController _gc;
-        private readonly VisualElement _viewport, _image, _fog, _symbols;
+        private readonly VisualElement _viewport, _image, _detail, _fog, _symbols;
         private readonly Label _cursorInfo, _waypointInfo, _exploreInfo, _zoomInfo;
         private readonly TextField _markerName;
         private readonly VisualElement _markerList;
@@ -45,9 +45,10 @@ namespace Afterfall.Presentation.UI
             var side = body.Put(UiKit.Div("col", "map-side"));
             _viewport = body.Put(UiKit.Div("map-viewport", "grow"));
             _image = _viewport.Put(UiKit.Div("map-layer"));
+            _detail = _viewport.Put(UiKit.Div("map-layer"));
             _fog = _viewport.Put(UiKit.Div("map-layer"));
             _symbols = _viewport.Put(UiKit.Div("map-layer"));
-            foreach (VisualElement e in new[] { _image, _fog, _symbols }) e.pickingMode = PickingMode.Ignore;
+            foreach (VisualElement e in new[] { _image, _detail, _fog, _symbols }) e.pickingMode = PickingMode.Ignore;
             _viewport.RegisterCallback<PointerDownEvent>(OnDown);
             _viewport.RegisterCallback<PointerMoveEvent>(OnMove);
             _viewport.RegisterCallback<PointerUpEvent>(OnUp);
@@ -92,7 +93,8 @@ namespace Afterfall.Presentation.UI
             Vector3 p = _gc.Player.transform.position;
             _cx = p.x;
             _cz = p.z;
-            _mpp = 0.6f;
+            // The basin opens wider (a city block is ~100 m, the basin 64 km).
+            _mpp = _gc.Session.World.Layout.IsChunked ? 2f : 0.6f;
         }
 
         public VisualElement Root { get; }
@@ -144,6 +146,18 @@ namespace Afterfall.Presentation.UI
             }
             if (_gc.Maps.Overview != null) _image.style.backgroundImage = new StyleBackground(_gc.Maps.Overview);
             if (_gc.Maps.Fog != null) _fog.style.backgroundImage = new StyleBackground(_gc.Maps.Fog);
+            // Zoomed in on a chunked world, the local detail map (streets, buildings) lies over the overview.
+            bool detail = _gc.Maps.Detail != null && _mpp < 6f;
+            UiKit.Show(_detail, detail);
+            if (detail)
+            {
+                view.WorldToScreen(_gc.Maps.DetailOrigin.x, _gc.Maps.DetailOrigin.y + MapTextures.DetailSize, out float dl, out float dt);
+                _detail.style.left = dl;
+                _detail.style.top = dt;
+                _detail.style.width = MapTextures.DetailSize / _mpp;
+                _detail.style.height = MapTextures.DetailSize / _mpp;
+                _detail.style.backgroundImage = new StyleBackground(_gc.Maps.Detail);
+            }
             // Textures have row 0 at the south edge; UI images draw row 0 at the bottom too, so no flip is needed.
             _zoomInfo.text = string.Format(CultureInfo.InvariantCulture, "Scale: 100 px = {0}", MapGeometry.Distance(100f * _mpp));
 

@@ -109,6 +109,17 @@ namespace Afterfall.Presentation
 
         private Vector3 NodeFocus() => _gc.Session.World.Player.Position.ToUnity();
 
+        /// <summary>In a large world, views of the world's structures and parked vehicles exist only this near the survivor.</summary>
+        public const float StructureViewRadius = 350f, VehicleViewRadius = 700f;
+
+        private bool InRange(Vec3 p, float radius)
+        {
+            if (!_streamNodes || !_gc.Session.World.Layout.IsChunked) return true;
+            Vec3 f = _gc.Session.World.Player != null ? _gc.Session.World.Player.Position : p;
+            float dx = p.X - f.X, dz = p.Z - f.Z;
+            return dx * dx + dz * dz <= radius * radius;
+        }
+
         private bool InNodeRange(Vec3 p, float extra)
         {
             if (!_streamNodes) return true;
@@ -130,6 +141,32 @@ namespace Afterfall.Presentation
             }
             foreach (ResourceNodeState n in w.ResourceNodes.Values)
                 if (!_nodes.ContainsKey(n.Id) && InNodeRange(n.Position, 0f)) CreateNodeView(n);
+
+            // The world's structures and parked vehicles follow the same rule (with their own ranges).
+            var far = new List<EntityId>();
+            foreach (KeyValuePair<EntityId, StructureView> kv in _structures)
+                if (w.Structures.TryGetValue(kv.Key, out Structure s) && !s.PlayerBuilt && !InRange(s.Position, StructureViewRadius + 50f)) far.Add(kv.Key);
+            foreach (EntityId id in far)
+            {
+                if (_structures[id] != null) Destroy(_structures[id].gameObject);
+                _structures.Remove(id);
+            }
+            foreach (Structure s in w.Structures.Values)
+                if (!_structures.ContainsKey(s.Id) && (s.PlayerBuilt || InRange(s.Position, StructureViewRadius))) CreateStructureView(s);
+            far.Clear();
+            foreach (KeyValuePair<EntityId, VehicleView> kv in _vehicles)
+                if (kv.Value != null && !kv.Value.Driven && w.Vehicles.TryGetValue(kv.Key, out var v) && (w.Player == null || w.Player.VehicleId != kv.Key) && !InRange(v.Position, VehicleViewRadius + 100f)) far.Add(kv.Key);
+            foreach (EntityId id in far)
+            {
+                Destroy(_vehicles[id].gameObject);
+                _vehicles.Remove(id);
+            }
+            foreach (Afterfall.Domain.Vehicles.VehicleState v in w.Vehicles.Values)
+            {
+                if (_vehicles.ContainsKey(v.Id) || !InRange(v.Position, VehicleViewRadius)) continue;
+                Afterfall.Domain.Vehicles.VehicleDefinition def = _gc.Session.Content.Vehicle(v.DefId);
+                if (def != null) _vehicles[v.Id] = VehicleView.Create(_gc, v, def, _vehiclesRoot);
+            }
         }
 
         private void CreateNodeView(ResourceNodeState n)
@@ -167,7 +204,7 @@ namespace Afterfall.Presentation
                 if (InNodeRange(n.Position, 0f)) CreateNodeView(n);
             }
 
-            // Structures
+            // Structures (in a large world, the world's own ones only near the survivor)
             RemoveMissing(_structures, w.Structures);
             foreach (Structure s in w.Structures.Values)
             {
@@ -177,6 +214,7 @@ namespace Afterfall.Presentation
                     Destroy(view.gameObject);
                     _structures.Remove(s.Id);
                 }
+                if (!s.PlayerBuilt && !InRange(s.Position, StructureViewRadius)) continue;
                 CreateStructureView(s);
             }
 
@@ -212,6 +250,8 @@ namespace Afterfall.Presentation
                     if (!view.Driven && (view.transform.position - v.Position.ToUnity()).sqrMagnitude > 1f) view.Place(v.Position, v.Yaw);
                     continue;
                 }
+                if (w.Player == null || w.Player.VehicleId != v.Id)
+                    if (!InRange(v.Position, VehicleViewRadius)) continue;
                 _vehicles[v.Id] = VehicleView.Create(_gc, v, def, _vehiclesRoot);
             }
 

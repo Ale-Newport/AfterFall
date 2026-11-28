@@ -268,7 +268,7 @@ namespace Afterfall.Domain.AI
         {
             Structure best = null;
             float bestD = float.MaxValue;
-            foreach (Structure s in _world.Structures.Values)
+            foreach (Structure s in _world.StructuresNear(position, reach + 16f))
             {
                 if (!s.IsComplete) continue;
                 BuildingDefinition def = _content.Building(s.DefId);
@@ -294,7 +294,7 @@ namespace Afterfall.Domain.AI
         /// <summary>True if a point lies inside the footprint of a complete blocking player structure.</summary>
         public bool IsInsideBlocker(Vec3 p, float margin)
         {
-            foreach (Structure s in _world.Structures.Values)
+            foreach (Structure s in _world.StructuresNear(p, margin + 16f))
             {
                 if (!s.IsComplete) continue;
                 BuildingDefinition def = _content.Building(s.DefId);

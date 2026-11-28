@@ -1,0 +1,160 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using Afterfall.Core;
+using Afterfall.Domain.Construction;
+using Afterfall.Domain.World;
+using Afterfall.Persistence;
+using Afterfall.Services;
+using NUnit.Framework;
+
+namespace Afterfall.Tests
+{
+    /// <summary>World version 3: the 64 km Kessel Basin, generated in chunks around the survivor.</summary>
+    public sealed class BasinTests
+    {
+        private const int Seed = 20261107;
+
+        private static GameSession NewBasinGame()
+        {
+            var settings = GameSettings.FromPreset(DifficultyPreset.Survival);
+            settings.WorldVersion = 3;
+            return NewGameFactory.Create(TestSupport.Content, Seed, settings);
+        }
+
+        private static void TravelTo(GameSession s, float x, float z, int seconds = 3)
+        {
+            s.World.Player.Position = s.World.Layout.Ground(x, z);
+            s.Streaming.Warm(s.World.Player.Position);
+            for (int i = 0; i < seconds * 4; i++) s.Update(0.25);
+        }
+
+        [Test]
+        public void Basin_IsSixtyFourKilometres_AndBuiltOnlyWhereTheSurvivorGoes()
+        {
+            var sw = Stopwatch.StartNew();
+            WorldLayout l = WorldGenerator.Generate(Seed, 3);
+            Assert.Less(sw.ElapsedMilliseconds, 20000, "planning the basin stays a loading-screen job");
+            Assert.AreEqual(65536f, l.Size, 0.1f);
+            Assert.IsTrue(l.IsChunked);
+            Assert.AreEqual(0, l.GeneratedChunkCount, "nothing is generated until asked");
+            foreach (string id in new[] { "kesselmouth", "harrowgate", "cragholm", "redrock", "kingsmoor", "dunmere", "gullhaven", "saltcombe", "fenwick", "greyspine", "highmoor", "scar", "millbrook", "ashford" })
+                Assert.IsNotNull(l.Poi(id), id);
+            PoiInfo city = l.Poi("kesselmouth");
+            Assert.Greater(Math.PI * city.Radius * city.Radius / 1e6, 1300.0, "Kesselmouth covers about the area of Greater London (~1,570 km²)");
+
+            // The same seed is the same world, chunk by chunk, whatever order they are made in.
+            WorldLayout m = WorldGenerator.Generate(Seed, 3);
+            ChunkContent a1 = l.EnsureChunk(78, 59), a2 = l.EnsureChunk(30, 70);
+            ChunkContent b2 = m.EnsureChunk(30, 70), b1 = m.EnsureChunk(78, 59);
+            Assert.AreEqual(a1.Blocks.Count, b1.Blocks.Count);
+            Assert.AreEqual(a1.Nodes.Count, b1.Nodes.Count);
+            Assert.AreEqual(a2.Nodes.Count, b2.Nodes.Count);
+            for (int i = 0; i < a1.Blocks.Count; i += 7) Assert.AreEqual(a1.Blocks[i].Position.X, b1.Blocks[i].Position.X, 1e-3f);
+            for (int i = 0; i < 50; i++)
+            {
+                float x = 39000f + i * 37.3f, z = 29000f + i * 21.7f;
+                Assert.AreEqual(l.HeightAt(x, z), m.HeightAt(x, z), 1e-3f);
+            }
+        }
+
+        [Test]
+        public void Basin_HasItsBiomes()
+        {
+            WorldLayout l = WorldGenerator.Generate(Seed, 3);
+            var b = (BasinWorld)l.Chunks;
+            Assert.Greater(l.HeightAt(6000f, 30000f), 480f, "the Greyspine is high");
+            Assert.Greater(b.Biome(6000f, 30000f).Snow, 0.5f, "with snow");
+            Assert.Greater(b.Biome(30000f, 55000f).Moor, 0.7f);
+            Assert.Greater(b.Biome(11000f, 6500f).Badlands, 0.7f);
+            Assert.Greater(b.Biome(40000f, 30000f).City, 0.9f);
+            Assert.Greater(b.Biome(30000f, 5000f).Farm, 0.5f);
+            Assert.Greater(b.Biome(19000f, 44000f).Forest, 0.5f);
+            Assert.IsTrue(l.CoarseWaterAt(63000f, 20000f, out float sea) && Math.Abs(sea - BasinWorld.Sea) < 0.01f, "the sea in the east");
+            Assert.IsTrue(l.WaterAt(51200f, 55700f, out _), "a lake in the lake district");
+            // The Aldwater flows downhill to the sea through the city.
+            foreach (RiverPath r in l.Rivers.Where(r => r.Name.StartsWith("Aldwater", StringComparison.Ordinal)))
+                for (int i = 1; i < r.Points.Count; i++) Assert.LessOrEqual(r.Points[i].Y, r.Points[i - 1].Y + 1e-3f);
+            Vec3 river = l.Rivers.First(r => r.Name == "Aldwater" && r.Width > 80f).Points[400];
+            Assert.IsTrue(l.WaterAt(river.X, river.Z, out _), $"the river holds water in the city at {river}");
+        }
+
+        [Test]
+        public void City_HasStreetsBuildingsLootAndParks_WithoutOverlaps()
+        {
+            WorldLayout l = WorldGenerator.Generate(Seed, 3);
+            int blocks = 0, enterable = 0, containers = 0, streets = 0, parks = 0;
+            var kinds = new HashSet<string>();
+            for (int z = 56; z <= 62; z += 2)
+                for (int x = 60; x <= 104; x += 4)
+                {
+                    ChunkContent c = l.EnsureChunk(x, z);
+                    blocks += c.Blocks.Count;
+                    enterable += c.Props.Count(p => p.PoiId == "kesselmouth");
+                    containers += c.Containers.Count;
+                    streets += c.Streets.Count;
+                    parks += c.Props.Count(p => p.Kind == "city_park");
+                    foreach (PropPlacement p in c.Blocks) kinds.Add(p.Kind);
+                    // Buildings in a chunk never overlap each other or stand in water.
+                    var all = c.Blocks.Concat(c.Props.Where(p => p.PoiId == "kesselmouth")).ToList();
+                    for (int i = 0; i < all.Count; i++)
+                    {
+                        Assert.IsFalse(l.WaterAt(all[i].Position.X, all[i].Position.Z, out _), $"{all[i].Kind} in water at {all[i].Position}");
+                        for (int j = i + 1; j < all.Count; j++)
+                            Assert.Greater(Vec3.DistanceXZ(all[i].Position, all[j].Position), Math.Min(Math.Min(all[i].Size.X, all[i].Size.Z), Math.Min(all[j].Size.X, all[j].Size.Z)) * 0.45f,
+                                $"{all[i].Kind} and {all[j].Kind} overlap at {all[i].Position}");
+                    }
+                }
+            Assert.Greater(blocks, 5000, "a dense city along the Aldwater");
+            Assert.Greater(enterable, 100, "buildings to enter and search");
+            Assert.Greater(containers, 200);
+            Assert.Greater(streets, 1000);
+            Assert.Greater(parks, 5);
+            foreach (string k in new[] { "city_tower", "city_midrise", "city_terrace", "city_semi" }) Assert.IsTrue(kinds.Contains(k), k);
+            Assert.Greater(l.Props.Count(p => p.Kind == "bridge"), 0, "the Aldwater is bridged");
+        }
+
+        [Test]
+        public void NewBasinGame_SeedsAroundTheSurvivor_AndForgetsUntouchedTreesFarAway()
+        {
+            GameSession s = NewBasinGame();
+            WorldState w = s.World;
+            Assert.Greater(w.SeededChunks.Count, 0);
+            Assert.Greater(w.ResourceNodes.Count, 500, "trees and rocks around the camp");
+            Assert.Greater(w.Structures.Values.Count(x => !x.PlayerBuilt), 20, "containers and fixtures of Millbrook");
+            Assert.Greater(w.Vehicles.Count, 0);
+            int nearStart = w.ResourceNodes.Count;
+
+            // Fell a tree at the camp, then go to the city.
+            ResourceNodeState tree = w.ResourceNodes.Values.Where(n => n.DefId == "tree_pine").OrderBy(n => Vec3.DistanceXZ(n.Position, w.Player.Position)).First();
+            tree.RemainingHarvests -= 1;
+            tree.Touched = true;
+            string treeKey = tree.SeedKey;
+            Assert.IsNotEmpty(treeKey);
+
+            TravelTo(s, 40500f, 31500f);
+            Assert.IsTrue(w.SeededChunks.Contains(ChunkContent.ChunkKey(WorldLayout.ChunkOf(40500f), WorldLayout.ChunkOf(31500f))));
+            Assert.IsTrue(w.ResourceNodes.Values.Any(n => n.SeedKey == treeKey), "the felled tree is kept");
+            Assert.Less(w.ResourceNodes.Values.Count(n => n.Position.X < 2048f && n.Position.Z < 2048f), nearStart / 4, "untouched trees far away are let go");
+            Assert.Greater(w.Structures.Values.Count(x => x.PoiId == "kesselmouth"), 20, "city loot near the survivor");
+
+            // Save in the city, load, and the world is the same.
+            string text = SaveSerializer.Serialize(w, "t", 1);
+            WorldState loaded = SaveSerializer.Deserialize(text, TestSupport.Content, new List<string>());
+            var s2 = new GameSession(TestSupport.Content, loaded);
+            Assert.AreEqual(w.SeededChunks.Count, loaded.SeededChunks.Count);
+            Assert.AreEqual(w.Structures.Count, loaded.Structures.Count);
+            Assert.AreEqual(w.Vehicles.Count, loaded.Vehicles.Count);
+            Assert.IsTrue(loaded.ResourceNodes.Values.Any(n => n.SeedKey == treeKey && n.RemainingHarvests == tree.RemainingHarvests));
+            Assert.AreEqual(w.ResourceNodes.Values.Count(n => n.Position.X > 30000f), loaded.ResourceNodes.Values.Count(n => n.Position.X > 30000f), "the trees around the survivor are back");
+            Assert.Less(text.Length, 6_000_000, "untouched trees are not saved");
+
+            // Coming back seeds nothing twice.
+            int structures = loaded.Structures.Count;
+            TravelTo(s2, 300f, 300f);
+            Assert.AreEqual(structures, loaded.Structures.Count, "Millbrook was seeded already");
+            Assert.AreEqual(1, loaded.ResourceNodes.Values.Count(n => n.SeedKey == treeKey), "the felled tree is not made again");
+        }
+    }
+}

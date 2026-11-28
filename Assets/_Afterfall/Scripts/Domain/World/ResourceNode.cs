@@ -53,6 +53,12 @@ namespace Afterfall.Domain.World
         public int RemainingHarvests { get; set; }
         public bool Depleted { get; set; }
 
+        /// <summary>The layout key of a node in a chunked world ("" otherwise): untouched keyed nodes are not saved but remade from the layout.</summary>
+        public string SeedKey { get; set; } = "";
+
+        /// <summary>Harvested at least once (so it must be saved even when keyed).</summary>
+        public bool Touched { get; set; }
+
         /// <summary>Simulation time at which a depleted node regrows (if its definition allows).</summary>
         public double RespawnAt { get; set; }
     }

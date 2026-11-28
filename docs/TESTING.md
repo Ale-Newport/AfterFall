@@ -97,7 +97,7 @@ Before the game starts it also shows the New Game, Load Game, Settings and Contr
 
 It writes a PNG for each step and `tour-report.txt`, then quits. The report has load times, frame times, a line per check and every error logged. A check that does not hold starts with `FAIL`. Building materials are granted, and the report lists them. Everything else goes through the normal game commands.
 
-`-afterfall-tour-region` runs only the Greater Millbrook scene (about two minutes). `-afterfall-tour-expansion` skips the settlement chapters and runs only the expansion scenes after the new game loads (about a minute), for quick iteration on new features.
+`-afterfall-tour-region` runs only the Greater Millbrook scene (about two minutes). `-afterfall-tour-basin` starts a game in the 64 km Kessel Basin and teleports through the city (Old Quarter, terraces, docklands, the river), the snowy Greyspine, the moor, the lake district, the Scar, the coast and Harrowgate, with a screenshot, a streaming check and frame times at each stop, the local map in the city and the world map at the end (about six minutes). `-afterfall-tour-expansion` skips the settlement chapters and runs only the expansion scenes after the new game loads (about a minute), for quick iteration on new features.
 
 `tools/run-unity-checks.sh tour` prints the report and exits non-zero on any `FAIL` line or logged error. `-afterfall-tour-diag` adds:
 - lighting comparisons and a scan for large shadow casters;

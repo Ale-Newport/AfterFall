@@ -257,25 +257,28 @@ namespace Afterfall.Presentation
             ExplorationState e = _gc.Session.World.Exploration;
             int n = e.CellsPerSide;
             _fogTex = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, name = "FogOfWar" };
-            // A terrain-following grid so the fog sits just above the ground everywhere.
+            // A terrain-following grid so the fog sits just above the ground everywhere (at most 256² cells,
+            // on the coarse map heights in a chunked world so no terrain tiles are made for it).
             WorldLayout l = _gc.Session.World.Layout;
-            int verts = n + 1;
+            int steps = Mathf.Min(n, 256);
+            float step = n * e.CellSize / steps;
+            int verts = steps + 1;
             var mesh = new Mesh { name = "FogGrid", indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
             var v = new Vector3[verts * verts];
             var uv = new Vector2[verts * verts];
             for (int z = 0; z < verts; z++)
                 for (int x = 0; x < verts; x++)
                 {
-                    float wx = Mathf.Min(x * ExplorationState.CellSize, l.Size);
-                    float wz = Mathf.Min(z * ExplorationState.CellSize, l.Size);
-                    float h = Mathf.Max(l.HeightAt(wx, wz), l.WaterLevel) + 9f;
+                    float wx = Mathf.Min(x * step, l.Size);
+                    float wz = Mathf.Min(z * step, l.Size);
+                    float h = Mathf.Max(l.IsChunked ? l.MapHeightAt(wx, wz) : l.HeightAt(wx, wz), l.WaterLevel) + (l.IsChunked ? 24f : 9f);
                     v[z * verts + x] = new Vector3(wx, h, wz);
-                    uv[z * verts + x] = new Vector2(wx / (n * ExplorationState.CellSize), wz / (n * ExplorationState.CellSize));
+                    uv[z * verts + x] = new Vector2(wx / (n * e.CellSize), wz / (n * e.CellSize));
                 }
-            var tris = new int[n * n * 6];
+            var tris = new int[steps * steps * 6];
             int t = 0;
-            for (int z = 0; z < n; z++)
-                for (int x = 0; x < n; x++)
+            for (int z = 0; z < steps; z++)
+                for (int x = 0; x < steps; x++)
                 {
                     int i = z * verts + x;
                     tris[t++] = i;

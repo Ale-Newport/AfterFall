@@ -4,37 +4,24 @@ using Afterfall.Core;
 
 namespace Afterfall.Domain.World
 {
-    /// <summary>Engine-independent terrain heights. The presentation builds a Unity Terrain from it.</summary>
-    public sealed class HeightField
+    /// <summary>
+    /// Engine-independent terrain heights on a square grid starting at (0, 0): a whole array
+    /// (<see cref="HeightField"/>) or tiles made on demand (<see cref="TiledHeightField"/>).
+    /// The presentation builds Unity Terrain tiles from it.
+    /// </summary>
+    public abstract class HeightSource
     {
-        public HeightField(int resolution, float size, float maxHeight)
-        {
-            Resolution = resolution;
-            Size = size;
-            MaxHeight = maxHeight;
-            Heights = new float[resolution * resolution];
-        }
-
-        public int Resolution { get; }
-        public float Size { get; }
-        public float MaxHeight { get; }
-
-        /// <summary>Row-major heights in metres: index = z * Resolution + x.</summary>
-        public float[] Heights { get; }
-
+        /// <summary>Samples along one side (grid points, not cells).</summary>
+        public abstract int Resolution { get; }
+        public abstract float Size { get; }
+        public abstract float MaxHeight { get; }
         public float CellSize => Size / (Resolution - 1);
 
-        public float Get(int x, int z)
-        {
-            x = x < 0 ? 0 : x >= Resolution ? Resolution - 1 : x;
-            z = z < 0 ? 0 : z >= Resolution ? Resolution - 1 : z;
-            return Heights[z * Resolution + x];
-        }
-
-        public void Set(int x, int z, float h) => Heights[z * Resolution + x] = h < 0 ? 0 : h > MaxHeight ? MaxHeight : h;
+        /// <summary>Height at a grid point (clamped to the grid).</summary>
+        public abstract float Get(int x, int z);
 
         /// <summary>Bilinear height at a world position (clamped to the map).</summary>
-        public float Sample(float wx, float wz)
+        public virtual float Sample(float wx, float wz)
         {
             float fx = wx / CellSize;
             float fz = wz / CellSize;
@@ -57,6 +44,55 @@ namespace Afterfall.Domain.World
             float dx = (Sample(wx + d, wz) - Sample(wx - d, wz)) / (2 * d);
             float dz = (Sample(wx, wz + d) - Sample(wx, wz - d)) / (2 * d);
             return (float)(Math.Atan(Math.Sqrt(dx * dx + dz * dz)) * 180.0 / Math.PI);
+        }
+    }
+
+    /// <summary>Heights held in one array (the 512 m valley and the 2 km region).</summary>
+    public sealed class HeightField : HeightSource
+    {
+        public HeightField(int resolution, float size, float maxHeight)
+        {
+            Resolution = resolution;
+            Size = size;
+            MaxHeight = maxHeight;
+            Heights = new float[resolution * resolution];
+        }
+
+        public override int Resolution { get; }
+        public override float Size { get; }
+        public override float MaxHeight { get; }
+
+        /// <summary>Row-major heights in metres: index = z * Resolution + x.</summary>
+        public float[] Heights { get; }
+
+        public new float CellSize => Size / (Resolution - 1);
+
+        public override float Get(int x, int z)
+        {
+            x = x < 0 ? 0 : x >= Resolution ? Resolution - 1 : x;
+            z = z < 0 ? 0 : z >= Resolution ? Resolution - 1 : z;
+            return Heights[z * Resolution + x];
+        }
+
+        public void Set(int x, int z, float h) => Heights[z * Resolution + x] = h < 0 ? 0 : h > MaxHeight ? MaxHeight : h;
+
+        /// <summary>Bilinear height (inlined for the whole-array case, which the generators use heavily).</summary>
+        public override float Sample(float wx, float wz)
+        {
+            float cell = Size / (Resolution - 1);
+            float fx = wx / cell;
+            float fz = wz / cell;
+            int x0 = (int)Math.Floor(fx);
+            int z0 = (int)Math.Floor(fz);
+            float tx = fx - x0;
+            float tz = fz - z0;
+            float h00 = Get(x0, z0);
+            float h10 = Get(x0 + 1, z0);
+            float h01 = Get(x0, z0 + 1);
+            float h11 = Get(x0 + 1, z0 + 1);
+            float a = h00 + (h10 - h00) * tx;
+            float b = h01 + (h11 - h01) * tx;
+            return a + (b - a) * tz;
         }
     }
 
@@ -174,6 +210,8 @@ namespace Afterfall.Domain.World
 
     public sealed class NodeSeed
     {
+        /// <summary>Stable key in chunked worlds ("" in prebuilt ones), so a node is made once and found again.</summary>
+        public string Key { get; set; } = "";
         public string DefId { get; set; } = "";
         public Vec3 Position { get; set; }
         public float Yaw { get; set; }
@@ -182,6 +220,8 @@ namespace Afterfall.Domain.World
 
     public sealed class ContainerSeed
     {
+        /// <summary>Stable key in chunked worlds ("" in prebuilt ones).</summary>
+        public string Key { get; set; } = "";
         public string DefId { get; set; } = "";
         public string LootTable { get; set; } = "";
         public Vec3 Position { get; set; }
@@ -270,7 +310,7 @@ namespace Afterfall.Domain.World
         public const int HeightResolution = 513;
         public const float MaxTerrainHeight = 90f;
 
-        public HeightField Height { get; set; }
+        public HeightSource Height { get; set; }
         public float WaterLevel { get; set; }
         public Vec3 LakeCenter { get; set; }
         public float LakeRadius { get; set; }
@@ -288,7 +328,157 @@ namespace Afterfall.Domain.World
         public List<RiverPath> Rivers { get; } = new List<RiverPath>();
         public List<LakeInfo> Lakes { get; } = new List<LakeInfo>();
 
-        /// <summary>Generator version that built this layout (1 = the 512 m valley, 2 = the 2 km region).</summary>
+        // ------------------------------------------------------------------ chunked worlds
+
+        /// <summary>Side of a chunk (and of a terrain tile) in metres.</summary>
+        public const float ChunkSize = 512f;
+
+        /// <summary>The generator of a chunked world (version 3); null when the whole layout is built up front.</summary>
+        public IChunkSource Chunks { get; set; }
+        public bool IsChunked => Chunks != null;
+        public int ChunksAcross => (int)Math.Ceiling(Size / ChunkSize - 0.001f);
+
+        /// <summary>Sea level of a chunked world (land below it near the coast is sea); the valley's water line otherwise.</summary>
+        public float SeaLevel { get; set; }
+
+        private readonly Dictionary<long, ChunkContent> _chunks = new Dictionary<long, ChunkContent>();
+
+        /// <summary>Counts chunks generated, so views know to look for new content.</summary>
+        public int ChunkVersion { get; private set; }
+
+        public IEnumerable<ChunkContent> GeneratedChunks => _chunks.Values;
+        public int GeneratedChunkCount => _chunks.Count;
+
+        public bool HasChunk(int x, int z) => _chunks.ContainsKey(ChunkContent.ChunkKey(x, z));
+
+        public ChunkContent GetChunk(int x, int z) => _chunks.TryGetValue(ChunkContent.ChunkKey(x, z), out ChunkContent c) ? c : null;
+
+        public static int ChunkOf(float coordinate) => (int)Math.Floor(coordinate / ChunkSize);
+
+        /// <summary>
+        /// The chunk's content, generated now if needed and appended to the layout's lists (props,
+        /// nodes, containers, fixtures, vehicles, spawn points, streets). Main thread only.
+        /// Null outside the map or in a prebuilt layout.
+        /// </summary>
+        public ChunkContent EnsureChunk(int x, int z)
+        {
+            if (Chunks == null || x < 0 || z < 0 || x >= ChunksAcross || z >= ChunksAcross) return null;
+            long key = ChunkContent.ChunkKey(x, z);
+            if (_chunks.TryGetValue(key, out ChunkContent c)) return c;
+            if (_pending.TryGetValue(key, out System.Threading.Tasks.Task<ChunkContent> task))
+            {
+                _pending.Remove(key);
+                c = task.Result;
+            }
+            else
+            {
+                c = new ChunkContent(x, z);
+                Chunks.Populate(this, c);
+            }
+            return Integrate(c);
+        }
+
+        private readonly Dictionary<long, System.Threading.Tasks.Task<ChunkContent>> _pending = new Dictionary<long, System.Threading.Tasks.Task<ChunkContent>>();
+
+        /// <summary>Chunks generated on workers at once at most, so the nearest requests are never stuck behind far ones.</summary>
+        public const int MaxPendingChunks = 6;
+
+        /// <summary>
+        /// Starts generating a chunk on a worker thread (main thread only); <see cref="IntegrateReady"/>
+        /// adds it when done. False when too many are in flight already (ask again later).
+        /// </summary>
+        public bool RequestChunk(int x, int z)
+        {
+            if (Chunks == null || x < 0 || z < 0 || x >= ChunksAcross || z >= ChunksAcross) return false;
+            long key = ChunkContent.ChunkKey(x, z);
+            if (_chunks.ContainsKey(key) || _pending.ContainsKey(key)) return true;
+            if (_pending.Count >= MaxPendingChunks) return false;
+            IChunkSource source = Chunks;
+            _pending[key] = System.Threading.Tasks.Task.Run(() =>
+            {
+                var c = new ChunkContent(x, z);
+                source.Populate(this, c);
+                return c;
+            });
+            return true;
+        }
+
+        public bool IsChunkPending(int x, int z) => _pending.ContainsKey(ChunkContent.ChunkKey(x, z));
+        public int PendingChunks => _pending.Count;
+
+        /// <summary>Adds up to <paramref name="max"/> chunks whose generation finished (main thread); returns them.</summary>
+        public List<ChunkContent> IntegrateReady(int max)
+        {
+            var done = new List<ChunkContent>();
+            if (_pending.Count == 0) return done;
+            var keys = new List<long>();
+            foreach (var kv in _pending)
+                if (kv.Value.IsCompleted && keys.Count < max) keys.Add(kv.Key);
+            foreach (long k in keys)
+            {
+                System.Threading.Tasks.Task<ChunkContent> t = _pending[k];
+                _pending.Remove(k);
+                if (t.IsFaulted) throw t.Exception;
+                done.Add(Integrate(t.Result));
+            }
+            return done;
+        }
+
+        private ChunkContent Integrate(ChunkContent c)
+        {
+            long key = c.Key;
+            if (_chunks.TryGetValue(key, out ChunkContent existing)) return existing;
+            _chunks[key] = c;
+            Props.AddRange(c.Props);
+            Nodes.AddRange(c.Nodes);
+            Containers.AddRange(c.Containers);
+            Fixtures.AddRange(c.Fixtures);
+            Vehicles.AddRange(c.Vehicles);
+            ZombieSpawnPoints.AddRange(c.ZombieSpawns);
+            Roads.AddRange(c.Streets);
+            Plans.AddRange(c.Plans);
+            ChunkVersion++;
+            return c;
+        }
+
+        /// <summary>Height for maps: a cached coarse grid in a chunked world, the real height otherwise.</summary>
+        public float MapHeightAt(float x, float z) => Chunks != null ? Chunks.MapHeight(x, z) : HeightAt(x, z);
+
+        /// <summary>Height without local detail (cheap anywhere): the generator's coarse height in a chunked world.</summary>
+        public float CoarseHeightAt(float x, float z) => Chunks != null ? Chunks.CoarseHeight(x, z) : HeightAt(x, z);
+
+        /// <summary>
+        /// Water at coarse detail, without making terrain tiles (maps): rivers within their banks,
+        /// lakes, and sea where the coarse ground is below sea level.
+        /// </summary>
+        public bool CoarseWaterAt(float x, float z, out float level)
+        {
+            if (Chunks == null) return WaterAt(x, z, out level);
+            level = SeaLevel;
+            if (Chunks.MapHeight(x, z) < SeaLevel) return true;
+            foreach (LakeInfo lake in Lakes)
+            {
+                float dx = x - lake.Center.X, dz = z - lake.Center.Z;
+                if (dx * dx + dz * dz > lake.Radius * lake.Radius) continue;
+                level = lake.Level;
+                return true;
+            }
+            if (_riverIndex == null) return false;
+            long k = ((long)(int)Math.Floor(x / RiverCell) << 32) ^ (uint)(int)Math.Floor(z / RiverCell);
+            if (!_riverIndex.TryGetValue(k, out List<int> segs)) return false;
+            foreach (int id in segs)
+            {
+                (int r, int i) = _riverSegs[id];
+                RiverPath river = Rivers[r];
+                float d = DistanceToSegmentXZ(x, z, river.Points[i], river.Points[i + 1], out float t);
+                if (d > river.Width * 0.5f) continue;
+                level = river.Points[i].Y + (river.Points[i + 1].Y - river.Points[i].Y) * t;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>Generator version that built this layout (1 = the 512 m valley, 2 = the 2 km region, 3 = the 64 km basin).</summary>
         public int Version { get; set; } = 1;
 
         /// <summary>Display name of the region.</summary>

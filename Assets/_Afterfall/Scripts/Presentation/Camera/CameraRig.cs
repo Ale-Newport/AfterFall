@@ -121,7 +121,7 @@ namespace Afterfall.Presentation
             obstacles.Enabled = !on;
             _follow.AvoidObstacles = obstacles;
             LensSettings lens = _thirdPerson.Lens;
-            lens.FarClipPlane = on ? FlightFarClip : 650f;
+            lens.FarClipPlane = on ? Mathf.Max(FlightFarClip, ViewDistance) : ViewDistance;
             _thirdPerson.Lens = lens;
             if (on)
             {
@@ -171,6 +171,18 @@ namespace Afterfall.Presentation
 
         /// <summary>From the air the whole region should be visible.</summary>
         public const float FlightFarClip = 2500f;
+
+        /// <summary>How far the shoulder camera sees: 650 m in the valley and the region, further in the basin (its skyline).</summary>
+        public float ViewDistance { get; private set; } = 650f;
+
+        public void SetViewDistance(float metres)
+        {
+            ViewDistance = metres;
+            LensSettings lens = _thirdPerson.Lens;
+            lens.FarClipPlane = _flight ? Mathf.Max(FlightFarClip, metres) : metres;
+            _thirdPerson.Lens = lens;
+            if (_camera != null) _camera.farClipPlane = lens.FarClipPlane;
+        }
 
         /// <summary>Points the shoulder camera (used by the scripted tour).</summary>
         public void Look(float yaw, float pitch)

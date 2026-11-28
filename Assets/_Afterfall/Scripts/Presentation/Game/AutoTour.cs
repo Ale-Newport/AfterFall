@@ -121,6 +121,13 @@ namespace Afterfall.Presentation
             yield return Seconds(2f);
             yield return Capture("02_start_camp");
             if (Array.IndexOf(Environment.GetCommandLineArgs(), "-afterfall-tour-perf") >= 0) yield return PerfAttribution(gc);
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), OnlyBasinFlag) >= 0)
+            {
+                yield return BasinScene(gc);
+                Check(SaveFolderSnapshot() == playerSaves, $"The tour left the player's save folder untouched ({GameBootstrap.SaveDirectory})");
+                Finish();
+                yield break;
+            }
             if (Array.IndexOf(Environment.GetCommandLineArgs(), OnlyRegionFlag) >= 0)
             {
                 // Quicker still: only the 2 km region.

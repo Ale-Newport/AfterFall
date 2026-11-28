@@ -18,7 +18,7 @@ namespace Afterfall.Presentation.UI
         private static readonly float[] Zooms = { 0.35f, 0.6f, 1f, 1.8f, 3f };
 
         private readonly GameController _gc;
-        private readonly VisualElement _disc, _image, _fog, _symbols, _north;
+        private readonly VisualElement _disc, _image, _detail, _fog, _symbols, _north;
         private readonly Label _info;
         private readonly List<MapSymbol> _found = new List<MapSymbol>();
         private int _zoom = 2;
@@ -32,11 +32,12 @@ namespace Afterfall.Presentation.UI
             Root.pickingMode = PickingMode.Ignore;
             _disc = Root.Put(UiKit.Div("minimap-disc"));
             _image = _disc.Put(UiKit.Div("map-layer"));
+            _detail = _disc.Put(UiKit.Div("map-layer"));
             _fog = _disc.Put(UiKit.Div("map-layer"));
             _symbols = _disc.Put(UiKit.Div("map-layer"));
             _north = Root.Put(UiKit.Text("N", "minimap-north"));
             _info = Root.Put(UiKit.Text("", "minimap-info"));
-            foreach (VisualElement e in new[] { _disc, _image, _fog, _symbols, _north, _info }) e.pickingMode = PickingMode.Ignore;
+            foreach (VisualElement e in new[] { _disc, _image, _detail, _fog, _symbols, _north, _info }) e.pickingMode = PickingMode.Ignore;
         }
 
         private readonly List<VisualElement> _pool = new List<VisualElement>();
@@ -109,6 +110,19 @@ namespace Afterfall.Presentation.UI
                 e.style.rotate = new Rotate(new Angle(-rot, AngleUnit.Degree));
             }
             if (maps.Overview != null) _image.style.backgroundImage = new StyleBackground(maps.Overview);
+            // In a chunked world a detailed local map (streets, buildings) lies over the overview near the survivor.
+            UiKit.Show(_detail, maps.Detail != null);
+            if (maps.Detail != null)
+            {
+                float dx0 = maps.DetailOrigin.x, dz1 = maps.DetailOrigin.y + MapTextures.DetailSize;
+                _detail.style.left = Size * 0.5f - (me.x - dx0) / mpp;
+                _detail.style.top = Size * 0.5f - (dz1 - me.z) / mpp;
+                _detail.style.width = MapTextures.DetailSize / mpp;
+                _detail.style.height = MapTextures.DetailSize / mpp;
+                _detail.style.transformOrigin = new TransformOrigin(Length.Pixels((me.x - dx0) / mpp), Length.Pixels((dz1 - me.z) / mpp));
+                _detail.style.rotate = new Rotate(new Angle(-rot, AngleUnit.Degree));
+                _detail.style.backgroundImage = new StyleBackground(maps.Detail);
+            }
             if (maps.Fog != null) _fog.style.backgroundImage = new StyleBackground(maps.Fog);
 
             // North marker on the rim.

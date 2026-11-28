@@ -504,6 +504,51 @@ namespace Afterfall.Presentation.Art
             return FinishTerrain(c, 0.9f, 2f, 2, 0.7f);
         }
 
+        /// <summary>Wind-packed snow: soft drifts, sastrugi ridges and sparkle grain (no rocks: a tiled rock would repeat every few metres).</summary>
+        public static TerrainMaps TerrainSnow(int n)
+        {
+            var c = new Canvas(n);
+            Col white = Col.S(226, 230, 236), blue = Col.S(188, 198, 214);
+            c.Each((i, u, v) =>
+            {
+                float drift = Fbm(u, v, 3, 4, 4701);
+                float ridge = 0.5f + 0.5f * MathF.Sin((u * 7f + v * 3f + drift * 2.4f) * 6.2831853f);
+                float grain = Hash01((int)(u * n), (int)(v * n), 4702) - 0.5f;
+                Col col = Col.Mix(white, blue, SmoothStep(0.15f, -0.35f, drift) * 0.6f + (1f - ridge) * 0.12f) * (0.97f + grain * 0.05f);
+                float h = 0.45f + drift * 0.2f + ridge * 0.08f;
+                float smooth = 0.35f + ridge * 0.15f;
+                Put(c, i, col);
+                c.H[i] = h;
+                c.Crevice[i] = 1f;
+                c.Smooth[i] = smooth;
+            });
+            return FinishTerrain(c, 0.6f, 1.6f, 2, 0.5f);
+        }
+
+        /// <summary>Sand: fine grain in wind ripples, darker damp streaks and scattered shell and pebble bits (beaches and the badlands' red sand by tint).</summary>
+        public static TerrainMaps TerrainSand(int n)
+        {
+            var c = new Canvas(n);
+            Col sand = Col.S(196, 176, 138), pale = Col.S(214, 200, 168), damp = Col.S(150, 128, 96), shell = Col.S(226, 220, 206);
+            float texel = 1f / n;
+            c.Each((i, u, v) =>
+            {
+                float warp = Fbm(u, v, 3, 3, 4801);
+                float ripple = 0.5f + 0.5f * MathF.Sin((v * 26f + u * 4f + warp * 2f) * 6.2831853f);
+                float grain = Hash01((int)(u * n), (int)(v * n), 4802) - 0.5f;
+                float dampMask = SmoothStep(0.2f, 0.55f, Fbm(u, v, 2, 3, 4803));
+                Col col = Col.Mix(Col.Mix(sand, pale, ripple * 0.35f), damp, dampMask * 0.55f) * (0.95f + grain * 0.1f);
+                float h = 0.42f + ripple * 0.12f + grain * 0.03f;
+                float bits = Blobs(u, v, 30, 4810, 0.06f, 0.08f, 0.2f, 0.6f, texel * 30f, out float bt, out _, out _);
+                if (bits > 0f) col = Col.Mix(col, Col.Mix(shell, damp, bt), bits * 0.7f);
+                Put(c, i, col);
+                c.H[i] = h;
+                c.Crevice[i] = 1f;
+                c.Smooth[i] = 0.08f + dampMask * 0.2f;
+            });
+            return FinishTerrain(c, 0.7f, 1.4f, 2, 0.6f);
+        }
+
         // ---------------------------------------------------------------- rock and asphalt
 
         /// <summary>Weathered bedrock: fractal relief, strata, a few deep fractures, mineral grain, lichen rosettes and moss in the hollows.</summary>

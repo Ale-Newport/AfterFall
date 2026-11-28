@@ -82,23 +82,26 @@ namespace Afterfall.Presentation.UI
             foreach (GameMode m in new[] { GameMode.Survival, GameMode.Creative })
                 modeButtons[m] = modeRow.Put(UiKit.Btn(m.ToString(), () => SelectMode(m)));
             col.Add(modeDesc);
-            int world = 2;
+            int world = 3;
             var worldButtons = new Dictionary<int, Button>();
             var worldDesc = UiKit.Text("", "muted", "wrap");
             void SelectWorld(int v)
             {
                 world = v;
                 foreach (var kv in worldButtons) UiKit.SetClass(kv.Value, "btn--selected", kv.Key == v);
-                worldDesc.text = v >= 2
+                worldDesc.text = v >= 3
+                    ? "The Kessel Basin — 64 × 64 km around Greater Millbrook: the Greyspine mountains with snow, the High Moor, a lake district, the red badlands of the Scar, farmland, marshes and a coast, a dozen towns and villages, and the metropolis of Kesselmouth, about the size of Greater London. Generated as you travel."
+                    : v >= 2
                     ? "Greater Millbrook — 2 × 2 km: the valley, the Kessel river and reservoir, the towns of Ashford and Eastgate, Pinecrest in the mountains, farms, a lodge and a research station. Drive between them."
                     : "Millbrook Valley — the original 512 m valley: a small, dense start.";
             }
             var worldRow = col.Put(UiKit.Div("row"));
             worldRow.Add(UiKit.Text("World", "muted"));
+            worldButtons[3] = worldRow.Put(UiKit.Btn("Kessel Basin (64 km)", () => SelectWorld(3)));
             worldButtons[2] = worldRow.Put(UiKit.Btn("Greater Millbrook (2 km)", () => SelectWorld(2)));
             worldButtons[1] = worldRow.Put(UiKit.Btn("Millbrook Valley (512 m)", () => SelectWorld(1)));
             col.Add(worldDesc);
-            SelectWorld(2);
+            SelectWorld(3);
             var seedField = col.Put(new TextField("World seed") { value = UnityEngine.Random.Range(1, 99999).ToString() });
             Select(DifficultyPreset.Survival);
             SelectMode(GameMode.Survival);

@@ -12,7 +12,7 @@ namespace Afterfall.Domain.World
     /// </summary>
     public static partial class WorldGenerator
     {
-        private struct ContainerSpec
+        internal struct ContainerSpec
         {
             public readonly string Def;
             public readonly string Table;
@@ -94,7 +94,7 @@ namespace Afterfall.Domain.World
             l.Roads.Add(sub);
         }
 
-        private static void AddPoints(RoadPath r, params float[] xz)
+        internal static void AddPoints(RoadPath r, params float[] xz)
         {
             for (int i = 0; i + 1 < xz.Length; i += 2) r.Points.Add(new Vec3(xz[i], 0, xz[i + 1]));
         }
@@ -562,7 +562,7 @@ namespace Afterfall.Domain.World
             return new Vec3(local.X * c + local.Z * s, local.Y, -local.X * s + local.Z * c);
         }
 
-        private static float SmoothStep(float edge0, float edge1, float x)
+        internal static float SmoothStep(float edge0, float edge1, float x)
         {
             float t = (x - edge0) / (edge1 - edge0);
             t = t < 0 ? 0 : t > 1 ? 1 : t;

@@ -42,6 +42,9 @@ namespace Afterfall.Presentation
         public BuildController Build { get; private set; }
         public TacticalController Tactical { get; private set; }
         /// <summary>The terrain tiles streamed around the survivor.</summary>
+        /// <summary>Props, the city and the far terrain of a chunked world (null otherwise).</summary>
+        public ChunkViews Chunks { get; private set; }
+
         public TerrainStreamer TerrainTiles { get; private set; }
         public AudioDirector Audio { get; private set; }
 
@@ -90,7 +93,18 @@ namespace Afterfall.Presentation
             yield return null;
             Ui.ShowLoading("Raising ruins…");
             yield return null;
-            WorldBuilder.BuildProps(Session.World.Layout, _worldRoot);
+            if (Session.World.Layout.IsChunked)
+            {
+                // The basin: props, the city and the far terrain stream around the camera.
+                Chunks = gameObject.AddComponent<ChunkViews>();
+                Chunks.Initialize(this, Session.World.Layout, _worldRoot);
+                DayNightCycle.FogScale = 0.4f;
+            }
+            else
+            {
+                WorldBuilder.BuildProps(Session.World.Layout, _worldRoot);
+                DayNightCycle.FogScale = 1f;
+            }
             yield return null;
             Ui.ShowLoading("Growing the forest…");
             yield return null;
@@ -109,6 +123,7 @@ namespace Afterfall.Presentation
             Player.transform.SetParent(transform, true);
             CameraRig = CameraRig.Create(this, Player.transform, Settings);
             CameraRig.transform.SetParent(transform, true);
+            if (Session.World.Layout.IsChunked) CameraRig.SetViewDistance(3200f);
             // A game saved at the wheel continues at the wheel.
             if (Session.Player.InVehicle && Sync.VehicleViewOf(Session.Player.VehicleId) is VehicleView seat)
             {
@@ -561,9 +576,13 @@ namespace Afterfall.Presentation
                 }
             }
             Teleporting = true;
-            TerrainTiles.Prefetch(target);
             float timeout = Time.realtimeSinceStartup + 30f;
-            while (!IsWorldReadyAt(target) && Time.realtimeSinceStartup < timeout) yield return null;
+            // In a chunked world the destination's chunk is generated first (on a worker), then its tile painted.
+            while (!IsWorldReadyAt(target) && Time.realtimeSinceStartup < timeout)
+            {
+                TerrainTiles.Prefetch(target);
+                yield return null;
+            }
             if (!IsWorldReadyAt(target))
             {
                 Teleporting = false;

@@ -45,7 +45,13 @@ namespace Afterfall.Persistence
             foreach (EntityId id in w.SortedStructureIds()) dto.Structures.Add(ToDto(w.Structures[id]));
             foreach (PowerLink l in w.PowerLinks) dto.PowerLinks.Add(new[] { l.A.Value, l.B.Value });
             foreach (ResourceNodeState n in Sorted(w.ResourceNodes))
-                dto.Nodes.Add(new NodeDto { Id = n.Id.Value, DefId = n.DefId, Position = n.Position, Yaw = n.Yaw, Scale = n.Scale, Remaining = n.RemainingHarvests, Depleted = n.Depleted, RespawnAt = n.RespawnAt });
+            {
+                // A keyed node nobody has touched is remade from the layout when its chunk is near again.
+                if (!string.IsNullOrEmpty(n.SeedKey) && !n.Touched && !n.Depleted) continue;
+                dto.Nodes.Add(new NodeDto { Id = n.Id.Value, DefId = n.DefId, Position = n.Position, Yaw = n.Yaw, Scale = n.Scale, Remaining = n.RemainingHarvests, Depleted = n.Depleted, RespawnAt = n.RespawnAt, SeedKey = n.SeedKey ?? "" });
+            }
+            dto.SeededChunks.AddRange(w.SeededChunks);
+            dto.SeededChunks.Sort();
             foreach (WorldDrop d in Sorted(w.Drops))
                 dto.Drops.Add(new DropDto { Id = d.Id.Value, Position = d.Position, Contents = ToDto(d.Contents), Label = d.Label, IsBelongings = d.IsBelongings });
             foreach (ZombieState z in Sorted(w.Zombies))
@@ -339,7 +345,11 @@ namespace Afterfall.Persistence
                     warnings?.Add($"Skipped node {nd.Id}: unknown definition '{nd.DefId}'.");
                     continue;
                 }
-                w.AddNode(new ResourceNodeState { Id = new EntityId(nd.Id), DefId = nd.DefId, Position = nd.Position, Yaw = nd.Yaw, Scale = nd.Scale, RemainingHarvests = nd.Remaining, Depleted = nd.Depleted, RespawnAt = nd.RespawnAt });
+                w.AddNode(new ResourceNodeState
+                {
+                    Id = new EntityId(nd.Id), DefId = nd.DefId, Position = nd.Position, Yaw = nd.Yaw, Scale = nd.Scale, RemainingHarvests = nd.Remaining, Depleted = nd.Depleted, RespawnAt = nd.RespawnAt,
+                    SeedKey = nd.SeedKey ?? "", Touched = !string.IsNullOrEmpty(nd.SeedKey)
+                });
             }
 
             foreach (DropDto dd in dto.Drops)
@@ -412,6 +422,7 @@ namespace Afterfall.Persistence
             foreach (string t in dto.UnlockedTechs) w.Tech.Unlocked.Add(t);
             foreach (KeyValuePair<string, int> kv in dto.TechProgress) w.Tech.Progress[kv.Key] = kv.Value;
             UnpackBits(dto.ExploredCells, w.Exploration.Revealed);
+            foreach (long chunk in dto.SeededChunks ?? new List<long>()) w.SeededChunks.Add(chunk);
             foreach (string poi in dto.DiscoveredPois) w.Exploration.DiscoveredPois.Add(poi);
             if (dto.Threat != null) CopyThreat(dto.Threat, w.Threat);
             if (dto.Weather != null) CopyWeather(dto.Weather, w.Weather);

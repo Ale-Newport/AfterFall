@@ -10,11 +10,15 @@ namespace Afterfall.Domain.World
     /// </summary>
     public sealed class ExplorationState
     {
-        public const float CellSize = 16f;
+        /// <summary>Cell side: 16 m in the valley and the region, 64 m in the 64 km basin (a 1024² grid).</summary>
+        public float CellSize { get; }
+
+        public static float CellSizeFor(float worldSize) => worldSize > 4096f ? 64f : 16f;
 
         public ExplorationState(float worldSize)
         {
             WorldSize = worldSize;
+            CellSize = CellSizeFor(worldSize);
             CellsPerSide = (int)Math.Ceiling(worldSize / CellSize);
             Revealed = new bool[CellsPerSide * CellsPerSide];
         }

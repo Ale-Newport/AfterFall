@@ -81,25 +81,40 @@ namespace Afterfall.Domain.World
         internal readonly List<Footprint> Buildings = new List<Footprint>();
         internal float[] Forest;
         internal int ForestCells;
+        internal float ForestX0, ForestZ0;
 
         /// <summary>Prop kinds drawn as building footprints.</summary>
         public static readonly HashSet<string> BuildingKinds = new HashSet<string>(StringComparer.Ordinal)
         {
-            "house", "clinic", "shop", "garage", "warehouse", "barn", "shack", "silo", "canopy", "transformer", "tent", "apartment", "townhouse", "store", "office", "church", "school", "hall"
+            "house", "clinic", "shop", "garage", "warehouse", "barn", "shack", "silo", "canopy", "transformer", "tent", "apartment", "townhouse", "store", "office", "church", "school", "hall",
+            "city_terrace", "city_midrise", "city_tower", "city_semi", "city_shed", "city_church"
         };
 
         public int RoadSegmentCount => Roads.Count;
         public int BuildingCount => Buildings.Count;
 
-        public static MapFeatures Build(WorldLayout layout)
+        public static MapFeatures Build(WorldLayout layout) => Build(layout, 0f, 0f, layout.Size, layout.Size);
+
+        /// <summary>
+        /// The features within a rectangle (main thread in a chunked world, whose lists grow while
+        /// playing): roads, building footprints (with a chunked world's city blocks) and, for areas up
+        /// to 4 km, an 8 m woodland grid from the trees (larger areas take woodland from the biomes).
+        /// </summary>
+        public static MapFeatures Build(WorldLayout layout, float x0, float z0, float x1, float z1)
         {
             var f = new MapFeatures();
             foreach (RoadPath r in layout.Roads)
                 for (int i = 0; i + 1 < r.Points.Count; i++)
-                    f.Roads.Add(new Segment { Ax = r.Points[i].X, Az = r.Points[i].Z, Bx = r.Points[i + 1].X, Bz = r.Points[i + 1].Z, HalfWidth = r.Width * 0.5f, Paved = r.Paved, Rail = r.Rail });
-            foreach (PropPlacement p in layout.Props)
+                {
+                    Vec3 a = r.Points[i], b = r.Points[i + 1];
+                    float m = r.Width;
+                    if (Math.Max(a.X, b.X) < x0 - m || Math.Min(a.X, b.X) > x1 + m || Math.Max(a.Z, b.Z) < z0 - m || Math.Min(a.Z, b.Z) > z1 + m) continue;
+                    f.Roads.Add(new Segment { Ax = a.X, Az = a.Z, Bx = b.X, Bz = b.Z, HalfWidth = r.Width * 0.5f, Paved = r.Paved, Rail = r.Rail });
+                }
+            void Footprint(PropPlacement p)
             {
-                if (!BuildingKinds.Contains(p.Kind)) continue;
+                if (!BuildingKinds.Contains(p.Kind)) return;
+                if (p.Position.X < x0 - 40f || p.Position.X > x1 + 40f || p.Position.Z < z0 - 40f || p.Position.Z > z1 + 40f) return;
                 double a = p.Yaw * Math.PI / 180.0;
                 f.Buildings.Add(new Footprint
                 {
@@ -107,13 +122,27 @@ namespace Afterfall.Domain.World
                     Cos = (float)Math.Cos(a), Sin = (float)Math.Sin(a), Kind = (byte)(p.Kind == "canopy" || p.Kind == "tent" ? 1 : 0)
                 });
             }
-            int cells = Math.Max(1, (int)Math.Ceiling(layout.Size / ForestCell));
+            foreach (PropPlacement p in layout.Props) Footprint(p);
+            if (layout.IsChunked && x1 - x0 <= 8192f)
+                foreach (ChunkContent c in layout.GeneratedChunks)
+                {
+                    if (c.MinX > x1 || c.MinX + WorldLayout.ChunkSize < x0 || c.MinZ > z1 || c.MinZ + WorldLayout.ChunkSize < z0) continue;
+                    foreach (PropPlacement p in c.Blocks) Footprint(p);
+                }
+            if (x1 - x0 > 4096f)
+            {
+                f.ForestCells = 0;
+                return f;
+            }
+            f.ForestX0 = x0;
+            f.ForestZ0 = z0;
+            int cells = Math.Max(1, (int)Math.Ceiling((x1 - x0) / ForestCell));
             f.ForestCells = cells;
             var counts = new float[cells * cells];
             foreach (NodeSeed n in layout.Nodes)
             {
                 if (!n.DefId.StartsWith("tree", StringComparison.Ordinal)) continue;
-                int cx = (int)(n.Position.X / ForestCell), cz = (int)(n.Position.Z / ForestCell);
+                int cx = (int)((n.Position.X - x0) / ForestCell), cz = (int)((n.Position.Z - z0) / ForestCell);
                 if (cx < 0 || cz < 0 || cx >= cells || cz >= cells) continue;
                 counts[cz * cells + cx] += n.Scale;
             }
@@ -144,7 +173,8 @@ namespace Afterfall.Domain.World
         /// <summary>Forest density 0..1 at a world point (bilinear between cell centres).</summary>
         public float ForestAt(float x, float z)
         {
-            float fx = x / ForestCell - 0.5f, fz = z / ForestCell - 0.5f;
+            if (ForestCells == 0) return 0f;
+            float fx = (x - ForestX0) / ForestCell - 0.5f, fz = (z - ForestZ0) / ForestCell - 0.5f;
             int x0 = (int)Math.Floor(fx), z0 = (int)Math.Floor(fz);
             float tx = fx - x0, tz = fz - z0;
             float a = Cell(x0, z0), b = Cell(x0 + 1, z0), c = Cell(x0, z0 + 1), d = Cell(x0 + 1, z0 + 1);
@@ -245,11 +275,23 @@ namespace Afterfall.Domain.World
             return px;
         }
 
+        private static readonly Rgb Urban = new Rgb(196, 190, 184);
+        private static readonly Rgb UrbanDense = new Rgb(170, 160, 152);
+        private static readonly Rgb Snow = new Rgb(246, 248, 252);
+        private static readonly Rgb Sand = new Rgb(228, 206, 160);
+        private static readonly Rgb Heath = new Rgb(186, 170, 150);
+        private static readonly Rgb Marsh = new Rgb(170, 188, 168);
+
         private static Rgb Ground(WorldLayout layout, MapFeatures f, float x, float z, float sx, float sz, float water, float maxH)
         {
-            float h = layout.HeightAt(x, z);
+            // A chunked world's overview (metres per pixel) reads cached coarse grids, never terrain tiles.
+            bool coarse = layout.IsChunked && Math.Max(sx, sz) > 3f;
+            float H(float a, float b) => coarse ? layout.MapHeightAt(a, b) : layout.HeightAt(a, b);
+            float h = H(x, z);
+            bool wet = coarse ? layout.CoarseWaterAt(x, z, out float waterLevel) : layout.WaterAt(x, z, out waterLevel);
+            if (coarse && wet) h = Math.Min(h, waterLevel - 2f);
             // Rivers and lakes have their own level; the valley lake uses the sea-level water line.
-            if (layout.WaterAt(x, z, out float waterLevel) && h < waterLevel + 0.15f)
+            if (wet && h < waterLevel + 0.15f)
             {
                 water = waterLevel + 0.15f;
                 float depth = Math.Min(1f, (water - h) / 6f);
@@ -264,6 +306,18 @@ namespace Afterfall.Domain.World
                 : Rgb.Lerp(Highland, Summit, (t - 0.75f) / 0.25f);
 
             float forest = f.ForestAt(x, z);
+            if (layout.Chunks is BasinWorld basin)
+            {
+                // The basin's land cover from its biomes: town grey, snow, sand, heath, marsh.
+                BiomeSample b = basin.MapBiome(x, z);
+                forest = Math.Max(forest, b.Forest * 0.8f);
+                c = Rgb.Lerp(c, Heath, b.Moor * 0.55f);
+                c = Rgb.Lerp(c, Marsh, b.Marsh * 0.6f);
+                c = Rgb.Lerp(c, Sand, Math.Max(b.Beach, b.Badlands * 0.75f));
+                c = Rgb.Lerp(c, Snow, b.Snow);
+                if (b.City > 0.05f) c = Rgb.Lerp(c, Rgb.Lerp(Urban, UrbanDense, basin.MapDensity(x, z)), Math.Min(1f, b.City * 1.1f));
+                forest *= 1f - b.City;
+            }
             if (forest > 0.05f)
             {
                 // Woodland with a faint stipple, like a printed map's tree pattern.
@@ -273,8 +327,8 @@ namespace Afterfall.Domain.World
 
             // Hill shading lit from the north-west.
             float d = Math.Max(1f, Math.Max(sx, sz));
-            float dx = (layout.HeightAt(x + d, z) - layout.HeightAt(x - d, z)) / (2f * d);
-            float dz = (layout.HeightAt(x, z + d) - layout.HeightAt(x, z - d)) / (2f * d);
+            float dx = (H(x + d, z) - H(x - d, z)) / (2f * d);
+            float dz = (H(x, z + d) - H(x, z - d)) / (2f * d);
             float nx = -dx, ny = 1f, nz = -dz;
             float len = (float)Math.Sqrt(nx * nx + ny * ny + nz * nz);
             const float lx = -0.5f, ly = 0.75f, lz = 0.43f;
