@@ -14,7 +14,7 @@ namespace Afterfall.Presentation.UI
     /// </summary>
     public sealed class ColonyPanel
     {
-        private static readonly JobType[] WorkTypes = { JobType.Haul, JobType.Build, JobType.Farm, JobType.Gather, JobType.Guard };
+        private static readonly JobType[] WorkTypes = { JobType.Haul, JobType.Build, JobType.Farm, JobType.Gather, JobType.Guard, JobType.Mechanic, JobType.Medic };
         private readonly GameController _gc;
         private readonly VisualElement _list;
         private readonly Label _summary;

@@ -820,6 +820,11 @@ namespace Afterfall.Presentation
                 return;
             }
             if (i.Rotate.WasPressedThisFrame()) OpenVehicle(v);
+            if (i.Lights.WasPressedThisFrame())
+            {
+                v.Lights = v.Lights == VehicleView.LightMode.Auto ? VehicleView.LightMode.On : v.Lights == VehicleView.LightMode.On ? VehicleView.LightMode.Off : VehicleView.LightMode.Auto;
+                Toast(v.Lights == VehicleView.LightMode.Auto ? "Headlights: automatic (on in the dark)." : v.Lights == VehicleView.LightMode.On ? "Headlights: on." : "Headlights: off.", Severity.Info);
+            }
 
             string problem = Afterfall.Domain.Vehicles.VehicleRules.StartProblem(state, v.Def, Session.Player.Inventory);
             bool canHotwire = Session.Vehicles.CanTryHotwire(out string missing, out float chance);
@@ -855,7 +860,8 @@ namespace Afterfall.Presentation
                 }
             }
             string engine = state.EngineOn ? "[F] Engine off" : problem.Length == 0 ? "[F] Start engine" : canHotwire ? (missing.Length == 0 ? $"[Hold F] Hotwire ({chance * 100f:0}%)" : $"Hotwiring {missing}") : problem;
-            CurrentPrompt = $"{engine} · [W/S] drive · [A/D] steer · [Space] handbrake · [E] get out · [R] trunk";
+            string lights = v.Lights == VehicleView.LightMode.Auto ? "auto" : v.Lights == VehicleView.LightMode.On ? "on" : "off";
+            CurrentPrompt = $"{engine} · [W/S] drive · [A/D] steer · [Space] handbrake · [L] lights ({lights}) · [E] get out · [R] trunk";
         }
 
         /// <summary>Finds clear, level ground for a vehicle about <paramref name="distance"/> ahead of the survivor (creative spawning).</summary>

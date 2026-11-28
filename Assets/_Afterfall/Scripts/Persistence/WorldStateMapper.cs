@@ -85,7 +85,7 @@ namespace Afterfall.Persistence
                     Description = j.Description, FailureReason = j.FailureReason, CreatedAt = j.CreatedAt, TargetStructure = j.TargetStructure.Value,
                     SourceInventory = j.SourceInventory.Value, DestinationInventory = j.DestinationInventory.Value, ItemId = j.ItemId, Quantity = j.Quantity,
                     Stage = j.Stage.ToString(), SourceToken = j.SourceToken.Id, DestinationToken = j.DestinationToken.Id, DeliverToBlueprint = j.DeliverToBlueprint,
-                    Farm = j.Farm.ToString(), TargetNode = j.TargetNode.Value, Progress = j.Progress, Harvests = j.Harvests
+                    Farm = j.Farm.ToString(), TargetNode = j.TargetNode.Value, Progress = j.Progress, Harvests = j.Harvests, Patient = j.Patient.Value
                 });
             }
             foreach (WorkZone z in Sorted(w.WorkZones))
@@ -407,7 +407,7 @@ namespace Afterfall.Persistence
                     DestinationToken = jd.DestinationToken > 0 ? new ReservationToken(new EntityId(jd.DestinationInventory), jd.DestinationToken) : default,
                     DeliverToBlueprint = jd.DeliverToBlueprint,
                     Farm = Enum.TryParse(jd.Farm, out FarmAction fa) ? fa : FarmAction.Plant,
-                    TargetNode = new EntityId(jd.TargetNode), Progress = jd.Progress, Harvests = jd.Harvests
+                    TargetNode = new EntityId(jd.TargetNode), Progress = jd.Progress, Harvests = jd.Harvests, Patient = new EntityId(jd.Patient)
                 };
                 w.Jobs[j.Id] = j;
                 w.Ids.EnsureAbove(j.Id);

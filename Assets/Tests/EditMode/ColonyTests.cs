@@ -40,6 +40,60 @@ namespace Afterfall.Tests
         }
 
         [Test]
+        public void Mechanic_RepairsDamagedBuildings_WithMaterialsFromStorage()
+        {
+            GameSession s = Base(out ColonistState c, out Structure crate);
+            Vec3 p = s.Player.Position;
+            Structure wall = TestSupport.Build(s.World, "wall", new Vec3(p.X + 6, p.Y, p.Z - 6));
+            float max = s.Content.Building("wall").MaxHealth;
+            wall.Health = max * 0.3f;
+            List<ItemAmount> cost = s.Construction.RepairCost(wall);
+            foreach (ItemAmount a in cost) crate.Storage.TryAdd(a.ItemId, a.Quantity + 2);
+            TestSupport.Run(s, 20, 0.1);
+            Assert.Less(wall.Health, max, "without a mechanic nobody repairs");
+            Assert.IsTrue(s.SetWorkPriority(c.Id, JobType.Mechanic, 1).Ok);
+            TestSupport.Run(s, 20, 0.1);
+            Assert.Less(wall.Health, max, "no hammer in storage, no repairs");
+            crate.Storage.TryAdd("hammer", 1);
+            TestSupport.Run(s, 60, 0.1);
+            Assert.AreEqual(max, wall.Health, 0.01f, "the mechanic fetched the materials and repaired the wall");
+            foreach (ItemAmount a in cost) Assert.AreEqual(2, crate.Storage.Count(a.ItemId) + c.Carry.Count(a.ItemId), "the repair used exactly its cost");
+        }
+
+        [Test]
+        public void Medic_TreatsWoundedColonists_AndTheSurvivorNearby()
+        {
+            GameSession s = Base(out ColonistState c, out Structure crate);
+            ColonistState other = s.World.Colonists.Values.First(x => x.Id != c.Id);
+            Vec3 p = s.Player.Position;
+            TestSupport.Build(s.World, "bed", new Vec3(p.X - 3, p.Y, p.Z + 3));
+            other.Position = new Vec3(p.X + 2, p.Y, p.Z - 2);
+            Assert.IsTrue(s.Recruit(other.Id).Ok);
+            crate.Storage.TryAdd("bandage", 3);
+            other.Vitals.Health = other.Vitals.MaxHealth * 0.4f;
+            s.Player.Vitals.Health = s.Player.Vitals.MaxHealth * 0.3f;
+            Assert.IsTrue(s.SetWorkPriority(c.Id, JobType.Medic, 1).Ok);
+            float otherBefore = other.Vitals.Health, playerBefore = s.Player.Vitals.Health;
+            TestSupport.Run(s, 60, 0.1);
+            Assert.Greater(other.Vitals.Health, otherBefore + 15f, "the medic bandaged the wounded colonist");
+            Assert.Greater(s.Player.Vitals.Health, playerBefore + 15f, "and the survivor, who is near the settlement");
+            Assert.AreEqual(1, crate.Storage.Count("bandage") + c.Carry.Count("bandage"), "one bandage each");
+        }
+
+        [Test]
+        public void Guard_ArmsWithTheBestWeaponInStorage()
+        {
+            GameSession s = Base(out ColonistState c, out Structure crate);
+            crate.Storage.TryAdd("machete", 1);
+            crate.Storage.TryAdd("hammer", 1);
+            Assert.IsTrue(s.SetWorkPriority(c.Id, JobType.Guard, 1).Ok);
+            TestSupport.Run(s, 20, 0.1);
+            Assert.AreEqual(1, c.Carry.Count("machete"), "the guard took the machete (the best weapon) and keeps it");
+            Assert.AreEqual(0, crate.Storage.Count("machete"));
+            Assert.AreEqual(1, crate.Storage.Count("hammer"));
+        }
+
+        [Test]
         public void StorageDesignation_FillsDesignatedCratesFirst_AndPutsAwayWhatBelongsThere()
         {
             GameSession s = Base(out ColonistState c, out Structure general);
@@ -87,7 +141,7 @@ namespace Afterfall.Tests
             for (int i = 0; i < 400 && !z.IsDead && c.Activity != ColonistActivity.Down; i++) TestSupport.Run(s, 0.25, 0.05);
             Assert.IsTrue(z.IsDead, $"the guard put the infected down ({c.Status}, guard health {c.Vitals.Health:0})");
             Assert.AreNotEqual(ColonistActivity.Down, c.Activity);
-            Assert.Greater(c.Skills[JobType.Guard], 0f, "fighting trains the guard");
+            Assert.Greater(c.Skill(JobType.Guard), 1f, "fighting trains the guard");
         }
 
         [Test]

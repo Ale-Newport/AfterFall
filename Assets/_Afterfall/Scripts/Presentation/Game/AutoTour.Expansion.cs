@@ -184,6 +184,12 @@ namespace Afterfall.Presentation
             SkipTo(gc, 22.5);
             yield return Seconds(1f);
             Check(view.HeadlightsOn, "At night the running car's headlights and tail lights are on");
+            view.Lights = VehicleView.LightMode.Off;
+            yield return null;
+            yield return null;
+            Check(!view.HeadlightsOn, "The light switch turns them off");
+            view.Lights = VehicleView.LightMode.Auto;
+            yield return null;
             yield return Capture("62b_headlights_at_night");
             SkipTo(gc, 11.0);
             yield return Seconds(0.5f);

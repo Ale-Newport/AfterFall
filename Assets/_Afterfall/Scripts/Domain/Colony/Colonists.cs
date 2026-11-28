@@ -24,7 +24,13 @@ namespace Afterfall.Domain.Colony
         /// Profession, not a board job: a guard who sees infected near the settlement goes for them and
         /// fights instead of fleeing (off unless set; a badly hurt guard still runs).
         /// </summary>
-        Guard
+        Guard,
+
+        /// <summary>Profession: repair your damaged buildings with materials from storage (off unless set).</summary>
+        Mechanic,
+
+        /// <summary>Profession: treat the wounded (colonists, and the survivor near the settlement) with bandages and medkits from storage (off unless set).</summary>
+        Medic
     }
 
     public enum FarmAction
@@ -97,6 +103,9 @@ namespace Afterfall.Domain.Colony
 
         public float Progress { get; set; }
         public int Harvests { get; set; }
+
+        /// <summary>Medic jobs: the colonist being treated; none means the survivor.</summary>
+        public EntityId Patient { get; set; }
 
         public bool IsActive => State == JobState.Open || State == JobState.Claimed;
     }

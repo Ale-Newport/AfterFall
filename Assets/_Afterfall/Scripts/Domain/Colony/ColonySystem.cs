@@ -231,6 +231,254 @@ namespace Afterfall.Domain.Colony
             _bus?.Publish(new Notification($"{c.Name} has died ({cause}).", Severity.Danger));
         }
 
+        /// <summary>The best weapon (highest damage) a colonist carries, or null; its slot.</summary>
+        private ToolStats GuardWeapon(Inventory carry, out int slot)
+        {
+            slot = -1;
+            ToolStats best = null;
+            for (int i = 0; i < carry.SlotCount; i++)
+            {
+                ItemStack st = carry.GetSlot(i);
+                if (st.IsEmpty) continue;
+                ToolStats t = _content.Items.Get(st.ItemId).Tool;
+                if (t == null || t.Damage <= GuardDamage || (best != null && t.Damage <= best.Damage)) continue;
+                best = t;
+                slot = i;
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// A guard with nothing better than bare hands fetches the best weapon from storage near the
+        /// settlement (a machete, a pipe, an axe…). Returns true while walking to get it.
+        /// </summary>
+        private bool ArmGuard(ColonistState c, Vec3 post, float dt)
+        {
+            ToolStats have = GuardWeapon(c.Carry, out _);
+            Structure from = null;
+            string item = null;
+            float bestDamage = have?.Damage ?? GuardDamage;
+            foreach (Structure st in PlayerStorages())
+            {
+                if (Vec3.DistanceXZ(st.Position, post) > GuardRadius) continue;
+                foreach (KeyValuePair<string, int> kv in st.Storage.Totals())
+                {
+                    ToolStats t = _content.Items.Get(kv.Key).Tool;
+                    if (t == null || t.Damage <= bestDamage || st.Storage.Available(kv.Key) - PendingOutgoing(st.Storage.Id, kv.Key) <= 0) continue;
+                    bestDamage = t.Damage;
+                    from = st;
+                    item = kv.Key;
+                }
+            }
+            if (from == null) return false;
+            if (!MoveTo(c, from.Position, dt, ArriveDistance + FootprintRadius(from)))
+            {
+                c.Status = $"Guarding: fetching the {_content.Items.NameOf(item)}";
+                return true;
+            }
+            var taken = new List<ItemStack>();
+            if (from.Storage.TryRemove(item, 1) && c.Carry.TryAdd(item, 1)) c.Status = $"On guard with the {_content.Items.NameOf(item)}";
+            c.Activity = ColonistActivity.Idle;
+            return false;
+        }
+
+        // ------------------------------------------------------------------ mechanic and medic
+
+        /// <summary>Repairs start below this share of a building's health.</summary>
+        public const float RepairBelow = 0.75f;
+        public const float RepairSeconds = 3f;
+
+        /// <summary>A repair job for each damaged building whose repair materials one storage holds (and a hammer is in storage).</summary>
+        private void PlanRepairs(List<Structure> storages, double now)
+        {
+            bool anyMechanic = false;
+            foreach (ColonistState c in _world.Colonists.Values)
+                if (c.Recruited && c.Activity != ColonistActivity.Down && c.Work.PriorityFor(JobType.Mechanic) > 0) anyMechanic = true;
+            if (!anyMechanic) return;
+            bool hammer = false;
+            foreach (Structure st in storages)
+                foreach (KeyValuePair<string, int> kv in st.Storage.Totals())
+                    if (_content.Items.Get(kv.Key).Tool?.Type == ToolType.Hammer) hammer = true;
+            if (!hammer) return;
+            foreach (EntityId id in _world.SortedStructureIds())
+            {
+                Structure s = _world.Structures[id];
+                BuildingDefinition def = _content.Building(s.DefId);
+                if (!s.PlayerBuilt || !s.IsComplete || def == null || s.Health >= def.MaxHealth * RepairBelow || HasActiveJob(JobType.Mechanic, s.Id, null)) continue;
+                List<ItemAmount> cost = _construction.RepairCost(s);
+                Structure source = null;
+                foreach (Structure st in storages)
+                {
+                    bool all = true;
+                    foreach (ItemAmount a in cost)
+                        if (st.Storage.Available(a.ItemId) - PendingOutgoing(st.Storage.Id, a.ItemId) < a.Quantity) all = false;
+                    if (all)
+                    {
+                        source = st;
+                        break;
+                    }
+                }
+                if (source == null) continue;
+                AddJob(new Job
+                {
+                    Type = JobType.Mechanic, Priority = JobPriority.Safety, TargetStructure = s.Id, SourceInventory = source.Storage.Id, CreatedAt = now,
+                    Description = $"Repair {def.Name}"
+                });
+            }
+        }
+
+        private void ExecuteRepair(ColonistState c, Job j, float dt)
+        {
+            if (!_world.Structures.TryGetValue(j.TargetStructure, out Structure s) || !s.IsComplete)
+            {
+                Fail(c, j, "the building is gone");
+                return;
+            }
+            BuildingDefinition def = _content.Building(s.DefId);
+            if (s.Health >= def.MaxHealth)
+            {
+                Complete(c, j);
+                return;
+            }
+            List<ItemAmount> cost = _construction.RepairCost(s);
+            if (j.Stage == HaulStage.ToSource)
+            {
+                Inventory src = _world.FindInventory(j.SourceInventory);
+                if (src == null)
+                {
+                    Fail(c, j, "the storage is gone");
+                    return;
+                }
+                if (!MoveTo(c, InventoryPosition(j.SourceInventory, c), dt, SourceArrive(j.SourceInventory))) return;
+                if (!src.TryConsume(cost))
+                {
+                    Fail(c, j, "the repair materials are gone");
+                    return;
+                }
+                foreach (ItemAmount a in cost) c.Carry.AddUpTo(a.ItemId, a.Quantity);
+                j.Stage = HaulStage.ToDestination;
+                c.Status = j.Description;
+            }
+            if (!MoveTo(c, s.Position, dt, 2.5f + FootprintRadius(s))) return;
+            c.Activity = ColonistActivity.Working;
+            j.Progress += dt * c.Skill(JobType.Mechanic);
+            if (j.Progress < RepairSeconds) return;
+            OpResult r = _construction.Repair(s, c.Carry);
+            if (!r.Ok)
+            {
+                Fail(c, j, r.Message);
+                return;
+            }
+            c.Skills[JobType.Mechanic] = Math.Min(2f, c.Skill(JobType.Mechanic) + 0.02f);
+            Complete(c, j);
+        }
+
+        /// <summary>Colonists treat below this share of their health, the survivor below <see cref="TreatSurvivorBelow"/> and within <see cref="TreatSurvivorRadius"/> of a medic's bed.</summary>
+        public const float TreatBelow = 0.6f, TreatSurvivorBelow = 0.5f, TreatSurvivorRadius = 40f;
+
+        private void PlanTreatment(List<Structure> storages, double now)
+        {
+            var medics = new List<ColonistState>();
+            foreach (ColonistState c in _world.Colonists.Values)
+                if (c.Recruited && c.Activity != ColonistActivity.Down && c.Work.PriorityFor(JobType.Medic) > 0) medics.Add(c);
+            if (medics.Count == 0) return;
+            var patients = new List<(EntityId Id, float Missing, Vec3 At)>();
+            foreach (ColonistState c in _world.Colonists.Values)
+                if (c.Recruited && c.Activity != ColonistActivity.Down && c.Vitals.Health < c.Vitals.MaxHealth * TreatBelow)
+                    patients.Add((c.Id, c.Vitals.MaxHealth - c.Vitals.Health, c.Position));
+            PlayerState p = _world.Player;
+            if (p != null && !p.Vitals.IsDead && p.Vitals.Health < p.Vitals.MaxHealth * TreatSurvivorBelow && !p.InVehicle)
+                foreach (ColonistState m in medics)
+                    if (m.HomeBed.IsValid && _world.Structures.TryGetValue(m.HomeBed, out Structure bed) && Vec3.DistanceXZ(bed.Position, p.Position) < TreatSurvivorRadius)
+                    {
+                        patients.Add((EntityId.None, p.Vitals.MaxHealth - p.Vitals.Health, p.Position));
+                        break;
+                    }
+            foreach ((EntityId id, float missing, Vec3 at) in patients)
+            {
+                bool treating = false;
+                foreach (Job j in _world.Jobs.Values)
+                    if (j.IsActive && j.Type == JobType.Medic && j.Patient == id) treating = true;
+                if (treating) continue;
+                // A medkit for bad wounds, a bandage otherwise (whichever storage has one).
+                foreach (string want in missing > 40f ? new[] { "medkit", "bandage" } : new[] { "bandage", "medkit" })
+                {
+                    Structure source = null;
+                    foreach (Structure st in storages)
+                        if (st.Storage.Available(want) - PendingOutgoing(st.Storage.Id, want) > 0)
+                        {
+                            source = st;
+                            break;
+                        }
+                    if (source == null || !_content.Items.Contains(want)) continue;
+                    string who = id.IsValid && _world.Colonists.TryGetValue(id, out ColonistState pc) ? pc.Name : "the survivor";
+                    AddJob(new Job
+                    {
+                        Type = JobType.Medic, Priority = JobPriority.Survival, SourceInventory = source.Storage.Id, ItemId = want, Quantity = 1, Patient = id,
+                        TargetStructure = source.Id, CreatedAt = now, Description = $"Treat {who} with a {_content.Items.NameOf(want).ToLowerInvariant()}"
+                    });
+                    break;
+                }
+            }
+        }
+
+        private void ExecuteTreat(ColonistState c, Job j, float dt)
+        {
+            SurvivalState patient;
+            Vec3 at;
+            if (j.Patient.IsValid)
+            {
+                if (!_world.Colonists.TryGetValue(j.Patient, out ColonistState pc) || pc.Activity == ColonistActivity.Down)
+                {
+                    Fail(c, j, "the patient is gone");
+                    return;
+                }
+                patient = pc.Vitals;
+                at = pc.Position;
+            }
+            else
+            {
+                if (_world.Player == null || _world.Player.Vitals.IsDead)
+                {
+                    Fail(c, j, "the survivor is gone");
+                    return;
+                }
+                patient = _world.Player.Vitals;
+                at = _world.Player.Position;
+            }
+            if (j.Stage == HaulStage.ToSource)
+            {
+                Inventory src = _world.FindInventory(j.SourceInventory);
+                if (src == null || !src.HasReservation(j.SourceToken))
+                {
+                    Fail(c, j, "the medicine is gone");
+                    return;
+                }
+                if (!MoveTo(c, InventoryPosition(j.SourceInventory, c), dt, SourceArrive(j.SourceInventory))) return;
+                var taken = new List<ItemStack>();
+                if (!src.CommitOutgoing(j.SourceToken, taken))
+                {
+                    Fail(c, j, "the medicine is gone");
+                    return;
+                }
+                j.SourceToken = default;
+                j.Stage = HaulStage.ToDestination;
+            }
+            if (!MoveTo(c, at, dt, ArriveDistance)) return;
+            c.Activity = ColonistActivity.Working;
+            j.Progress += dt;
+            if (j.Progress < 2f) return;
+            ItemDefinition item = _content.Items.Get(j.ItemId);
+            float before = patient.Health;
+            SurvivalRules.Apply(patient, item.Consumable);
+            // Skill makes the same dressing go further.
+            patient.Health = Math.Min(patient.MaxHealth, patient.Health + (patient.Health - before) * Math.Max(0f, c.Skill(JobType.Medic) - 1f));
+            c.Skills[JobType.Medic] = Math.Min(2f, c.Skill(JobType.Medic) + 0.02f);
+            string who = j.Patient.IsValid && _world.Colonists.TryGetValue(j.Patient, out ColonistState p2) ? p2.Name : "you";
+            _bus?.Publish(new Notification($"{c.Name} treated {who} ({item.Name}: health {before:0} → {patient.Health:0}).", Severity.Success));
+            Complete(c, j);
+        }
+
         /// <summary>
         /// A guard (Guard work on) fights infected that come within <see cref="GuardRadius"/> of the
         /// settlement: drops the current job cleanly, walks up and strikes every
@@ -256,7 +504,7 @@ namespace Afterfall.Domain.Colony
             if (target == null)
             {
                 if (c.Status.StartsWith("Guarding", StringComparison.Ordinal)) c.Status = "On guard — all quiet";
-                return false;
+                return !c.CurrentJob.IsValid && ArmGuard(c, post, dt);
             }
             if (c.CurrentJob.IsValid && _world.Jobs.TryGetValue(c.CurrentJob, out Job j)) Fail(c, j, "called away to fight the infected");
             if (best > GuardReach)
@@ -271,9 +519,11 @@ namespace Afterfall.Domain.Colony
             c.GuardCooldown -= dt;
             if (c.GuardCooldown > 0f) return true;
             c.GuardCooldown = GuardHitEvery;
-            float skill = c.Skills.TryGetValue(JobType.Guard, out float s) ? s : 0f;
-            bool killed = DamageZombie(target.Id, GuardDamage * (1f + skill), c.Position);
-            c.Skills[JobType.Guard] = Math.Min(1f, skill + 0.01f);
+            float skill = c.Skill(JobType.Guard); // 1 to start, better with practice (like every skill)
+            ToolStats weapon = GuardWeapon(c.Carry, out _);
+            if (weapon != null) c.GuardCooldown = Math.Max(0.6f, weapon.Cooldown * 1.3f);
+            bool killed = DamageZombie(target.Id, Math.Max(GuardDamage, weapon?.Damage ?? 0f) * skill, c.Position);
+            c.Skills[JobType.Guard] = Math.Min(2f, skill + 0.02f);
             c.Status = killed ? "Guarding: put down an infected" : "Guarding: fighting the infected";
             if (killed) _bus?.Publish(new Notification($"{c.Name} put down an infected near the settlement.", Severity.Success));
             return true;
@@ -343,6 +593,8 @@ namespace Afterfall.Domain.Colony
             }
             PlanGathering(storages, now);
             PlanTidying(storages, now);
+            PlanRepairs(storages, now);
+            PlanTreatment(storages, now);
         }
 
         /// <summary>Designated storage is preferred over general storage up to this many metres further away.</summary>
@@ -740,6 +992,7 @@ namespace Afterfall.Domain.Colony
                 {
                     ItemStack st = c.Carry.GetSlot(i);
                     if (st.IsEmpty) continue;
+                    if (c.Work.PriorityFor(JobType.Guard) > 0 && GuardWeapon(c.Carry, out int ws) != null && ws == i) continue; // a guard keeps their weapon
                     Structure dest = BestStorageFor(st.ItemId, 1, PlayerStorages(), c.Position);
                     if (dest == null) break;
                     var stash = new Job
@@ -851,7 +1104,7 @@ namespace Afterfall.Domain.Colony
         public bool Claim(ColonistState c, Job j)
         {
             if (j.State != JobState.Open || j.AssigneeId.IsValid) return false;
-            if (j.Type == JobType.Haul || j.Type == JobType.Eat || ((j.Type == JobType.Farm || j.Type == JobType.Gather) && j.SourceInventory.IsValid))
+            if (j.Type == JobType.Haul || j.Type == JobType.Eat || j.Type == JobType.Medic || ((j.Type == JobType.Farm || j.Type == JobType.Gather) && j.SourceInventory.IsValid))
             {
                 Inventory src = _world.FindInventory(j.SourceInventory);
                 if (src == null || !src.TryReserveItems(j.ItemId, j.Quantity, out ReservationToken st))
@@ -912,6 +1165,12 @@ namespace Afterfall.Domain.Colony
                         return;
                     }
                     if (bp.IsComplete) Complete(c, j);
+                    break;
+                case JobType.Mechanic:
+                    ExecuteRepair(c, j, dt);
+                    break;
+                case JobType.Medic:
+                    ExecuteTreat(c, j, dt);
                     break;
                 case JobType.Eat:
                     ExecuteEat(c, j, dt);

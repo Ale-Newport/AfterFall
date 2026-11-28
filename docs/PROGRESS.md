@@ -108,7 +108,7 @@ All twelve are fixed (commit `fix(game): runtime issues found in presentation re
 
 ## Partially implemented
 - **Strategic orders:** machine recipes, on/off, cables, colonist work priorities, gathering areas and storage designation (which item categories each crate takes) work.
-- **Colony:** Haul, Build, Farm, Gather, Eat, Rest, Warm up and Guard work. Medic and mechanic professions, morale effects and more than two survivors are not done.
+- **Colony:** Haul, Build, Farm, Gather, Eat, Rest and Warm up, and the Guard, Mechanic and Medic professions work. Morale effects and more than two survivors are not done.
 - **Accessibility:** rebinding, UI scale, sensitivity, FOV, invert Y, camera shake, captions and text-based status are done. A colour-blind review and a tactical pause toggle (the setting exists in difficulty presets but has no UI) are not.
 - **Survival:** health, stamina, hunger, thirst, carry weight and body warmth are done. Fatigue, injuries and infection are not.
 
@@ -124,6 +124,14 @@ Conveyors and pipes, disasters other than storms and cold snaps (fires, floods, 
 - **Vehicles**: headlights (spotlights, tail lights brighter when braking) come on with the engine at dusk, at night and in rain; a procedural engine loop follows the revs, with a starter sound.
 - **Storage designation**: in the strategic view a crate can be set to take only some item categories; colonists fill designated crates first, never put other kinds there, and carry what belongs in a designated crate out of general storage (low priority). Saved.
 - **Guard**: a colonist with Guard work fights infected within 30 m of the settlement instead of fleeing (drops the current job, walks up, strikes every 1.2 s, gets better at it), and leaves the fight below a third of their health.
+
+## Professions, light switch and vehicle textures (session 8, continued)
+- **Fix**: vehicle materials were mapped in world space, so the paint's weathering slid over the body as it drove (it looked like the ground showing through). Vehicles now map their textures in their own space, as structures and characters do.
+- **Mechanic**: repairs your buildings below 75 % health with the repair materials from one storage (a hammer must be in storage), 3 s of work, faster with practice.
+- **Medic**: treats colonists below 60 % health, and the survivor below 50 % within 40 m of a medic's bed, with a bandage (or a medkit for bad wounds) from storage; practice makes each dressing go further.
+- **Armed guards**: a guard on watch fetches the best weapon in storage near the settlement and keeps it (it is not put away); it sets the damage and pace of their blows.
+- **Headlight switch**: L in a vehicle cycles automatic, on and off.
+- The three professions are off for each colonist until set in the colony panel.
 
 ## Basin follow-ups and characters (session 8, 2026-11-28)
 - Floating origin for the 64 km world; NavMesh window rebaked only for new ground inside it; railway stations, blocks of flats and supermarkets that can be entered; street furniture; distant trees (WORLD_EXPANSION_PROGRESS.md, phase 8).
@@ -285,9 +293,9 @@ Bugs that only showed up in the engine, all fixed:
 - Not yet measured (needs playtests): time to first construction, time to first machine output, playtime without critical bugs.
 
 ## Next development tasks
-0. **World expansion follow-ups**: road-aware vehicle routing; more motion capture (idles, turns, crouch-walk); a manual headlight switch.
+0. **World expansion follow-ups**: road-aware vehicle routing; more motion capture (idles, turns, crouch-walk).
 1. **Playtest the acceptance scenario** ([#1](https://github.com/Ale-Newport/AfterFall/issues/1), docs/TESTING.md) by hand in the editor or the macOS build, including a session into days 2–3 for storms and a cold snap. Tune movement, camera, harvest and colonist pacing, day length, and weather balance. Record time to first construction and to first machine output.
-2. Medic and mechanic professions; arming guards with the weapons in storage.
+2. Morale; more than two recruitable survivors; weapon wear for guards.
 3. Conveyors (automation level 3) between storage and machines.
 4. Recorded audio where licensed assets are available; skinned characters to hide joint seams.
 5. Play the Windows build on a real PC ([#2](https://github.com/Ale-Newport/AfterFall/issues/2)); a WebGL demo ([#8](https://github.com/Ale-Newport/AfterFall/issues/8)).

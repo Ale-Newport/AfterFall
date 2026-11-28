@@ -5,11 +5,21 @@ namespace Afterfall.Presentation
 {
     /// <summary>
     /// A vehicle's headlights and engine. The lights come on with the engine at dusk, at night and in
-    /// rain or storms (two spotlights and red tail lights; the quad bike has one lamp); the engine is a
+    /// rain or storms (the L key switches them to always on or off) (two spotlights and red tail lights; the quad bike has one lamp); the engine is a
     /// procedural loop whose pitch and volume follow the revs, with a starter sound when it catches.
     /// </summary>
     public sealed partial class VehicleView
     {
+        /// <summary>The headlight switch: automatic (on with the engine in the dark), always on, or off.</summary>
+        public enum LightMode
+        {
+            Auto,
+            On,
+            Off
+        }
+
+        public LightMode Lights { get; set; } = LightMode.Auto;
+
         private Light[] _headlights;
         private Light _taillights;
         private AudioSource _engine;
@@ -68,7 +78,7 @@ namespace Afterfall.Presentation
             bool running = v.EngineOn && v.Fuel > 0f;
             var weather = _gc.Session.WeatherNow;
             bool dark = _gc.Session.World.Clock.Daylight01 < 0.35f || weather.Rain > 0.4f || weather.Storm > 0.2f;
-            bool lit = running && dark;
+            bool lit = running && (Lights == LightMode.On || (Lights == LightMode.Auto && dark));
             foreach (Light l in _headlights)
                 if (l.enabled != lit) l.enabled = lit;
             if (_taillights.enabled != lit) _taillights.enabled = lit;

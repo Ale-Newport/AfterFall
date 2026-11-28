@@ -264,6 +264,7 @@ namespace Afterfall.Persistence
         public long TargetNode { get; set; }
         public float Progress { get; set; }
         public int Harvests { get; set; }
+        public long Patient { get; set; }
     }
 
     public sealed class WorkZoneDto

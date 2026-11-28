@@ -57,10 +57,12 @@ namespace Afterfall.Presentation
             return view;
         }
 
-        private static Material PaintMat => MaterialLibrary.Surface(Art.Surface.PaintedMetal, new Color(0.82f, 0.82f, 0.82f), 0.45f, 0.1f);
-        private static Material TrimMat => MaterialLibrary.Surface(Art.Surface.Metal, new Color(0.6f, 0.6f, 0.6f), 0.4f, 0.6f);
-        private static Material GlassMat => MaterialLibrary.Surface(Art.Surface.Glass, new Color(0.14f, 0.17f, 0.19f), 0.92f);
-        private static Material RubberMat => MaterialLibrary.Surface(Art.Surface.Rubber, new Color(0.14f, 0.13f, 0.13f));
+        // Vehicles move, so their texture is mapped in the vehicle's own space: mapped in world space (as
+        // the static world is) the paint's weathering slid over the body as it drove, like the ground showing through.
+        private static Material PaintMat => MaterialLibrary.Surface(Art.Surface.PaintedMetal, new Color(0.82f, 0.82f, 0.82f), 0.45f, 0.1f, objectSpace: true);
+        private static Material TrimMat => MaterialLibrary.Surface(Art.Surface.Metal, new Color(0.6f, 0.6f, 0.6f), 0.4f, 0.6f, objectSpace: true);
+        private static Material GlassMat => MaterialLibrary.Surface(Art.Surface.Glass, new Color(0.14f, 0.17f, 0.19f), 0.92f, objectSpace: true);
+        private static Material RubberMat => MaterialLibrary.Surface(Art.Surface.Rubber, new Color(0.14f, 0.13f, 0.13f), objectSpace: true);
 
         private void Build(VehicleState v)
         {
