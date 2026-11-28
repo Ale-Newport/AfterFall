@@ -40,6 +40,57 @@ namespace Afterfall.Tests
         }
 
         [Test]
+        public void StorageDesignation_FillsDesignatedCratesFirst_AndPutsAwayWhatBelongsThere()
+        {
+            GameSession s = Base(out ColonistState c, out Structure general);
+            Vec3 p = s.Player.Position;
+            Structure pantry = TestSupport.Build(s.World, "storage_crate", new Vec3(p.X - 8, p.Y, p.Z + 6));
+            Assert.AreEqual("not_storage", s.SetStorageAccepts(EntityId.None, ItemCategory.Natural, false).Code);
+            // Designate the pantry: food and medicine only.
+            foreach (ItemCategory cat in (ItemCategory[])System.Enum.GetValues(typeof(ItemCategory)))
+                if (cat != ItemCategory.FoodMedicine) Assert.IsTrue(s.SetStorageAccepts(pantry.Id, cat, false).Ok);
+            Assert.AreNotEqual(0, pantry.StorageFilter);
+            Assert.IsTrue(pantry.Accepts(ItemCategory.FoodMedicine) && !pantry.Accepts(ItemCategory.Natural));
+            Assert.AreEqual("empty", s.SetStorageAccepts(pantry.Id, ItemCategory.FoodMedicine, false).Code, "a storage takes at least one kind");
+
+            // Food in the general crate is carried to the pantry; wood stays where it is.
+            general.Storage.TryAdd("canned_food", 3);
+            general.Storage.TryAdd("wood", 6);
+            TestSupport.Run(s, 120, 0.1);
+            Assert.AreEqual(3, pantry.Storage.Count("canned_food"), "the colonist put the food away in the pantry");
+            Assert.AreEqual(0, pantry.Storage.Count("wood"), "nothing the pantry does not take goes there");
+            Assert.AreEqual(6, general.Storage.Count("wood"));
+
+            // Saved and loaded.
+            string text = SaveSerializer.Serialize(s.World, "t", 1);
+            WorldState loaded = SaveSerializer.Deserialize(text, TestSupport.Content, new List<string>());
+            Assert.AreEqual(pantry.StorageFilter, loaded.Structures[pantry.Id].StorageFilter);
+
+            // Taking everything again makes it general storage.
+            foreach (ItemCategory cat in (ItemCategory[])System.Enum.GetValues(typeof(ItemCategory))) s.SetStorageAccepts(pantry.Id, cat, true);
+            Assert.AreEqual(0, pantry.StorageFilter);
+        }
+
+        [Test]
+        public void Guard_FightsInfectedNearTheSettlement()
+        {
+            GameSession s = Base(out ColonistState c, out Structure crate);
+            Vec3 p = s.Player.Position;
+            s.Player.Position = new Vec3(p.X - 60, p.Y, p.Z - 60); // the survivor is away
+            var rng = DeterministicRandom.Derive(1, "guard");
+            ZombieState z = s.Zombies.Spawn(new Vec3(c.Position.X + 6, c.Position.Y, c.Position.Z), "wanderer", rng);
+            z.Mode = ZombieMode.Chase;
+            Assert.AreEqual(0, c.Work.PriorityFor(JobType.Guard), "guarding is off until set");
+            Assert.IsTrue(s.SetWorkPriority(c.Id, JobType.Guard, 1).Ok);
+            TestSupport.Run(s, 0.5, 0.05);
+            StringAssert.StartsWith("Guarding", c.Status, "a guard goes for an infected near the settlement instead of fleeing");
+            for (int i = 0; i < 400 && !z.IsDead && c.Activity != ColonistActivity.Down; i++) TestSupport.Run(s, 0.25, 0.05);
+            Assert.IsTrue(z.IsDead, $"the guard put the infected down ({c.Status}, guard health {c.Vitals.Health:0})");
+            Assert.AreNotEqual(ColonistActivity.Down, c.Activity);
+            Assert.Greater(c.Skills[JobType.Guard], 0f, "fighting trains the guard");
+        }
+
+        [Test]
         public void NewGame_HasRecruitableSurvivors()
         {
             GameSession s = TestSupport.NewSession(1);

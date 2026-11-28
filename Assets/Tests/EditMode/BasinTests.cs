@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using Afterfall.Core;
 using Afterfall.Domain.Construction;
+using Afterfall.Domain.Items;
 using Afterfall.Domain.World;
 using Afterfall.Persistence;
 using Afterfall.Services;
@@ -201,6 +202,57 @@ namespace Afterfall.Tests
                 foreach (PlanFixture door in plan.Fixtures.Where(f => f.Locked))
                     Assert.IsTrue(plan.Fixtures.Any(f => f.KeysInside.Contains(door.LockId) && !f.Key.Contains(door.Key.Substring(door.Key.LastIndexOf(':') + 1).Replace("door:", ""))), $"{plan.Name}: the key to {door.LockId} is in the building");
             }
+        }
+
+        [Test]
+        public void Basin_UntouchedFittingsFarAway_AreDroppedFromSaves_AndComeBackTheSame()
+        {
+            GameSession s = NewBasinGame();
+            WorldState w = s.World;
+            TravelTo(s, 39980f, 30250f);
+            var city = w.Structures.Values.Where(st => st.SeedKey.StartsWith("c", StringComparison.Ordinal) && st.Storage != null && !st.Storage.IsEmpty).ToList();
+            Assert.Greater(city.Count, 20, "the city's containers are seeded around the survivor");
+            // Loot one container: its chunk is the player's now and keeps everything.
+            Structure looted = city[0];
+            ItemStack first = Enumerable.Range(0, looted.Storage.SlotCount).Select(looted.Storage.GetSlot).First(st => !st.IsEmpty);
+            Assert.IsTrue(looted.Storage.TryRemove(first.ItemId, 1));
+            Assert.IsTrue(looted.Touched, "taking something marks a seeded container touched");
+            // A seed key names the chunk that generated it ("c{x}_{z}:…"), which can be a neighbour of where it stands.
+            long ChunkOfKey(string k)
+            {
+                int us = k.IndexOf('_'), colon = k.IndexOf(':');
+                return ChunkContent.ChunkKey(int.Parse(k.Substring(1, us - 1)), int.Parse(k.Substring(us + 1, colon - us - 1)));
+            }
+            long lootedChunk = ChunkOfKey(looted.SeedKey);
+            // Remember an untouched container elsewhere and its loot.
+            Structure kept = city.First(st => !st.Touched && ChunkOfKey(st.SeedKey) != lootedChunk);
+            string keptKey = kept.SeedKey;
+            string Loot(Structure st) => string.Join(",", Enumerable.Range(0, st.Storage.SlotCount).Select(st.Storage.GetSlot).Where(x => !x.IsEmpty).Select(x => $"{x.ItemId}x{x.Quantity}{x.Tag}").OrderBy(x => x, StringComparer.Ordinal));
+            string keptLoot = Loot(kept);
+            int before = w.Structures.Count;
+            int sizeBefore = SaveSerializer.Serialize(w, "t", 1).Length;
+
+            TravelTo(s, 20000f, 30250f, 12); // 20 km away: past the keep radius, and a prune pass or two
+            Assert.Greater(w.DormantChunks.Count, 0, "far chunks' untouched fittings are dropped");
+            Assert.IsFalse(w.Structures.Values.Any(st => st.SeedKey == keptKey), "the untouched container is gone from the world");
+            Assert.IsTrue(w.Structures.ContainsKey(looted.Id), "the looted container's chunk keeps its fittings");
+            Assert.IsFalse(w.DormantChunks.Contains(lootedChunk));
+            Assert.Less(w.Structures.Count, before);
+
+            // The save remembers which chunks are dormant, and is smaller for it.
+            string text = SaveSerializer.Serialize(w, "t", 1);
+            WorldState loaded = SaveSerializer.Deserialize(text, TestSupport.Content, new List<string>());
+            CollectionAssert.AreEquivalent(w.DormantChunks, loaded.DormantChunks);
+            Assert.IsTrue(loaded.Structures[looted.Id].Touched, "touched is saved");
+            TestContext.WriteLine($"Save {sizeBefore / 1024} KB in the city, {text.Length / 1024} KB after leaving it ({w.DormantChunks.Count} dormant chunks)");
+
+            // Back in the city everything is there again, the untouched container with the same loot.
+            TravelTo(s, 39980f, 30250f);
+            Structure again = w.Structures.Values.FirstOrDefault(st => st.SeedKey == keptKey);
+            Assert.IsNotNull(again, "the dormant chunk woke when the survivor came back");
+            Assert.AreEqual(keptLoot, Loot(again), "remade exactly as it was generated");
+            Assert.IsFalse(again.Touched);
+            Assert.IsFalse(w.DormantChunks.Contains(ChunkOfKey(again.SeedKey)));
         }
     }
 }

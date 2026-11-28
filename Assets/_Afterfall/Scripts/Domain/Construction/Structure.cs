@@ -55,11 +55,26 @@ namespace Afterfall.Domain.Construction
         /// </summary>
         public string SeedKey { get; set; } = "";
 
+        /// <summary>
+        /// A seeded fitting whose contents have changed since it was generated (a world that streams in
+        /// chunks keeps these; untouched ones are dropped far away and made again from the layout).
+        /// </summary>
+        public bool Touched { get; set; }
+
         /// <summary>Player toggle for lights and machines.</summary>
         public bool Enabled { get; set; } = true;
 
         // Functional components (null when the definition does not provide them).
         public Inventory Storage { get; set; }
+
+        /// <summary>
+        /// Storage designation: the item categories (bits of <see cref="Items.ItemCategory"/>) colonists
+        /// store here; 0 takes everything. Designated storage is filled first and keeps only what it takes.
+        /// </summary>
+        public int StorageFilter { get; set; }
+
+        /// <summary>True when this storage takes items of <paramref name="category"/>.</summary>
+        public bool Accepts(Items.ItemCategory category) => StorageFilter == 0 || (StorageFilter & (1 << (int)category)) != 0;
         public MachineState Machine { get; set; }
         public GeneratorState Generator { get; set; }
         public BatteryState Battery { get; set; }

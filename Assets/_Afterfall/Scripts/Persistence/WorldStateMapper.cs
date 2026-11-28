@@ -52,6 +52,8 @@ namespace Afterfall.Persistence
             }
             dto.SeededChunks.AddRange(w.SeededChunks);
             dto.SeededChunks.Sort();
+            dto.DormantChunks.AddRange(w.DormantChunks);
+            dto.DormantChunks.Sort();
             foreach (WorldDrop d in Sorted(w.Drops))
                 dto.Drops.Add(new DropDto { Id = d.Id.Value, Position = d.Position, Contents = ToDto(d.Contents), Label = d.Label, IsBelongings = d.IsBelongings });
             foreach (ZombieState z in Sorted(w.Zombies))
@@ -149,6 +151,8 @@ namespace Afterfall.Persistence
                 DoorLocked = s.DoorLocked,
                 LockId = s.LockId,
                 SeedKey = s.SeedKey,
+                Touched = s.Touched,
+                StorageFilter = s.StorageFilter,
                 Enabled = s.Enabled,
                 Storage = ToDto(s.Storage)
             };
@@ -262,6 +266,8 @@ namespace Afterfall.Persistence
                     DoorLocked = sd.DoorLocked,
                     LockId = sd.LockId ?? "",
                     SeedKey = sd.SeedKey ?? "",
+                    Touched = sd.Touched,
+                    StorageFilter = sd.StorageFilter,
                     Enabled = sd.Enabled
                 };
                 foreach (KeyValuePair<string, int> kv in sd.Delivered ?? new Dictionary<string, int>())
@@ -423,6 +429,7 @@ namespace Afterfall.Persistence
             foreach (KeyValuePair<string, int> kv in dto.TechProgress) w.Tech.Progress[kv.Key] = kv.Value;
             UnpackBits(dto.ExploredCells, w.Exploration.Revealed);
             foreach (long chunk in dto.SeededChunks ?? new List<long>()) w.SeededChunks.Add(chunk);
+            foreach (long chunk in dto.DormantChunks ?? new List<long>()) w.DormantChunks.Add(chunk);
             foreach (string poi in dto.DiscoveredPois) w.Exploration.DiscoveredPois.Add(poi);
             if (dto.Threat != null) CopyThreat(dto.Threat, w.Threat);
             if (dto.Weather != null) CopyWeather(dto.Weather, w.Weather);

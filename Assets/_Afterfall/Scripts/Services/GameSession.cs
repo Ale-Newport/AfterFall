@@ -50,6 +50,7 @@ namespace Afterfall.Services
             Threats = new ThreatDirector(World, Content, Events, Zombies);
             Colony = new ColonySystem(World, Content, Events, Construction);
             Zombies.ColonistHit += (id, dmg) => Colony.DamageColonist(id, dmg, "the infected");
+            Colony.DamageZombie = (id, amount, from) => Zombies.Damage(id, amount, from);
             Farming = new Afterfall.Domain.Farming.FarmingSystem(World, Content, Events, Tech);
             Colony.Farming = Farming;
             Farming.PumpHasPower = s =>
@@ -682,6 +683,27 @@ namespace Afterfall.Services
             c.Work.Priorities[type] = Math.Max(0, Math.Min(4, priority));
             return OpResult.Success(priority == 0 ? $"{c.Name} will no longer {type.ToString().ToLowerInvariant()}." : $"{c.Name}: {type} priority {priority}.");
         }
+
+        /// <summary>
+        /// Storage designation (strategic order): whether a storage of yours takes items of a category.
+        /// Taking every category again makes it general storage.
+        /// </summary>
+        public OpResult SetStorageAccepts(EntityId structureId, ItemCategory category, bool accept)
+        {
+            if (!World.Structures.TryGetValue(structureId, out Structure s) || !s.PlayerBuilt || !s.IsComplete || s.Storage == null || s.Machine != null)
+                return OpResult.Fail("not_storage", "Only your finished storage can be designated.");
+            int all = 0;
+            foreach (ItemCategory c in (ItemCategory[])Enum.GetValues(typeof(ItemCategory))) all |= 1 << (int)c;
+            int mask = s.StorageFilter == 0 ? all : s.StorageFilter;
+            mask = accept ? mask | (1 << (int)category) : mask & ~(1 << (int)category);
+            if (mask == 0) return OpResult.Fail("empty", "A storage must take at least one kind of item.");
+            s.StorageFilter = mask == all ? 0 : mask;
+            World.MarkChanged();
+            string name = Content.Building(s.DefId)?.Name ?? "Storage";
+            return OpResult.Success(s.StorageFilter == 0 ? $"{name} takes everything." : $"{name} {(accept ? "now takes" : "no longer takes")} {CategoryName(category)}.");
+        }
+
+        public static string CategoryName(ItemCategory c) => c == ItemCategory.FoodMedicine ? "food and medicine" : c.ToString().ToLowerInvariant();
 
         public const int MaxWorkZones = 6;
 

@@ -18,7 +18,13 @@ namespace Afterfall.Domain.Colony
         WarmUp,
 
         /// <summary>Cut, mine or pick a resource node inside a work zone (fetching a tool from storage first if needed).</summary>
-        Gather
+        Gather,
+
+        /// <summary>
+        /// Profession, not a board job: a guard who sees infected near the settlement goes for them and
+        /// fights instead of fleeing (off unless set; a badly hurt guard still runs).
+        /// </summary>
+        Guard
     }
 
     public enum FarmAction
@@ -134,6 +140,9 @@ namespace Afterfall.Domain.Colony
         public ColonistActivity Activity { get; set; }
         public string Status { get; set; } = "Waiting for work";
         public EntityId HomeBed { get; set; }
+
+        /// <summary>Seconds until a guard's next blow (not saved).</summary>
+        public float GuardCooldown { get; set; }
 
         /// <summary>Where the colonist is walking to (set by the colony system, executed by the movement adapter).</summary>
         public Vec3 MoveTarget { get; set; }

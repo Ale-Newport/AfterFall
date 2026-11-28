@@ -180,6 +180,13 @@ namespace Afterfall.Presentation
                 $"Drove {driven:0} m (odometer {sedan.OdometerMetres:0} m) along the road toward the gas station; fuel {fuel0:0.00} → {sedan.Fuel:0.00} L; upright {Vector3.Dot(view.transform.up, Vector3.up):0.00}");
             Check(sedan.Fuel < fuel0 && sedan.OdometerMetres > 90.0, "Driving burned fuel and ran up the odometer");
             Check(Vector3.Distance(s.Player.Position.ToUnity(), view.transform.position) < 3f, "The survivor rode along with the car");
+            Check(view.EngineAudible && !view.HeadlightsOn, $"The engine is heard while it runs; by day the headlights stay off");
+            SkipTo(gc, 22.5);
+            yield return Seconds(1f);
+            Check(view.HeadlightsOn, "At night the running car's headlights and tail lights are on");
+            yield return Capture("62b_headlights_at_night");
+            SkipTo(gc, 11.0);
+            yield return Seconds(0.5f);
 
             gc.ExitVehicle();
             yield return Seconds(1f);

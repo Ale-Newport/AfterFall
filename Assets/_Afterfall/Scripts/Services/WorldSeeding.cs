@@ -52,6 +52,7 @@ namespace Afterfall.Services
                     foreach (string item in f.ItemsInside)
                         if (content.Items.Contains(item)) s.Storage.AddUpTo(item, 1);
                 }
+                s.Touched = false;
                 world.AddStructure(s);
                 created++;
             }

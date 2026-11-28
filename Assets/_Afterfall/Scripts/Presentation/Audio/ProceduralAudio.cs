@@ -54,6 +54,21 @@ namespace Afterfall.Presentation
                 });
                 case "thunder": return Clip(name, 5f, (t, i) => Lowpass(Noise(rnd), 0.018f + 0.03f * Env(t, 0.01f, 0.4f), i) * 7f * Env(t, 0.12f, 3.6f) * (0.75f + 0.25f * Mathf.Sin(2 * Mathf.PI * 1.1f * t)));
                 case "thunder_crack": return Clip(name, 4f, (t, i) => Noise(rnd) * 0.85f * Env(t, 0.001f, 0.07f) + Lowpass(Noise(rnd), 0.035f, i) * 6f * Env(t, 0.02f, 2.8f));
+                // A four-stroke engine at idle (the source's pitch raises it with revs): firing pulses, their
+                // harmonics and exhaust rumble; whole cycles in one second so it loops seamlessly.
+                case "loop_engine": return Loop(name, 1f, (t, i) =>
+                {
+                    float fire = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(2 * Mathf.PI * 30f * t)), 6f);
+                    return Saw(30f, t) * 0.18f + Mathf.Sin(2 * Mathf.PI * 60f * t) * 0.2f + Mathf.Sin(2 * Mathf.PI * 90f * t) * 0.08f
+                        + fire * 0.35f + Lowpass(Noise(rnd), 0.12f, i) * 0.18f;
+                });
+                case "engine_start": return Clip(name, 1.1f, (t, i) =>
+                {
+                    // The starter cranks, then the engine catches.
+                    float crank = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(2 * Mathf.PI * 9f * t)), 4f) * Step(t, 0f, 0.6f);
+                    float run = (Saw(30f, t) * 0.3f + Mathf.Sin(2 * Mathf.PI * 60f * t) * 0.25f) * Mathf.Clamp01((t - 0.55f) * 4f);
+                    return (crank * 0.5f + Lowpass(Noise(rnd), 0.2f, i) * 0.2f * Step(t, 0f, 0.6f) + run) * Env(t, 0.01f, 1.2f);
+                });
                 case "loop_wind": return Loop(name, 6f, (t, i) => Lowpass(Noise(rnd), 0.03f, i) * 2.2f * (0.6f + 0.4f * Mathf.Sin(2 * Mathf.PI * t / 6f)));
                 case "loop_night": return Loop(name, 3f, (t, i) => Mathf.Sin(2 * Mathf.PI * 4200 * t) * 0.05f * (Mathf.Repeat(t * 7f, 1f) < 0.12f && Mathf.Repeat(t, 1.5f) < 0.6f ? 1f : 0f) + Lowpass(Noise(rnd), 0.03f, i) * 0.8f);
                 default: return Clip(name, 0.1f, (t, i) => 0f);

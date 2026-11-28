@@ -122,6 +122,8 @@ namespace Afterfall.Persistence
         public bool DoorLocked { get; set; }
         public string LockId { get; set; } = "";
         public string SeedKey { get; set; } = "";
+        public bool Touched { get; set; }
+        public int StorageFilter { get; set; }
         public bool Enabled { get; set; } = true;
         public InventoryDto Storage { get; set; }
         public MachineDto Machine { get; set; }
@@ -306,6 +308,9 @@ namespace Afterfall.Persistence
 
         /// <summary>Chunks of a chunked world that have been seeded (see WorldState.SeededChunks).</summary>
         public List<long> SeededChunks { get; set; } = new List<long>();
+
+        /// <summary>Seeded chunks whose untouched fittings are dropped (see WorldState.DormantChunks).</summary>
+        public List<long> DormantChunks { get; set; } = new List<long>();
 
         public List<string> DiscoveredPois { get; set; } = new List<string>();
         public ThreatState Threat { get; set; }

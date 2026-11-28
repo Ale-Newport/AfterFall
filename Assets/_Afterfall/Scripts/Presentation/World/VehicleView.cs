@@ -14,7 +14,7 @@ namespace Afterfall.Presentation
     /// telemetry, resting place) and what it hits (crashes, the infected). Far from the survivor
     /// the body is kinematic and still.
     /// </summary>
-    public sealed class VehicleView : EntityView, IInteractable
+    public sealed partial class VehicleView : EntityView, IInteractable
     {
         private const float ActiveRange = 90f;
         private const float DoorOpenDegrees = 62f;
@@ -201,6 +201,7 @@ namespace Afterfall.Presentation
             bool driven = Driven;
             float dist = Vector3.Distance(_gc.Player.transform.position, transform.position);
             SetActivePhysics(driven || dist < ActiveRange);
+            UpdateLightsAndEngine(v, dt);
 
             // Doors: the driver's door swings open while someone gets in or out, others follow the saved state.
             _doorHold -= dt;

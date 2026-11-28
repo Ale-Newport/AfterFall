@@ -157,11 +157,21 @@ namespace Afterfall.Domain.World
             _inventories[inventory.Id] = inventory;
             _inventoryOwner[inventory.Id] = owner;
             Ids.EnsureAbove(inventory.Id);
+            inventory.Changed -= OnInventoryChanged;
+            inventory.Changed += OnInventoryChanged;
+        }
+
+        /// <summary>A seeded structure's contents changed: it is the player's now and is always saved.</summary>
+        private void OnInventoryChanged(Inventory inventory)
+        {
+            if (_inventoryOwner.TryGetValue(inventory.Id, out EntityId owner) && Structures.TryGetValue(owner, out Structure s) && !string.IsNullOrEmpty(s.SeedKey))
+                s.Touched = true;
         }
 
         public void UnregisterInventory(Inventory inventory)
         {
             if (inventory == null) return;
+            inventory.Changed -= OnInventoryChanged;
             _inventories.Remove(inventory.Id);
             _inventoryOwner.Remove(inventory.Id);
         }
@@ -181,6 +191,12 @@ namespace Afterfall.Domain.World
 
         /// <summary>Chunks of a chunked world whose containers, fixtures, vehicles and infected have been created (saved).</summary>
         public HashSet<long> SeededChunks { get; } = new HashSet<long>();
+
+        /// <summary>
+        /// Seeded chunks whose containers and fittings, all untouched, were dropped far from everyone;
+        /// they are made again from the layout (identically: loot rolls per key) when someone comes back.
+        /// </summary>
+        public HashSet<long> DormantChunks { get; } = new HashSet<long>();
 
         private readonly Dictionary<string, EntityId> _nodeKeys = new Dictionary<string, EntityId>(StringComparer.Ordinal);
 

@@ -66,6 +66,9 @@ namespace Afterfall.Domain.Colony
         public const float WarmUpSearchRadius = 90f;
         public const float FleeRadius = 9f;
 
+        /// <summary>Guards defend this far around the settlement (their bed), strike from this reach, this often, this hard.</summary>
+        public const float GuardRadius = 30f, GuardReach = 1.9f, GuardHitEvery = 1.2f, GuardDamage = 14f;
+
         /// <summary>Idle colonists further than this from their bed walk back to the settlement.</summary>
         public const float HomeRadius = 18f;
 
@@ -92,6 +95,9 @@ namespace Afterfall.Domain.Colony
             set => _farming = value;
         }
         public IColonistMovement Movement { get; set; } = new DirectColonistMovement();
+
+        /// <summary>Damages an infected (the session wires it to the infected AI); returns true if it died.</summary>
+        public Func<EntityId, float, Vec3, bool> DamageZombie { get; set; }
 
         /// <summary>Noise of colonists' work (set by the session to the infected's noise field).</summary>
         public Action<Vec3, float, string> EmitNoise { get; set; }
@@ -159,6 +165,7 @@ namespace Afterfall.Domain.Colony
                 if (!c.Recruited || c.Activity == ColonistActivity.Down) continue;
                 Needs(c, dt);
                 if (c.Activity == ColonistActivity.Down) continue;
+                if (Guard(c, (float)dt)) continue;
                 if (Flee(c, (float)dt)) continue;
                 if ((!c.CurrentJob.IsValid || !_world.Jobs.ContainsKey(c.CurrentJob)) && now >= c.NextAssignAt)
                 {
@@ -225,6 +232,54 @@ namespace Afterfall.Domain.Colony
         }
 
         /// <summary>
+        /// A guard (Guard work on) fights infected that come within <see cref="GuardRadius"/> of the
+        /// settlement: drops the current job cleanly, walks up and strikes every
+        /// <see cref="GuardHitEvery"/> seconds. Returns true while fighting. Below a third of their
+        /// health a guard leaves the fight (and flees like anyone else).
+        /// </summary>
+        private bool Guard(ColonistState c, float dt)
+        {
+            if (c.Work.PriorityFor(JobType.Guard) <= 0 || DamageZombie == null || c.Vitals.Health < c.Vitals.MaxHealth / 3f) return false;
+            Vec3 post = c.HomeBed.IsValid && _world.Structures.TryGetValue(c.HomeBed, out Structure bed) ? bed.Position : c.Position;
+            AI.ZombieState target = null;
+            float best = float.MaxValue;
+            foreach (AI.ZombieState z in _world.Zombies.Values)
+            {
+                if (z.IsDead || Vec3.DistanceXZ(z.Position, post) > GuardRadius) continue;
+                float d = Vec3.DistanceXZ(z.Position, c.Position);
+                if (d < best)
+                {
+                    best = d;
+                    target = z;
+                }
+            }
+            if (target == null)
+            {
+                if (c.Status.StartsWith("Guarding", StringComparison.Ordinal)) c.Status = "On guard — all quiet";
+                return false;
+            }
+            if (c.CurrentJob.IsValid && _world.Jobs.TryGetValue(c.CurrentJob, out Job j)) Fail(c, j, "called away to fight the infected");
+            if (best > GuardReach)
+            {
+                c.Activity = ColonistActivity.Moving;
+                c.Status = "Guarding: going for the infected";
+                MoveTo(c, target.Position, dt, GuardReach * 0.8f);
+                return true;
+            }
+            c.HasMoveTarget = false;
+            c.Activity = ColonistActivity.Working;
+            c.GuardCooldown -= dt;
+            if (c.GuardCooldown > 0f) return true;
+            c.GuardCooldown = GuardHitEvery;
+            float skill = c.Skills.TryGetValue(JobType.Guard, out float s) ? s : 0f;
+            bool killed = DamageZombie(target.Id, GuardDamage * (1f + skill), c.Position);
+            c.Skills[JobType.Guard] = Math.Min(1f, skill + 0.01f);
+            c.Status = killed ? "Guarding: put down an infected" : "Guarding: fighting the infected";
+            if (killed) _bus?.Publish(new Notification($"{c.Name} put down an infected near the settlement.", Severity.Success));
+            return true;
+        }
+
+        /// <summary>
         /// Colonists drop what they are doing and run from infected that are hunting nearby
         /// (their job fails cleanly, so reserved items are released). Returns true while fleeing.
         /// </summary>
@@ -287,6 +342,48 @@ namespace Afterfall.Domain.Colony
                 if (s.Heater != null && s.Enabled) PlanFuel(s.Id, s.Heater.Fuel, storages, now, energy: false);
             }
             PlanGathering(storages, now);
+            PlanTidying(storages, now);
+        }
+
+        /// <summary>Designated storage is preferred over general storage up to this many metres further away.</summary>
+        public const float DesignatedPreference = 500f;
+        private const int MaxTidyJobs = 4;
+
+        /// <summary>
+        /// Storage designation, low priority: items in storage that no longer takes them, and items in
+        /// general storage that a designated crate takes, are carried to where they belong.
+        /// </summary>
+        private void PlanTidying(List<Structure> storages, double now)
+        {
+            bool designated = false;
+            foreach (Structure s in storages)
+                if (s.StorageFilter != 0) designated = true;
+            if (!designated) return;
+            int open = 0;
+            foreach (Job j in _world.Jobs.Values)
+                if (j.IsActive && j.Type == JobType.Haul && j.Priority == JobPriority.Optional) open++;
+            foreach (Structure from in storages)
+            {
+                foreach (KeyValuePair<string, int> kv in from.Storage.Totals())
+                {
+                    if (open >= MaxTidyJobs) return;
+                    ItemCategory category = _content.Items.Get(kv.Key).Category;
+                    bool wrongPlace = !from.Accepts(category);
+                    // From general storage only into a crate designated for this kind of item.
+                    if (!wrongPlace && from.StorageFilter != 0) continue;
+                    int qty = Math.Min(from.Storage.Available(kv.Key) - PendingOutgoing(from.Storage.Id, kv.Key), MaxHaulQuantity);
+                    if (qty <= 0) continue;
+                    Structure dest = BestStorageFor(kv.Key, qty, storages, from.Position, from);
+                    if (dest == null || (!wrongPlace && dest.StorageFilter == 0)) continue;
+                    AddJob(new Job
+                    {
+                        Type = JobType.Haul, Priority = JobPriority.Optional, TargetStructure = dest.Id, SourceInventory = from.Storage.Id,
+                        DestinationInventory = dest.Storage.Id, ItemId = kv.Key, Quantity = Math.Min(qty, dest.Storage.SpaceFor(kv.Key)), CreatedAt = now,
+                        Description = $"Put away {_content.Items.NameOf(kv.Key)} in {_content.Building(dest.DefId)?.Name}"
+                    });
+                    open++;
+                }
+            }
         }
 
         // ------------------------------------------------------------------ gathering
@@ -1114,14 +1211,19 @@ namespace Afterfall.Domain.Colony
             return list;
         }
 
-        private Structure BestStorageFor(string itemId, int quantity, List<Structure> storages, Vec3 near)
+        /// <summary>
+        /// The storage to put an item in: one that takes its category and has room, designated storage
+        /// (a crate set to take this kind of item) before general storage, then the nearest.
+        /// </summary>
+        private Structure BestStorageFor(string itemId, int quantity, List<Structure> storages, Vec3 near, Structure except = null)
         {
             Structure best = null;
             float bestD = float.MaxValue;
+            ItemCategory category = _content.Items.Get(itemId).Category;
             foreach (Structure s in storages)
             {
-                if (s.Storage.SpaceFor(itemId) < Math.Min(quantity, 1)) continue;
-                float d = Vec3.Distance(s.Position, near);
+                if (s == except || !s.Accepts(category) || s.Storage.SpaceFor(itemId) < Math.Min(quantity, 1)) continue;
+                float d = Vec3.Distance(s.Position, near) + (s.StorageFilter != 0 ? 0f : DesignatedPreference);
                 if (d < bestD)
                 {
                     bestD = d;

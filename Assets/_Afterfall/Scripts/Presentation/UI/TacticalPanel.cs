@@ -7,6 +7,7 @@ using Afterfall.Domain.Events;
 using Afterfall.Domain.Industry;
 using Afterfall.Domain.Power;
 using Afterfall.Domain.World;
+using Afterfall.Services;
 using UnityEngine;
 using UnityEngine.UIElements;
 using EntityId = Afterfall.Core.EntityId;
@@ -202,6 +203,37 @@ namespace Afterfall.Presentation.UI
                 // Physical actions: the session enforces that the survivor is standing next to it.
                 _selActions.Add(UiKit.Btn("Repair", () => Toast(_gc.Session.Repair(id)), "btn--small"));
                 _selActions.Add(UiKit.Btn(s.IsComplete ? "Demolish" : "Cancel blueprint", () => { Toast(_gc.Session.Demolish(id)); _gc.Tactical.Select(EntityId.None); }, "btn--small", "btn--danger"));
+            }
+            if (s.PlayerBuilt && s.IsComplete && s.Storage != null && s.Machine == null)
+            {
+                // Storage designation: which kinds of item colonists put here (designated crates fill first).
+                _recipeList.Add(UiKit.Text(s.StorageFilter == 0 ? "Stores: everything (click to designate)" : "Stores (designated)", "subtitle"));
+                foreach (Afterfall.Domain.Items.ItemCategory cat in (Afterfall.Domain.Items.ItemCategory[])System.Enum.GetValues(typeof(Afterfall.Domain.Items.ItemCategory)))
+                {
+                    Afterfall.Domain.Items.ItemCategory c = cat;
+                    bool on = s.Accepts(c);
+                    string name = GameSession.CategoryName(c);
+                    Button b = UiKit.Btn($"{(on ? "✓" : "–")} {char.ToUpperInvariant(name[0])}{name.Substring(1)}", () =>
+                    {
+                        // From "everything", a click keeps only that kind; afterwards clicks add and remove kinds.
+                        bool general = _gc.Session.World.Structures.TryGetValue(id, out Structure cur) && cur.StorageFilter == 0;
+                        if (general)
+                            foreach (Afterfall.Domain.Items.ItemCategory other in (Afterfall.Domain.Items.ItemCategory[])System.Enum.GetValues(typeof(Afterfall.Domain.Items.ItemCategory)))
+                                if (other != c) _gc.Session.SetStorageAccepts(id, other, false);
+                        Toast(general ? _gc.Session.SetStorageAccepts(id, c, true) : _gc.Session.SetStorageAccepts(id, c, !on));
+                        _builtFor = EntityId.None;
+                    }, "btn--small", "btn--list");
+                    if (on && s.StorageFilter != 0) b.AddToClassList("btn--selected");
+                    _recipeList.Add(b);
+                }
+                if (s.StorageFilter != 0)
+                    _recipeList.Add(UiKit.Btn("Take everything again", () =>
+                    {
+                        foreach (Afterfall.Domain.Items.ItemCategory c in (Afterfall.Domain.Items.ItemCategory[])System.Enum.GetValues(typeof(Afterfall.Domain.Items.ItemCategory)))
+                            _gc.Session.SetStorageAccepts(id, c, true);
+                        _gc.Toast("This storage takes everything again.");
+                        _builtFor = EntityId.None;
+                    }, "btn--small"));
             }
             if (s.Machine != null && def.Machine != null)
             {

@@ -107,8 +107,8 @@ Before Unity was available, an independent review of the Unity layer found:
 All twelve are fixed (commit `fix(game): runtime issues found in presentation review`). This shows how much risk remains until the game runs in Unity.
 
 ## Partially implemented
-- **Strategic orders:** machine recipes, on/off, cables, colonist work priorities and gathering areas work. Storage designation is not done.
-- **Colony:** Haul, Build, Farm, Gather, Eat, Rest and Warm up work. Guard, medic and mechanic professions, morale effects and more than two survivors are not done.
+- **Strategic orders:** machine recipes, on/off, cables, colonist work priorities, gathering areas and storage designation (which item categories each crate takes) work.
+- **Colony:** Haul, Build, Farm, Gather, Eat, Rest, Warm up and Guard work. Medic and mechanic professions, morale effects and more than two survivors are not done.
 - **Accessibility:** rebinding, UI scale, sensitivity, FOV, invert Y, camera shake, captions and text-based status are done. A colour-blind review and a tactical pause toggle (the setting exists in difficulty presets but has no UI) are not.
 - **Survival:** health, stamina, hunger, thirst, carry weight and body warmth are done. Fatigue, injuries and infection are not.
 
@@ -118,6 +118,12 @@ Conveyors and pipes, disasters other than storms and cold snaps (fires, floods, 
 ## The Kessel Basin (session 8, 2026-11-28)
 - World version 3: 64 × 64 km generated in chunks on demand (`BasinWorld`, `TiledHeightField`, `ChunkStreaming`), Greater Millbrook in its corner, biomes (mountains with snow, moor, lakes, badlands, farmland, marsh, coast), twelve villages and towns, rivers, roads and rail with bridges, and Kesselmouth, a London-sized city of towers, mansion blocks, terraces, semis, docks and parks. Spatial indexes, compact saves (untouched nodes are not saved), streamed views, merged city meshes, a skyline, far terrain, snow and sand layers, a local detail map. See WORLD_GENERATION.md.
 - Tests: 215 headless (4 new `BasinTests`); the basin tour in the macOS build: 0 failures, 0 errors, 8.3–8.4 ms average at every stop.
+
+## Saves, vehicles and colony orders (session 8, continued)
+- **Dormant fittings**: in the basin, a seeded chunk far from the survivor and every colonist (beyond 1.2 km) whose containers and fittings are all untouched (contents, searched, doors, damage) drops them; the save keeps only the chunk's key in `DormantChunks`, and they are remade identically (loot rolls per key) when someone comes back. A seeded structure is marked `Touched` when its contents change. Headless: a save of 1 096 KB in the city falls to 254 KB 20 km away (14 dormant chunks); the untouched container comes back with the same loot; a looted chunk keeps everything.
+- **Vehicles**: headlights (spotlights, tail lights brighter when braking) come on with the engine at dusk, at night and in rain; a procedural engine loop follows the revs, with a starter sound.
+- **Storage designation**: in the strategic view a crate can be set to take only some item categories; colonists fill designated crates first, never put other kinds there, and carry what belongs in a designated crate out of general storage (low priority). Saved.
+- **Guard**: a colonist with Guard work fights infected within 30 m of the settlement instead of fleeing (drops the current job, walks up, strikes every 1.2 s, gets better at it), and leaves the fight below a third of their health.
 
 ## Basin follow-ups and characters (session 8, 2026-11-28)
 - Floating origin for the 64 km world; NavMesh window rebaked only for new ground inside it; railway stations, blocks of flats and supermarkets that can be entered; street furniture; distant trees (WORLD_EXPANSION_PROGRESS.md, phase 8).
@@ -279,9 +285,9 @@ Bugs that only showed up in the engine, all fixed:
 - Not yet measured (needs playtests): time to first construction, time to first machine output, playtime without critical bugs.
 
 ## Next development tasks
-0. **World expansion follow-ups**: a hand playtest of the 64 km basin (the tour drives commands, not mouse and keyboard); pruning untouched building fittings from saves (a crossing of the city seeds thousands of doors and containers); road-aware vehicle routing; vehicle sounds and headlights; more motion capture (idles, turns, crouch-walk).
+0. **World expansion follow-ups**: road-aware vehicle routing; more motion capture (idles, turns, crouch-walk); a manual headlight switch.
 1. **Playtest the acceptance scenario** ([#1](https://github.com/Ale-Newport/AfterFall/issues/1), docs/TESTING.md) by hand in the editor or the macOS build, including a session into days 2–3 for storms and a cold snap. Tune movement, camera, harvest and colonist pacing, day length, and weather balance. Record time to first construction and to first machine output.
-2. Storage designation in the strategic view (which crates take what); the Guard profession.
+2. Medic and mechanic professions; arming guards with the weapons in storage.
 3. Conveyors (automation level 3) between storage and machines.
 4. Recorded audio where licensed assets are available; skinned characters to hide joint seams.
 5. Play the Windows build on a real PC ([#2](https://github.com/Ale-Newport/AfterFall/issues/2)); a WebGL demo ([#8](https://github.com/Ale-Newport/AfterFall/issues/8)).
